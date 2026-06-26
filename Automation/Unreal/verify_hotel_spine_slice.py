@@ -18,6 +18,8 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Materials/M_Hotel_RoomDoorPaint_v0",
     "/Game/Hotel/Materials/M_Hotel_FluorescentPanelGlow_v0",
     "/Game/Hotel/Materials/M_Hotel_MonitorGreenGlow_v0",
+    "/Game/Hotel/Cinematics/LS_HotelSpine_Stills",
+    "/Game/Hotel/Cinematics/MRQ_HotelEvidencePng",
 ]
 
 REQUIRED_ACTOR_LABELS = [
@@ -30,6 +32,10 @@ REQUIRED_ACTOR_LABELS = [
     "TRANSITION_EmergencyStair_Door_AlternateRoute",
     "AREA_GuestHall_Floor_OneDoorSlice",
     "PROP_GuestHall_RoomDoor203_OpenRefuseDecision",
+    "PROP_GuestHall_Room203_LeftDoorJamb",
+    "PROP_GuestHall_Room203_RightDoorJamb",
+    "PROP_GuestHall_Room203_TopDoorJamb",
+    "PROP_GuestHall_Room203_DarkLatchGap",
     "SFX_PhoneRing_FrontDesk_ManualTrigger_v0",
     "SFX_DoorKnock203_ManualTrigger_v0",
     "AMB_Lobby_FluorescentHum_Source_v0",
@@ -41,7 +47,10 @@ REQUIRED_ACTOR_LABELS = [
     "LIGHTMESH_GuestHall_FluorescentPanelA",
     "LIGHTMESH_GuestHall_FluorescentPanelB",
     "LIGHT_FrontDesk_WorkSurfacePracticalFill",
+    "LIGHT_FrontDesk_CaptureEvidenceSoftFill",
     "LIGHT_GuestHall_Room203PlatePractical",
+    "LIGHT_GuestHall_CaptureEvidenceDoorFill",
+    "LIGHT_MonitorToHall_CaptureEvidenceGreenFill",
     "PPV_HotelNightShift_ReadableHorrorExposure",
 ]
 

@@ -182,12 +182,16 @@ def try_set_property(obj, name: str, value) -> None:
         pass
 
 
+def make_rotator(pitch: float, yaw: float, roll: float = 0.0) -> unreal.Rotator:
+    return unreal.Rotator(roll, pitch, yaw)
+
+
 def add_cube(label: str, location, size, material: unreal.MaterialInterface, tags=()) -> unreal.Actor:
     cube = unreal.EditorAssetLibrary.load_asset("/Engine/BasicShapes/Cube.Cube")
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.StaticMeshActor,
         unreal.Vector(*location),
-        unreal.Rotator(0.0, 0.0, 0.0),
+        make_rotator(0.0, 0.0, 0.0),
     )
     actor.set_actor_label(label)
     actor.set_actor_scale3d(unreal.Vector(size[0] / 100.0, size[1] / 100.0, size[2] / 100.0))
@@ -214,7 +218,7 @@ def add_light(
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         cls,
         unreal.Vector(*location),
-        unreal.Rotator(*rotation),
+        make_rotator(*rotation),
     )
     actor.set_actor_label(label)
     component_name = "light_component"
@@ -237,12 +241,30 @@ def add_camera(label: str, location, rotation, fov: float = 62.0) -> unreal.Acto
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.CameraActor,
         unreal.Vector(*location),
-        unreal.Rotator(*rotation),
+        make_rotator(*rotation),
     )
     actor.set_actor_label(label)
     try:
         component = actor.get_editor_property("camera_component")
         component.set_editor_property("field_of_view", fov)
+        component.set_editor_property("post_process_blend_weight", 1.0)
+        settings = component.get_editor_property("post_process_settings")
+        exposure_overrides = {
+            "override_auto_exposure_method": True,
+            "override_auto_exposure_min_brightness": True,
+            "override_auto_exposure_max_brightness": True,
+            "override_auto_exposure_bias": True,
+            "auto_exposure_min_brightness": 1.0,
+            "auto_exposure_max_brightness": 1.0,
+            "auto_exposure_bias": 2.0,
+        }
+        for name, value in exposure_overrides.items():
+            try_set_property(settings, name, value)
+        try:
+            settings.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
+        except Exception:
+            pass
+        component.set_editor_property("post_process_settings", settings)
     except Exception:
         pass
     return actor
@@ -252,7 +274,7 @@ def add_audio(label: str, sound: unreal.SoundWave, location, auto_activate: bool
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.AmbientSound,
         unreal.Vector(*location),
-        unreal.Rotator(0.0, 0.0, 0.0),
+        make_rotator(0.0, 0.0, 0.0),
     )
     actor.set_actor_label(label)
     component = actor.get_editor_property("audio_component")
@@ -266,7 +288,7 @@ def add_post_process_volume(label: str) -> unreal.Actor:
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.PostProcessVolume,
         unreal.Vector(2100, 0, 120),
-        unreal.Rotator(0.0, 0.0, 0.0),
+        make_rotator(0.0, 0.0, 0.0),
     )
     actor.set_actor_label(label)
     try_set_property(actor, "b_unbound", True)
@@ -285,7 +307,7 @@ def add_post_process_volume(label: str) -> unreal.Actor:
             "override_auto_exposure_bias": True,
             "auto_exposure_min_brightness": 1.0,
             "auto_exposure_max_brightness": 1.0,
-            "auto_exposure_bias": 1.2,
+            "auto_exposure_bias": 2.0,
         }
         for name, value in exposure_overrides.items():
             try_set_property(settings, name, value)
@@ -367,6 +389,10 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_GuestHall_Ceiling_LowPressure", (3250, 0, 286), (2500, 560, 20), materials["trim"])
     add_cube("PROP_GuestHall_Camera_MonitorMismatchAnchor", (2600, -282, 220), (36, 20, 28), materials["black"])
     add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"], ("Hotel.Interact.Room203Door",))
+    add_cube("PROP_GuestHall_Room203_LeftDoorJamb", (3784, 272, 122), (14, 12, 244), materials["trim"])
+    add_cube("PROP_GuestHall_Room203_RightDoorJamb", (4056, 272, 122), (14, 12, 244), materials["trim"])
+    add_cube("PROP_GuestHall_Room203_TopDoorJamb", (3920, 272, 245), (286, 12, 14), materials["trim"])
+    add_cube("PROP_GuestHall_Room203_DarkLatchGap", (4042, 266, 122), (8, 8, 188), materials["black"])
     add_cube("PROP_GuestHall_Room203_NumberPlate", (3840, 272, 178), (55, 8, 28), materials["warn_glow"])
     add_cube("LIGHTMESH_GuestHall_Room203DoorPractical", (3775, 268, 212), (96, 8, 24), materials["warn_glow"], ("Hotel.Capture.Readability",))
     add_cube("PROP_GuestHall_ServiceCart_BlockingSightline", (3380, -205, 58), (150, 82, 116), materials["trim"])
@@ -378,16 +404,19 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     # Lighting and atmosphere: final-intent mood direction, still placeholder geometry.
     add_light("LIGHT_FrontDesk_TiredWarmCounter", unreal.RectLight, (-250, -440, 232), (-68, 0, 0), 6500.0, unreal.Color(255, 184, 116, 255), attenuation_radius=1250.0, source_width=360.0, source_height=90.0)
     add_light("LIGHT_FrontDesk_WorkSurfacePracticalFill", unreal.PointLight, (-330, -535, 178), (0, 0, 0), 950.0, unreal.Color(255, 190, 112, 255), ("Hotel.Capture.Readability",), attenuation_radius=520.0)
+    add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 1800.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=860.0)
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 2200.0, unreal.Color(120, 165, 255, 255), attenuation_radius=950.0, source_width=280.0, source_height=240.0)
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 1400.0, unreal.Color(255, 198, 90, 255), attenuation_radius=780.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
+    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 2200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability",), attenuation_radius=920.0)
+    add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability",), attenuation_radius=560.0)
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.ExponentialHeightFog,
         unreal.Vector(2100, 0, 0),
-        unreal.Rotator(0, 0, 0),
+        make_rotator(0, 0, 0),
     )
     fog.set_actor_label("ATMOS_SubtleHotelDustFog")
     add_post_process_volume("PPV_HotelNightShift_ReadableHorrorExposure")
@@ -395,13 +424,13 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     player_start = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.PlayerStart,
         unreal.Vector(-260, -635, 92),
-        unreal.Rotator(0.0, 54.0, 0.0),
+        make_rotator(0.0, 54.0, 0.0),
     )
     player_start.set_actor_label("PLAYERSTART_FrontDesk_FacingPhoneAndMonitor")
 
-    add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (160, -705, 170), (-3, 160, 0), 62.0)
-    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (3600, -150, 165), (-2, 55, 0), 64.0)
-    add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-715, -710, 172), (-4, 50, 0), 66.0)
+    add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-80, -675, 178), (2, 158, 0), 64.0)
+    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
+    add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
 
     if "AMB_LobbyFluorescentHum_v0" in sounds:
         add_audio("AMB_Lobby_FluorescentHum_Source_v0", sounds["AMB_LobbyFluorescentHum_v0"], (-180, -450, 210), True)
