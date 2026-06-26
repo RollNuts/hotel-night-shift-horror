@@ -221,6 +221,7 @@ def add_cube(
     material: unreal.MaterialInterface,
     tags=(),
     mobility=unreal.ComponentMobility.STATIC,
+    no_collision=False,
 ) -> unreal.Actor:
     cube = unreal.EditorAssetLibrary.load_asset("/Engine/BasicShapes/Cube.Cube")
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
@@ -234,6 +235,11 @@ def add_cube(
     component.set_static_mesh(cube)
     component.set_material(0, material)
     component.set_editor_property("mobility", mobility)
+    if no_collision:
+        try:
+            component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        except Exception:
+            pass
     tag_actor(actor, *tags)
     return actor
 
@@ -365,6 +371,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         "trim": ensure_material("M_Hotel_DarkTrim_v0", unreal.LinearColor(0.09, 0.08, 0.075, 1.0), 0.74),
         "desk": ensure_material("M_Hotel_FrontDeskWood_v0", unreal.LinearColor(0.19, 0.11, 0.065, 1.0), 0.68),
         "black": ensure_material("M_Hotel_BlackPlastic_v0", unreal.LinearColor(0.01, 0.012, 0.014, 1.0), 0.55),
+        "paper": ensure_material("M_Hotel_AgedCallSlipPaper_v0", unreal.LinearColor(0.72, 0.64, 0.48, 1.0), 0.81),
+        "button": ensure_material("M_Hotel_PhoneBoneButton_v0", unreal.LinearColor(0.58, 0.54, 0.46, 1.0), 0.62),
         "screen": ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
         "door": ensure_material("M_Hotel_RoomDoorPaint_v0", unreal.LinearColor(0.23, 0.18, 0.13, 1.0), 0.77),
         "warn": ensure_material("M_Hotel_ServiceAmber_v0", unreal.LinearColor(0.75, 0.43, 0.12, 1.0), 0.63),
@@ -402,7 +410,17 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_FrontDesk_Ceiling_LowPressure", (0, 0, 286), (2500, 1600, 20), materials["trim"])
     add_cube("PROP_FrontDesk_Counter_PlayerWorkSurface", (-430, -410, 55), (520, 120, 110), materials["desk"])
     add_cube("PROP_FrontDesk_BackShelf_KeyAndLogSilhouette", (-880, -400, 145), (30, 520, 170), materials["trim"])
-    add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 128), (58, 34, 22), materials["black"], ("Hotel.Interact.Phone",))
+    phone_visual_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual")
+
+    add_cube("PROP_FrontDesk_DeskMat_UnderPhoneAndLog", (-352, -529, 118), (310, 130, 8), materials["trim"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_BaseHeavyOldDeskSet", (-430, -525, 126), (108, 68, 18), materials["black"], ("Hotel.Capture.Readability",))
+    add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 140), (82, 48, 22), materials["black"], ("Hotel.Interact.Phone", "Hotel.Capture.Readability"))
+    add_cube("PROP_FrontDesk_Phone_Keypad_ReadableCue", (-430, -523, 154), (56, 32, 5), materials["button"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_ButtonRowTop", (-430, -535, 160), (44, 5, 4), materials["paper"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_ButtonRowBottom", (-430, -516, 160), (44, 5, 4), materials["paper"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_CradleLeftHook", (-465, -550, 154), (10, 18, 12), materials["trim"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_CradleRightHook", (-395, -550, 154), (10, 18, 12), materials["trim"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_HookSwitch_DepressedCue", (-430, -548, 158), (34, 10, 8), materials["button"], phone_visual_tags, no_collision=True)
     add_cube(
         "PROP_FrontDesk_Phone_ReceiverCue",
         (-430, -558, 150),
@@ -411,11 +429,33 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         ("Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"),
         unreal.ComponentMobility.MOVABLE,
     )
+    add_cube(
+        "PROP_FrontDesk_Phone_ReceiverLeftCap",
+        (-466, -558, 151),
+        (18, 22, 16),
+        materials["black"],
+        ("Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"),
+        unreal.ComponentMobility.MOVABLE,
+    )
+    add_cube(
+        "PROP_FrontDesk_Phone_ReceiverRightCap",
+        (-394, -558, 151),
+        (18, 22, 16),
+        materials["black"],
+        ("Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"),
+        unreal.ComponentMobility.MOVABLE,
+    )
     add_cube("PROP_FrontDesk_Phone_CradleShadow", (-430, -547, 138), (86, 44, 12), materials["trim"])
     add_cube("PROP_FrontDesk_Phone_CoiledCordCue", (-378, -556, 137), (42, 8, 8), materials["trim"])
+    add_cube("PROP_FrontDesk_Phone_CoiledCordLoopA", (-354, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_CoiledCordLoopB", (-336, -560, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_Phone_CoiledCordLoopC", (-318, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
     add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen_glow"], ("Hotel.Interact.Monitor",))
     add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn_glow"], ("Hotel.Interact.ReportLog",))
+    add_cube("PROP_FrontDesk_NightLog_OpenPage_Readable", (-255, -522, 137), (88, 54, 4), materials["paper"], ("Hotel.Capture.Readability",), no_collision=True)
+    add_cube("PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue", (-315, -565, 131), (76, 38, 4), materials["paper"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_CallSlip_Underline203", (-315, -565, 135), (42, 4, 3), materials["warn"], phone_visual_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-320, -548, 176), (72, 18, 18), materials["desk_lamp"], ("Hotel.Capture.Readability",))
     add_cube("AREA_Lobby_GuestAdmissionThreshold", (780, 0, -8), (620, 1280, 16), materials["floor"])
     add_cube("PROP_Lobby_MainGlassDoor_Silhouette", (1080, -250, 110), (28, 270, 220), materials["screen_glow"])
@@ -477,8 +517,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     )
     player_start.set_actor_label("PLAYERSTART_FrontDesk_FacingPhoneAndMonitor")
 
-    add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-80, -675, 178), (2, 158, 0), 64.0)
-    add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-240, -690, 168), (3, 140, 0), 56.0)
+    add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-130, -690, 178), (2, 151, 0), 60.0)
+    add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
     add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
 
