@@ -4,7 +4,7 @@
 
 - Task ID: T2026-0626-FIRST-LOOP-RUNTIME
 - Owner: Codex
-- Status: Implemented, needs in-editor capture proof
+- Status: Implemented; commandlet verify passes; usable visual capture proof pending
 - Product goal: make the first hotel work loop playable in the production hotel map instead of remaining a static map.
 - Hotel area: front desk, surveillance monitor, Room 203 door, report log, guest hallway lighting.
 - Core action affected: answer phone, watch cameras, go to location, refuse/keep door closed, record/report.
@@ -50,8 +50,10 @@
 - Level context: no test room; interactions are anchored to production hotel
   positions and the generation script now adds future-facing hotel Actor tags.
 - Performance: no broad subsystem; one pawn tick line trace and small HUD draw only.
-- Capture readiness: Editor and Game C++ targets build; screenshot/video still
-  blocked by current local UnrealEditor-Cmd startup.
+- Capture readiness: Editor and Game C++ targets build outside the filesystem
+  sandbox; commandlet verification now succeeds after rebuilding the Editor
+  target for arm64. Capture/export reaches PNG output, but current generated
+  PNGs are too dark for Steam-quality visual evidence.
 
 ## Risk And Compliance
 
@@ -61,29 +63,46 @@
 - Security/secret risk: none.
 - Paid tool/asset risk: none.
 - Small-room risk: low; code binds to production hotel anchors/tags, not a test harness.
-- Veripsa Core note: this adds new source/config paths. Core traffic may remain
-  `Unknown` until the app can index this Unreal project surface; that is a
-  coordination signal, not a product review.
+- Veripsa Core note: Core is traffic coordination for touched paths and indexing
+  status only; it is not a product review or an art/gameplay readiness review.
 
 ## Evidence
 
 - Screenshot/video/log path:
-  - Build log: `Build.sh HotelNightShiftHorrorEditor Mac Development ... -NoUBA` succeeded.
+  - Editor build log: `Build.sh HotelNightShiftHorrorEditor Mac Development ... -NoUBA`
+    succeeded outside the filesystem sandbox.
   - Game build log: `Build.sh HotelNightShiftHorror Mac Development ... -NoUBA`
-    succeeded when run outside the filesystem sandbox. The sandboxed attempt
-    compiled and linked, then failed during Xcode `.app` finalization.
-  - Runtime capture: not yet available.
+    succeeded outside the filesystem sandbox.
+  - Runtime capture: capture/export reaches PNG output, but the generated PNGs
+    are too dark for Steam-quality visual evidence.
+  - Capture quality gate: all three camera anchors exported PNG diagnostics,
+    then failed as intended at average luma `1.0/12.0`, average RGB energy
+    `3.1/36.0`, peak RGB energy `39/60`, and visible samples `2/5`.
+  - High-res screenshot path: `AutomationLibrary.take_high_res_screenshot`
+    crashed in commandlet and should not be used as the evidence path.
 - Performance note:
   - Expected runtime cost is low: one first-person pawn, one line trace per tick, timer-based phone ring replay, and HUD text draw.
 - Verification steps:
-  - Built `HotelNightShiftHorrorEditor` successfully with UnrealBuildTool.
-  - Built `HotelNightShiftHorror` Game target successfully with UnrealBuildTool.
+  - Built `HotelNightShiftHorrorEditor` successfully with UnrealBuildTool
+    outside the filesystem sandbox, including the arm64 rebuild needed for
+    commandlet verification.
+  - Built `HotelNightShiftHorror` Game target successfully with UnrealBuildTool
+    outside the filesystem sandbox.
   - Removed Editor-only `GetActorLabel()` runtime dependency after Game target
     compilation exposed it as invalid for product builds.
   - Added Actor tags to the hotel generation script for future regenerated maps;
     current runtime remains compatible with the existing map by using production
     hotel position anchors.
-  - Re-tried Unreal commandlet verification with `-NullRHI`; current local `UnrealEditor-Cmd` startup still blocks before script execution.
+  - Re-ran Unreal commandlet verification with `-NullRHI` after rebuilding the
+    Editor target for arm64; verification now succeeds.
+  - Ran the capture commandlet with rendering enabled; it reaches script
+    execution, writes ignored PNG diagnostics under
+    `Saved/Captures/HotelSpineSlice/`, and fails because the images are too dark
+    for visual evidence.
+  - Confirmed `AutomationLibrary.take_high_res_screenshot` is not a viable
+    commandlet evidence path because it crashed during commandlet capture.
+  - Marked PR #8 ready to trigger the Veripsa Core GitHub App traffic
+    coordination check.
   - Updated placeholder and asset license ledgers for runtime UI/feedback/code.
 
 ## Completion Statement
