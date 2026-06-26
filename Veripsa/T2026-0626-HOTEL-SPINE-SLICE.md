@@ -4,7 +4,7 @@
 
 - Task ID: T2026-0626-HOTEL-SPINE-SLICE
 - Owner: Codex
-- Status: Veripsa Core traffic Unknown
+- Status: Implemented; Veripsa Core traffic coordination Unknown; usable visual capture proof pending
 - Product goal: establish the first production-intent hotel spine for the front-desk-to-room-door loop.
 - Hotel area: front desk, surveillance point, lobby edge, elevator/stair transition, guest hallway, target room door.
 - Core action affected: answer phone, watch cameras, go to location, decide door/open/refuse, record/report.
@@ -46,9 +46,10 @@
 - UI feedback: no UI yet; future work must add work-equipment flavored feedback.
 - Level context: production hotel slice, not `TestHarness`.
 - Performance: expected low geometry cost; requires Unreal runtime stat capture after map opens.
-- Capture readiness: cameras exist and a reusable PNG capture script exists;
-  screenshot/video capture still requires a successful Unreal rendering
-  commandlet or interactive editor session.
+- Capture readiness: cameras exist and the PNG capture script reaches
+  rendering/export, but current generated PNGs are too dark for Steam-quality
+  visual evidence. `AutomationLibrary.take_high_res_screenshot` crashed in
+  commandlet and should not be used as the evidence path.
 
 ## Risk And Compliance
 
@@ -58,37 +59,49 @@
 - Security/secret risk: no credentials or platform tokens introduced.
 - Paid tool/asset risk: none.
 - Small-room risk: low; map is under `/Game/Hotel/Maps` and covers real product areas.
-- Veripsa Core GitHub App traffic result: `Unknown`; Core reported that new
-  Unreal/script paths are not analyzed in main's graph yet. This is a
-  coordination signal about unknown/unindexed paths, not a product-quality
-  judgment.
+- Veripsa Core GitHub App traffic result: `Unknown`; Core traffic is
+  coordination for changed paths and indexing status only. It is not a product
+  review or an art/gameplay readiness review.
 
 ## Evidence
 
 - Screenshot/video/log path:
+  - Build logs: `HotelNightShiftHorrorEditor` and `HotelNightShiftHorror` both
+    succeeded outside the filesystem sandbox.
   - Generation log: Unreal commandlet run for `create_hotel_spine_slice.py` completed with 0 errors and deprecation warnings only.
-  - Verification log: Unreal commandlet run for `verify_hotel_spine_slice.py` completed with 0 errors and deprecation warnings only.
-  - Capture script: `capture_hotel_spine_slice.py` creates PNG evidence from
-    the three in-map `CAPTURE_*` camera actors and performs a nonblack pixel
-    sanity check.
+  - Verification log: Unreal commandlet run for `verify_hotel_spine_slice.py`
+    now succeeds after rebuilding the Editor target for arm64.
+  - Capture script: `capture_hotel_spine_slice.py` reaches rendering/export from
+    the three in-map `CAPTURE_*` camera actors, but the generated PNGs are too
+    dark for Steam-quality visual evidence.
+  - Capture quality gate: all three camera anchors exported PNG diagnostics,
+    then failed as intended at average luma `1.0/12.0`, average RGB energy
+    `3.1/36.0`, peak RGB energy `39/60`, and visible samples `2/5`.
+  - High-res screenshot path: `AutomationLibrary.take_high_res_screenshot`
+    crashed in commandlet and should not be used as the evidence path.
   - Capture target: `Saved/Captures/HotelSpineSlice/` after a valid rendering
-    pass. These captures are evidence artifacts, not source assets.
+    pass. Current captures are provisional diagnostics, not Steam-quality
+    visual evidence or source assets.
 - Performance note: commandlet map load/import completed; runtime stat capture is still required after playable interaction work.
 - Verification steps:
   - Ran Unreal Python generation script.
   - Verified `/Game/Hotel/Maps/L_HotelNightShift_Slice` exists.
   - Verified required hotel actors exist in the map.
   - Ran Python syntax validation for `capture_hotel_spine_slice.py`.
-  - Attempted Unreal capture/verify commandlets after the capture script was
-    added; current local UnrealEditor-Cmd startup is blocked before project
-    script execution. Even `UnrealEditor-Cmd -help` reaches the same macOS
-    service connection warning and then waits. This is an environment/tool
-    startup blocker, not a capture-script result.
+  - Rebuilt the Editor target for arm64, then reran commandlet verification;
+    `verify_hotel_spine_slice.py` now succeeds.
+  - Ran the capture commandlet; the script reaches rendering/export and writes
+    ignored PNG diagnostics under `Saved/Captures/HotelSpineSlice/`, but they
+    are too dark for Steam-quality evidence.
+  - Tried `AutomationLibrary.take_high_res_screenshot`; it crashed in
+    commandlet, so it should not be used as the evidence path.
   - Confirmed the Unreal macOS Metal toolchain path works for Unreal commandlets.
   - Ran public repo safety scan before PR; no non-empty token, local path, or private key match was found in the intended committed files.
   - Confirmed Git LFS filter applies to `.umap`, `.uasset`, and `.wav` paths.
-  - Marked PR #8 ready for review to trigger the Veripsa Core GitHub App.
-  - Read the Veripsa Core PR comment/check; traffic result is `Unknown`.
+  - Marked PR #8 ready to trigger the Veripsa Core GitHub App traffic
+    coordination check.
+  - Read the Veripsa Core PR comment/check; traffic result is `Unknown`, which
+    is a coordination result only and not a product review.
 
 ## Completion Statement
 
