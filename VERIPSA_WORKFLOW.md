@@ -2,7 +2,17 @@
 
 Status: active workflow policy.
 
-Veripsa Core is a development coordination tool only. It is not a runtime service and must not become part of the game.
+Veripsa Core is a GitHub App based development coordination tool. It is not a
+runtime service and must not become part of the game.
+
+Local files under `Veripsa/` are task records for humans and Codex. They are
+not the Core coordination result. The authoritative Core signal is the GitHub
+App check run or PR comment after the pull request is marked "ready for review"
+in GitHub.
+
+Core does not judge product quality, correctness, fun, art direction, or release
+readiness. Core coordinates traffic: changed paths, reservations,
+unknown/unindexed areas, possible collisions, and land-order risk.
 
 ## Codex Decision Frame
 
@@ -10,10 +20,14 @@ Veripsa Core is a development coordination tool only. It is not a runtime servic
 - Do not build: Veripsa-dependent gameplay or unnecessary process overhead.
 - Market reason: coordinated AI work prevents visible quality debt from reaching the Steam page.
 - Unreal reason: maps, Blueprints, materials, widgets, sounds, and VFX are collision-prone binary assets.
-- Solo-dev/low-cost reason: Veripsa should reduce review burden and prevent rework.
-- Art/audio bar: Veripsa tracks missing visual, camera, SFX, ambience, UI, level, performance, and evidence as blockers.
-- No-small-room bar: Veripsa flags test-harness-only work and production-level omissions.
-- Steam quality bar: release tasks require store evidence and rights status.
+- Solo-dev/low-cost reason: Veripsa should reduce coordination burden and prevent rework.
+- Art/audio bar: task records track missing visual, camera, SFX, ambience, UI,
+  level, performance, and evidence; Core may only report coordination status for
+  the files carrying that work.
+- No-small-room bar: task records and PR descriptions must flag test-harness-only
+  work and production-level omissions.
+- Steam quality bar: release tasks require store evidence and rights status;
+  Core only reports traffic state for the changed paths.
 - Veripsa unit: one player-value or release-risk change with scope, non-goals, quality axes, and evidence.
 
 ## Required Task Fields
@@ -38,10 +52,18 @@ Parallel PRs and subagent work are allowed when Veripsa Core can see the planned
 Rules:
 
 - Open separate branches/PRs for independent work.
+- Mark a PR ready for review when the Core coordination signal is needed; a
+  draft PR may not trigger the GitHub App.
+- After Core posts, read the PR check/comment before claiming reservations,
+  unknowns, or collisions are understood.
 - Claim binary Unreal assets before editing.
-- Do not let two agents edit the same map, Blueprint, widget, material, Niagara system, sound cue, or Data Asset unless Veripsa Core explicitly clears the sequence.
-- Treat Veripsa Core recommendations as binding unless the user explicitly overrides them.
-- If Veripsa Core warns about collisions, placeholder debt, missing license review, missing production-level evidence, or small-room drift, stop and resolve the warning before continuing.
+- Do not let two agents edit the same map, Blueprint, widget, material, Niagara system, sound cue, or Data Asset unless the Core coordination signal and human land order allow the sequence.
+- Treat Veripsa Core coordination warnings as binding unless the user explicitly overrides them.
+- Treat `Unknown` as unresolved traffic coordination. Add path evidence, split
+  work, sequence branches, or ask the human to accept the coordination risk
+  before merge.
+- If Veripsa Core reports collisions, reservations, unknown/unindexed paths, or
+  land-order risk, stop and resolve the coordination issue before continuing.
 - Do not merge parallel PRs just because Git can merge text. Product quality, asset ownership, and evidence must be green.
 
 ## Required Labels

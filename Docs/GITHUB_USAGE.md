@@ -32,7 +32,22 @@ Recommended branch naming:
 - `docs/<topic>`
 - `tech/<system>`
 
-Parallel subagent branches are allowed, but Veripsa Core is the coordination authority for collisions, binary asset ownership, placeholder debt, license review, and production-evidence gaps. Do not ignore Core recommendations. If Core flags a conflict, sequence the PRs or split the work.
+Parallel subagent branches are allowed, but Veripsa Core is the GitHub App
+traffic coordinator for changed paths, reservations, unknown/unindexed areas,
+possible collisions, and land-order risk. Core does not judge product quality
+or release readiness. If Core flags a coordination issue, sequence the
+PRs, split the work, or ask the human to accept the risk.
+
+Veripsa Core runs as a GitHub App on ready-for-review PRs. Draft PRs are useful
+for incomplete work, but do not treat a draft PR as Core-coordinated. When the
+Core coordination signal is needed:
+
+- Mark the PR ready for review.
+- Read the Veripsa check run or PR comment on GitHub.
+- Record the Core traffic state in the PR discussion or task record.
+- Treat `Unknown` as unresolved coordination, not as a product-quality
+  judgment and not as a green light. Do not merge until the path/land-order risk
+  is resolved or a human explicitly accepts it.
 
 Each PR should state:
 

@@ -18,6 +18,7 @@ Saved/
 *.user
 *.userosscache
 *.sln.docstates
+Content/Developers/
 
 # Packaged builds and local captures
 Releases/
@@ -46,4 +47,3 @@ PrivateStrategy/
 
 # macOS
 .DS_Store
-
