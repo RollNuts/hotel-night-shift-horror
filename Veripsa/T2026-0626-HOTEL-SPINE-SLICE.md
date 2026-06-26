@@ -4,7 +4,7 @@
 
 - Task ID: T2026-0626-HOTEL-SPINE-SLICE
 - Owner: Codex
-- Status: PR ready
+- Status: Veripsa Core traffic Unknown
 - Product goal: establish the first production-intent hotel spine for the front-desk-to-room-door loop.
 - Hotel area: front desk, surveillance point, lobby edge, elevator/stair transition, guest hallway, target room door.
 - Core action affected: answer phone, watch cameras, go to location, decide door/open/refuse, record/report.
@@ -55,6 +55,10 @@
 - Security/secret risk: no credentials or platform tokens introduced.
 - Paid tool/asset risk: none.
 - Small-room risk: low; map is under `/Game/Hotel/Maps` and covers real product areas.
+- Veripsa Core GitHub App traffic result: `Unknown`; Core reported that new
+  Unreal/script paths are not analyzed in main's graph yet. This is a
+  coordination signal about unknown/unindexed paths, not a product-quality
+  judgment.
 
 ## Evidence
 
@@ -70,6 +74,8 @@
   - Confirmed the Unreal macOS Metal toolchain path works for Unreal commandlets.
   - Ran public repo safety scan before PR; no non-empty token, local path, or private key match was found in the intended committed files.
   - Confirmed Git LFS filter applies to `.umap`, `.uasset`, and `.wav` paths.
+  - Marked PR #8 ready for review to trigger the Veripsa Core GitHub App.
+  - Read the Veripsa Core PR comment/check; traffic result is `Unknown`.
 
 ## Completion Statement
 

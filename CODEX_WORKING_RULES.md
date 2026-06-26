@@ -27,6 +27,11 @@ This is a first-person, single-location, night-shift business hotel horror game.
 - Check placeholder and asset ledger requirements.
 - Check whether a binary Unreal asset needs ownership.
 - Define evidence before implementation.
+- For PR work, trigger Veripsa Core through the GitHub App by marking the PR
+  ready for review when a Core coordination signal is needed.
+- Read the Veripsa GitHub check/comment for traffic state: reservations,
+  unknown/unindexed paths, possible collisions, and land-order risk. Local
+  `Veripsa/` files are task records, not the Core traffic signal.
 
 ## Safe Tool And Asset Rule
 
@@ -56,4 +61,3 @@ Report:
 - Remaining placeholders.
 - License status.
 - Next quality risk.
-
