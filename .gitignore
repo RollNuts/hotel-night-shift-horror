@@ -1,0 +1,49 @@
+# Unreal generated folders
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+.vscode/
+.idea/
+
+# Platform/editor local files
+*.sln
+*.xcodeproj/
+*.xcworkspace/
+*.opensdf
+*.sdf
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Packaged builds and local captures
+Releases/
+Packages/
+Builds/
+Saved/
+Evidence/Captures/
+Evidence/Private/
+
+# Secrets and platform credentials
+.env
+.env.*
+*.p12
+*.mobileprovision
+*.keystore
+*.key
+*.pem
+*.pfx
+SteamworksSDK/
+ConsoleSDK/
+
+# Paid/restricted raw asset drops must stay outside public git unless cleared.
+RestrictedAssets/
+CommercialAssets/
+PrivateStrategy/
+
+# macOS
+.DS_Store
+
