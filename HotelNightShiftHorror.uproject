@@ -3,6 +3,13 @@
 	"EngineAssociation": "5.8",
 	"Category": "Games",
 	"Description": "First-person single-location night-shift business hotel horror game for Steam.",
+	"Modules": [
+		{
+			"Name": "HotelNightShiftHorror",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
 	"Plugins": [
 		{
 			"Name": "EnhancedInput",
