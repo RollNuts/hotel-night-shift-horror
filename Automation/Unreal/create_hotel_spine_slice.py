@@ -73,6 +73,18 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         cable = 0.12 * math.sin(2 * math.pi * 180 * t) if 0.12 <= t <= 0.36 else 0.0
         return 0.48 * click + cable
 
+    def phone_line_static(t: float) -> float:
+        hiss = 0.05 * math.sin(2 * math.pi * 3100 * t) + 0.035 * math.sin(2 * math.pi * 4970 * t)
+        cable = 0.045 * math.sin(2 * math.pi * 126 * t)
+        whisper_gate = 1.0 if 0.35 < t < 1.8 else 0.0
+        whisper = whisper_gate * (0.08 * math.sin(2 * math.pi * 178 * t) + 0.035 * math.sin(2 * math.pi * 221 * t))
+        clicks = 0.0
+        for start in (0.18, 1.92, 2.34):
+            dt = t - start
+            if 0.0 <= dt <= 0.035:
+                clicks += math.exp(-dt * 85.0) * math.sin(2 * math.pi * 920 * dt)
+        return hiss + cable + whisper + 0.34 * clicks
+
     def hallway_drone(t: float) -> float:
         pulse = 0.5 + 0.5 * math.sin(2 * math.pi * 0.11 * t)
         return 0.16 * math.sin(2 * math.pi * 82 * t) + 0.035 * pulse * math.sin(2 * math.pi * 610 * t)
@@ -88,6 +100,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
+        "SFX_PhoneLineStatic_v0": (3.2, phone_line_static),
         "AMB_LobbyFluorescentHum_v0": (6.0, lobby_hum),
         "AMB_GuestHallDrone_v0": (6.0, hallway_drone),
         "SFX_DoorKnock203_v0": (1.4, door_knock),
@@ -201,7 +214,14 @@ def make_rotator(pitch: float, yaw: float, roll: float = 0.0) -> unreal.Rotator:
     return unreal.Rotator(roll, pitch, yaw)
 
 
-def add_cube(label: str, location, size, material: unreal.MaterialInterface, tags=()) -> unreal.Actor:
+def add_cube(
+    label: str,
+    location,
+    size,
+    material: unreal.MaterialInterface,
+    tags=(),
+    mobility=unreal.ComponentMobility.STATIC,
+) -> unreal.Actor:
     cube = unreal.EditorAssetLibrary.load_asset("/Engine/BasicShapes/Cube.Cube")
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.StaticMeshActor,
@@ -213,7 +233,7 @@ def add_cube(label: str, location, size, material: unreal.MaterialInterface, tag
     component = actor.static_mesh_component
     component.set_static_mesh(cube)
     component.set_material(0, material)
-    component.set_editor_property("mobility", unreal.ComponentMobility.STATIC)
+    component.set_editor_property("mobility", mobility)
     tag_actor(actor, *tags)
     return actor
 
@@ -383,7 +403,14 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_Counter_PlayerWorkSurface", (-430, -410, 55), (520, 120, 110), materials["desk"])
     add_cube("PROP_FrontDesk_BackShelf_KeyAndLogSilhouette", (-880, -400, 145), (30, 520, 170), materials["trim"])
     add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 128), (58, 34, 22), materials["black"], ("Hotel.Interact.Phone",))
-    add_cube("PROP_FrontDesk_Phone_ReceiverCue", (-430, -558, 150), (74, 14, 12), materials["black"])
+    add_cube(
+        "PROP_FrontDesk_Phone_ReceiverCue",
+        (-430, -558, 150),
+        (74, 14, 12),
+        materials["black"],
+        ("Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"),
+        unreal.ComponentMobility.MOVABLE,
+    )
     add_cube("PROP_FrontDesk_Phone_CradleShadow", (-430, -547, 138), (86, 44, 12), materials["trim"])
     add_cube("PROP_FrontDesk_Phone_CoiledCordCue", (-378, -556, 137), (42, 8, 8), materials["trim"])
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
@@ -463,6 +490,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:
         add_audio("SFX_PhonePickup_FrontDesk_ManualTrigger_v0", sounds["SFX_PhonePickup_v0"], (-430, -548, 150), False, ("Hotel.Audio.PhonePickup",))
+    if "SFX_PhoneLineStatic_v0" in sounds:
+        add_audio("SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0", sounds["SFX_PhoneLineStatic_v0"], (-438, -552, 154), False, ("Hotel.Audio.PhoneLineStatic",))
     if "SFX_DoorKnock203_v0" in sounds:
         add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False, ("Hotel.Audio.Room203Knock",))
 

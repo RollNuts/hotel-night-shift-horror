@@ -43,6 +43,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hotel Loop")
 	float GetFearPressure() const;
 
+#if WITH_DEV_AUTOMATION_TESTS
+	EHotelLoopStage AutomationGetLoopStage() const;
+	bool AutomationInteractWithActor(AActor* TargetActor);
+	bool AutomationIsPhoneRingTimerActive() const;
+	bool AutomationIsPhoneLineConnected() const;
+	bool AutomationHasPhoneLineSound() const;
+	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
+	float AutomationGetPhoneReceiverLiftAlpha() const;
+	FVector AutomationGetPhoneReceiverLocation() const;
+#endif
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
@@ -53,13 +64,18 @@ private:
 	void Turn(float Value);
 	void LookUp(float Value);
 	void Interact();
+	bool TryInteractWithActor(AActor* TargetActor);
 	void CacheHotelActors();
 	void UpdateLookTarget();
 	void StartPhoneRing();
 	void PlayPhoneRing();
 	void StopPhoneRing();
+	void StartPhoneLineAudio();
+	void StopPhoneLineAudio();
 	void PlayActorSound(AActor* SoundActor) const;
 	void UpdatePhoneRingVisual(float DeltaSeconds);
+	void LiftPhoneReceiver();
+	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
 	void SetPhoneIndicatorIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
@@ -71,6 +87,7 @@ private:
 	bool ActorMatches(const AActor* Actor, const FVector& Anchor, float Radius, FName RequiredTag) const;
 	bool IsActorNear(const AActor* Actor, const FVector& Anchor, float Radius) const;
 	AActor* FindAudioActorNear(const FVector& Anchor, float Radius) const;
+	AActor* FindActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
 	AActor* FindLightActorNear(const FVector& Anchor, float Radius) const;
 
 	UPROPERTY()
@@ -78,6 +95,12 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhonePickupSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PhoneLineSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PhoneReceiverActor;
 
 	UPROPERTY()
 	TObjectPtr<AActor> DoorKnockSoundActor;
@@ -100,6 +123,13 @@ private:
 	FString InteractionPromptText;
 	float FearPressure = 0.0f;
 	float PhoneRingVisualClock = 0.0f;
+	float PhoneReceiverLiftAlpha = 0.0f;
+	FVector PhoneReceiverRestLocation = FVector::ZeroVector;
+	FVector PhoneReceiverLiftLocation = FVector::ZeroVector;
+	FRotator PhoneReceiverRestRotation = FRotator::ZeroRotator;
+	FRotator PhoneReceiverLiftRotation = FRotator::ZeroRotator;
 	int32 PhoneRingCount = 0;
 	bool bMonitorChecked = false;
+	bool bPhoneReceiverLiftActive = false;
+	bool bPhoneLineConnected = false;
 };
