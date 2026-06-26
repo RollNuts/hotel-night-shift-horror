@@ -16,10 +16,14 @@ const FVector Door203Anchor(3920.0f, 302.0f, 120.0f);
 const FVector ReportLogAnchor(-255.0f, -522.0f, 128.0f);
 const FVector PhoneSoundAnchor(-430.0f, -525.0f, 150.0f);
 const FVector PhonePickupSoundAnchor(-430.0f, -548.0f, 150.0f);
+const FVector PhoneLineSoundAnchor(-438.0f, -552.0f, 154.0f);
+const FVector PhoneReceiverAnchor(-430.0f, -558.0f, 150.0f);
 const FVector PhoneIndicatorLightAnchor(-395.0f, -555.0f, 158.0f);
 const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
+const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
+const FName PhoneLineAudioTag(TEXT("Hotel.Audio.PhoneLineStatic"));
 const FName MonitorInteractTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorInteractTag(TEXT("Hotel.Interact.Room203Door"));
 const FName ReportLogInteractTag(TEXT("Hotel.Interact.ReportLog"));
@@ -60,6 +64,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	UpdateLookTarget();
 	UpdatePhoneRingVisual(DeltaSeconds);
+	UpdatePhoneReceiverAnimation(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -98,6 +103,50 @@ float AHotelNightShiftPawn::GetFearPressure() const
 	return FearPressure;
 }
 
+#if WITH_DEV_AUTOMATION_TESTS
+EHotelLoopStage AHotelNightShiftPawn::AutomationGetLoopStage() const
+{
+	return LoopStage;
+}
+
+bool AHotelNightShiftPawn::AutomationInteractWithActor(AActor* TargetActor)
+{
+	return TryInteractWithActor(TargetActor);
+}
+
+bool AHotelNightShiftPawn::AutomationIsPhoneRingTimerActive() const
+{
+	return GetWorldTimerManager().IsTimerActive(PhoneRingTimerHandle);
+}
+
+bool AHotelNightShiftPawn::AutomationIsPhoneLineConnected() const
+{
+	return bPhoneLineConnected;
+}
+
+bool AHotelNightShiftPawn::AutomationHasPhoneLineSound() const
+{
+	const AAmbientSound* PhoneLineSound = Cast<AAmbientSound>(PhoneLineSoundActor);
+	const UAudioComponent* AudioComponent = PhoneLineSound ? PhoneLineSound->GetAudioComponent() : nullptr;
+	return AudioComponent && AudioComponent->Sound;
+}
+
+void AHotelNightShiftPawn::AutomationAdvancePhoneReceiver(float DeltaSeconds)
+{
+	UpdatePhoneReceiverAnimation(DeltaSeconds);
+}
+
+float AHotelNightShiftPawn::AutomationGetPhoneReceiverLiftAlpha() const
+{
+	return PhoneReceiverLiftAlpha;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetPhoneReceiverLocation() const
+{
+	return PhoneReceiverActor ? PhoneReceiverActor->GetActorLocation() : FVector::ZeroVector;
+}
+#endif
+
 void AHotelNightShiftPawn::MoveForward(float Value)
 {
 	if (!FMath::IsNearlyZero(Value))
@@ -129,29 +178,37 @@ void AHotelNightShiftPawn::LookUp(float Value)
 
 void AHotelNightShiftPawn::Interact()
 {
-	if (!CurrentLookActor)
+	TryInteractWithActor(CurrentLookActor);
+}
+
+bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
+{
+	if (!TargetActor)
 	{
-		return;
+		return false;
 	}
 
-	if (ActorMatches(CurrentLookActor, PhoneAnchor, 90.0f, PhoneInteractTag) && LoopStage == EHotelLoopStage::PhoneRinging)
+	if (ActorMatches(TargetActor, PhoneAnchor, 90.0f, PhoneInteractTag) && LoopStage == EHotelLoopStage::PhoneRinging)
 	{
 		StopPhoneRing();
+		LiftPhoneReceiver();
 		PlayActorSound(PhonePickupSoundActor);
+		StartPhoneLineAudio();
 		SetPhoneIndicatorIntensity(96.0f);
 
 		SetWorkState(
 			EHotelLoopStage::RequestKnown,
 			TEXT("Room 203 request: check the monitor before you leave the desk."),
-			TEXT("Caller: 'Room 203. Do not open unless the hallway camera agrees.'"),
+			TEXT("The receiver clicks open. A thin voice says: 'Room 203. Do not open unless the hallway camera agrees.'"),
 			TEXT("DESK LINE: CONNECTED / ROOM 203"),
 			0.34f);
-		return;
+		return true;
 	}
 
-	if (ActorMatches(CurrentLookActor, MonitorAnchor, 130.0f, MonitorInteractTag) && LoopStage == EHotelLoopStage::RequestKnown)
+	if (ActorMatches(TargetActor, MonitorAnchor, 130.0f, MonitorInteractTag) && LoopStage == EHotelLoopStage::RequestKnown)
 	{
 		bMonitorChecked = true;
+		StopPhoneLineAudio();
 		PulseHallLight(85.0f);
 		SetWorkState(
 			EHotelLoopStage::MonitorChecked,
@@ -159,11 +216,11 @@ void AHotelNightShiftPawn::Interact()
 			TEXT("Monitor feed: empty hallway. The call says that should be impossible."),
 			TEXT("DESK LINE: HOLDING / CAMERA MISMATCH"),
 			0.54f);
-		return;
+		return true;
 	}
 
 	if (
-		ActorMatches(CurrentLookActor, Door203Anchor, 190.0f, Room203DoorInteractTag)
+		ActorMatches(TargetActor, Door203Anchor, 190.0f, Room203DoorInteractTag)
 		&& (LoopStage == EHotelLoopStage::RequestKnown || LoopStage == EHotelLoopStage::MonitorChecked))
 	{
 		PlayActorSound(DoorKnockSoundActor);
@@ -176,27 +233,41 @@ void AHotelNightShiftPawn::Interact()
 				: TEXT("Room 203 knocks before you checked the camera. That mistake now matters."),
 			TEXT("DESK LINE: SILENT / REFUSAL PENDING"),
 			0.76f);
-		return;
+		return true;
 	}
 
-	if (ActorMatches(CurrentLookActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused)
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused)
 	{
+		StopPhoneLineAudio();
 		SetWorkState(
 			EHotelLoopStage::ReportFiled,
 			TEXT("Entry filed. Stay at the desk and wait for the next call."),
 			TEXT("Night log: 203 refused, hallway camera mismatch, knock confirmed."),
 			TEXT("DESK LINE: CLOSED / INCIDENT LOGGED"),
 			0.63f);
+		return true;
 	}
+
+	return false;
 }
 
 void AHotelNightShiftPawn::CacheHotelActors()
 {
 	PhoneRingSoundActor = FindAudioActorNear(PhoneSoundAnchor, 90.0f);
 	PhonePickupSoundActor = FindAudioActorNear(PhonePickupSoundAnchor, 80.0f);
+	PhoneLineSoundActor = FindActorWithTagNear(PhoneLineAudioTag, PhoneLineSoundAnchor, 90.0f);
+	PhoneReceiverActor = FindActorWithTagNear(PhoneReceiverTag, PhoneReceiverAnchor, 120.0f);
 	DoorKnockSoundActor = FindAudioActorNear(DoorKnockSoundAnchor, 140.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
+
+	if (PhoneReceiverActor)
+	{
+		PhoneReceiverRestLocation = PhoneReceiverActor->GetActorLocation();
+		PhoneReceiverRestRotation = PhoneReceiverActor->GetActorRotation();
+		PhoneReceiverLiftLocation = PhoneReceiverRestLocation + FVector(48.0f, -20.0f, 28.0f);
+		PhoneReceiverLiftRotation = PhoneReceiverRestRotation + FRotator(-18.0f, 6.0f, -24.0f);
+	}
 }
 
 void AHotelNightShiftPawn::UpdateLookTarget()
@@ -286,6 +357,31 @@ void AHotelNightShiftPawn::StopPhoneRing()
 	}
 }
 
+void AHotelNightShiftPawn::StartPhoneLineAudio()
+{
+	bPhoneLineConnected = true;
+	if (AAmbientSound* PhoneLineSound = Cast<AAmbientSound>(PhoneLineSoundActor))
+	{
+		if (UAudioComponent* AudioComponent = PhoneLineSound->GetAudioComponent())
+		{
+			AudioComponent->Stop();
+			AudioComponent->Play();
+		}
+	}
+}
+
+void AHotelNightShiftPawn::StopPhoneLineAudio()
+{
+	bPhoneLineConnected = false;
+	if (AAmbientSound* PhoneLineSound = Cast<AAmbientSound>(PhoneLineSoundActor))
+	{
+		if (UAudioComponent* AudioComponent = PhoneLineSound->GetAudioComponent())
+		{
+			AudioComponent->Stop();
+		}
+	}
+}
+
 void AHotelNightShiftPawn::PlayActorSound(AActor* SoundActor) const
 {
 	const AAmbientSound* AmbientSound = Cast<AAmbientSound>(SoundActor);
@@ -311,6 +407,39 @@ void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
 	PhoneRingVisualClock += DeltaSeconds;
 	const float Pulse = 0.5f + 0.5f * FMath::Sin(PhoneRingVisualClock * 7.2f);
 	SetPhoneIndicatorIntensity(120.0f + Pulse * 920.0f);
+}
+
+void AHotelNightShiftPawn::LiftPhoneReceiver()
+{
+	if (!PhoneReceiverActor)
+	{
+		return;
+	}
+
+	bPhoneReceiverLiftActive = true;
+	PhoneReceiverLiftAlpha = 0.0f;
+}
+
+void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
+{
+	if (!bPhoneReceiverLiftActive || !PhoneReceiverActor)
+	{
+		return;
+	}
+
+	PhoneReceiverLiftAlpha = FMath::Clamp(PhoneReceiverLiftAlpha + DeltaSeconds / 0.42f, 0.0f, 1.0f);
+	const float Ease = FMath::InterpEaseInOut(0.0f, 1.0f, PhoneReceiverLiftAlpha, 2.0f);
+	const FVector NewLocation = FMath::Lerp(PhoneReceiverRestLocation, PhoneReceiverLiftLocation, Ease);
+	const FQuat NewRotation = FQuat::Slerp(
+		PhoneReceiverRestRotation.Quaternion(),
+		PhoneReceiverLiftRotation.Quaternion(),
+		Ease);
+	PhoneReceiverActor->SetActorLocationAndRotation(NewLocation, NewRotation.Rotator());
+
+	if (PhoneReceiverLiftAlpha >= 1.0f)
+	{
+		bPhoneReceiverLiftActive = false;
+	}
 }
 
 void AHotelNightShiftPawn::SetPhoneIndicatorIntensity(float NewIntensity)
@@ -370,6 +499,20 @@ AActor* AHotelNightShiftPawn::FindAudioActorNear(const FVector& Anchor, float Ra
 	for (AActor* Actor : Actors)
 	{
 		if (IsActorNear(Actor, Anchor, Radius))
+		{
+			return Actor;
+		}
+	}
+	return nullptr;
+}
+
+AActor* AHotelNightShiftPawn::FindActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const
+{
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(this, AActor::StaticClass(), Actors);
+	for (AActor* Actor : Actors)
+	{
+		if (Actor && Actor->ActorHasTag(RequiredTag) && IsActorNear(Actor, Anchor, Radius))
 		{
 			return Actor;
 		}
