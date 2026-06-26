@@ -64,6 +64,15 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         slow = math.sin(2 * math.pi * 0.17 * t) * 0.08
         return 0.18 * math.sin(2 * math.pi * 60 * t) + 0.06 * math.sin(2 * math.pi * 120 * t) + slow
 
+    def phone_pickup(t: float) -> float:
+        click = 0.0
+        for start, pitch in ((0.025, 840), (0.105, 360), (0.205, 1200)):
+            dt = t - start
+            if 0.0 <= dt <= 0.055:
+                click += math.exp(-dt * 55.0) * math.sin(2 * math.pi * pitch * dt)
+        cable = 0.12 * math.sin(2 * math.pi * 180 * t) if 0.12 <= t <= 0.36 else 0.0
+        return 0.48 * click + cable
+
     def hallway_drone(t: float) -> float:
         pulse = 0.5 + 0.5 * math.sin(2 * math.pi * 0.11 * t)
         return 0.16 * math.sin(2 * math.pi * 82 * t) + 0.035 * pulse * math.sin(2 * math.pi * 610 * t)
@@ -78,6 +87,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
 
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
+        "SFX_PhonePickup_v0": (0.45, phone_pickup),
         "AMB_LobbyFluorescentHum_v0": (6.0, lobby_hum),
         "AMB_GuestHallDrone_v0": (6.0, hallway_drone),
         "SFX_DoorKnock203_v0": (1.4, door_knock),
@@ -95,7 +105,12 @@ def import_audio(source_paths: dict[str, pathlib.Path]) -> dict[str, unreal.Soun
     tasks = []
     sounds: dict[str, unreal.SoundWave] = {}
     for name, path in source_paths.items():
-        existing_asset = unreal.EditorAssetLibrary.load_asset(f"/Game/Hotel/Audio/{name}")
+        asset_path = f"/Game/Hotel/Audio/{name}"
+        existing_asset = (
+            unreal.EditorAssetLibrary.load_asset(asset_path)
+            if unreal.EditorAssetLibrary.does_asset_exist(asset_path)
+            else None
+        )
         if existing_asset:
             sounds[name] = existing_asset
             continue
@@ -369,6 +384,9 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_BackShelf_KeyAndLogSilhouette", (-880, -400, 145), (30, 520, 170), materials["trim"])
     add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 128), (58, 34, 22), materials["black"], ("Hotel.Interact.Phone",))
     add_cube("PROP_FrontDesk_Phone_ReceiverCue", (-430, -558, 150), (74, 14, 12), materials["black"])
+    add_cube("PROP_FrontDesk_Phone_CradleShadow", (-430, -547, 138), (86, 44, 12), materials["trim"])
+    add_cube("PROP_FrontDesk_Phone_CoiledCordCue", (-378, -556, 137), (42, 8, 8), materials["trim"])
+    add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
     add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen_glow"], ("Hotel.Interact.Monitor",))
     add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn_glow"], ("Hotel.Interact.ReportLog",))
     add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-320, -548, 176), (72, 18, 18), materials["desk_lamp"], ("Hotel.Capture.Readability",))
@@ -377,6 +395,9 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_Lobby_MainGlassDoor_RefuseLine", (1080, 250, 110), (28, 270, 220), materials["screen_glow"])
 
     # Controlled transition from work hub to guest-floor response.
+    add_cube("AREA_Transition_CarpetRun_ToGuestHall_NoVoid", (1625, 0, -9), (750, 560, 18), materials["floor"])
+    add_cube("AREA_Transition_LeftSightlineWall_ToGuestHall", (1625, -290, 140), (750, 24, 280), materials["wall"])
+    add_cube("AREA_Transition_RightSightlineWall_ToGuestHall", (1625, 290, 140), (750, 24, 280), materials["wall"])
     add_cube("TRANSITION_Elevator_Door_AudibleBeforeSeen", (1160, 565, 120), (34, 280, 240), materials["door"])
     add_cube("TRANSITION_Elevator_CallPanel_SoundCueAnchor", (1125, 385, 120), (12, 30, 80), materials["warn_glow"])
     add_cube("TRANSITION_EmergencyStair_Door_AlternateRoute", (1160, -565, 120), (34, 280, 240), materials["door"])
@@ -404,6 +425,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     # Lighting and atmosphere: final-intent mood direction, still placeholder geometry.
     add_light("LIGHT_FrontDesk_TiredWarmCounter", unreal.RectLight, (-250, -440, 232), (-68, 0, 0), 6500.0, unreal.Color(255, 184, 116, 255), attenuation_radius=1250.0, source_width=360.0, source_height=90.0)
     add_light("LIGHT_FrontDesk_WorkSurfacePracticalFill", unreal.PointLight, (-330, -535, 178), (0, 0, 0), 950.0, unreal.Color(255, 190, 112, 255), ("Hotel.Capture.Readability",), attenuation_radius=520.0)
+    add_light("LIGHT_FrontDesk_PhoneCallLampPulse", unreal.PointLight, (-395, -555, 158), (0, 0, 0), 280.0, unreal.Color(255, 168, 72, 255), ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"), attenuation_radius=220.0)
     add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 1800.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=860.0)
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 2200.0, unreal.Color(120, 165, 255, 255), attenuation_radius=950.0, source_width=280.0, source_height=240.0)
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 1400.0, unreal.Color(255, 198, 90, 255), attenuation_radius=780.0)
@@ -429,6 +451,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     player_start.set_actor_label("PLAYERSTART_FrontDesk_FacingPhoneAndMonitor")
 
     add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-80, -675, 178), (2, 158, 0), 64.0)
+    add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-240, -690, 168), (3, 140, 0), 56.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
     add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
 
@@ -438,6 +461,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("AMB_GuestHall_Drone_Source_v0", sounds["AMB_GuestHallDrone_v0"], (3380, 0, 210), True)
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
+    if "SFX_PhonePickup_v0" in sounds:
+        add_audio("SFX_PhonePickup_FrontDesk_ManualTrigger_v0", sounds["SFX_PhonePickup_v0"], (-430, -548, 150), False, ("Hotel.Audio.PhonePickup",))
     if "SFX_DoorKnock203_v0" in sounds:
         add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False, ("Hotel.Audio.Room203Knock",))
 
