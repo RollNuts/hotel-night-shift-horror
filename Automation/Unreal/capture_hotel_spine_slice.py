@@ -22,6 +22,24 @@ CAPTURE_CAMERAS = [
     ("CAPTURE_MonitorToHall_MismatchCandidate", "monitor_to_hall_mismatch.png"),
 ]
 
+CAPTURE_ATTEMPTS = [
+    (
+        "scene_color_hdr_legacy",
+        unreal.SceneCaptureSource.SCS_SCENE_COLOR_HDR,
+        unreal.SceneCapturePrimitiveRenderMode.PRM_LEGACY_SCENE_CAPTURE,
+    ),
+    (
+        "final_color_ldr_legacy",
+        unreal.SceneCaptureSource.SCS_FINAL_COLOR_LDR,
+        unreal.SceneCapturePrimitiveRenderMode.PRM_LEGACY_SCENE_CAPTURE,
+    ),
+    (
+        "final_color_ldr_scene_primitives",
+        unreal.SceneCaptureSource.SCS_FINAL_COLOR_LDR,
+        unreal.SceneCapturePrimitiveRenderMode.PRM_RENDER_SCENE_PRIMITIVES,
+    ),
+]
+
 SAMPLE_X_FRACTIONS = (0.15, 0.3, 0.5, 0.7, 0.85)
 SAMPLE_Y_FRACTIONS = (0.2, 0.35, 0.5, 0.65, 0.8)
 MIN_AVERAGE_LUMA = 12.0
@@ -138,6 +156,28 @@ def dark_frame_error(camera_label: str, output_path: str, metrics) -> str:
     )
 
 
+def apply_capture_attempt_settings(capture_component, capture_source, primitive_render_mode) -> None:
+    set_property(capture_component, "capture_every_frame", False)
+    set_property(capture_component, "capture_on_movement", False)
+    set_property(capture_component, "always_persist_rendering_state", True)
+    set_property(capture_component, "capture_source", capture_source)
+    set_property(capture_component, "primitive_render_mode", primitive_render_mode)
+    set_property(capture_component, "use_ray_tracing_if_enabled", False)
+
+
+def warm_capture_scene(capture_component, world, render_target):
+    # Commandlet rendering can leave the first SceneCapture frame stale. Two
+    # captures plus pixel reads force the render target to settle before export.
+    for _ in range(2):
+        unreal.RenderingLibrary.clear_render_target2d(
+            world,
+            render_target,
+            unreal.LinearColor(0.0, 0.0, 0.0, 1.0),
+        )
+        capture_component.capture_scene()
+        unreal.RenderingLibrary.read_render_target_pixel(world, render_target, WIDTH // 2, HEIGHT // 2)
+
+
 def capture_camera(world, camera_actor, filename: str):
     render_target = unreal.RenderingLibrary.create_render_target2d(
         world,
@@ -170,41 +210,50 @@ def capture_camera(world, camera_actor, filename: str):
             pass
 
     set_property(capture_component, "texture_target", render_target)
-    set_property(capture_component, "capture_every_frame", False)
-    set_property(capture_component, "capture_on_movement", False)
-    set_property(capture_component, "capture_source", unreal.SceneCaptureSource.SCS_FINAL_COLOR_LDR)
-    set_property(capture_component, "primitive_render_mode", unreal.SceneCapturePrimitiveRenderMode.PRM_RENDER_SCENE_PRIMITIVES)
 
-    unreal.RenderingLibrary.clear_render_target2d(
-        world,
-        render_target,
-        unreal.LinearColor(0.0, 0.0, 0.0, 1.0),
-    )
-    capture_component.capture_scene()
+    chosen_attempt = None
+    chosen_metrics = None
+    chosen_dark_frame_message = None
+    for attempt_name, capture_source, primitive_render_mode in CAPTURE_ATTEMPTS:
+        apply_capture_attempt_settings(capture_component, capture_source, primitive_render_mode)
+        warm_capture_scene(capture_component, world, render_target)
+        samples = sample_render_target(world, render_target)
+        metrics = capture_quality_metrics(samples)
+        unreal.log(
+            f"[HotelSpineCapture] {camera_actor.get_actor_label()} attempt {attempt_name}: "
+            f"average luma {metrics['average_luma']:.1f}, "
+            f"average RGB energy {metrics['average_rgb_energy']:.1f}, "
+            f"peak RGB energy {metrics['peak_rgb_energy']}, "
+            f"visible samples {metrics['visible_sample_count']}/{metrics['sample_count']}"
+        )
+        chosen_attempt = attempt_name
+        chosen_metrics = metrics
+        if not is_too_dark_for_visual_evidence(metrics):
+            chosen_dark_frame_message = None
+            break
 
-    samples = sample_render_target(world, render_target)
-    metrics = capture_quality_metrics(samples)
+    if chosen_metrics is None or chosen_attempt is None:
+        fail(f"No capture attempts ran for {camera_actor.get_actor_label()}.")
 
     unreal.RenderingLibrary.export_render_target(world, render_target, CAPTURE_DIR, filename)
     output_path = os.path.join(CAPTURE_DIR, filename)
     if not os.path.exists(output_path):
         fail(f"Missing exported PNG: {output_path}")
 
-    dark_frame_message = None
-    if is_too_dark_for_visual_evidence(metrics):
-        dark_frame_message = dark_frame_error(camera_actor.get_actor_label(), output_path, metrics)
-    if not dark_frame_message and os.path.getsize(output_path) < 4096:
+    if is_too_dark_for_visual_evidence(chosen_metrics):
+        chosen_dark_frame_message = dark_frame_error(camera_actor.get_actor_label(), output_path, chosen_metrics)
+    if not chosen_dark_frame_message and os.path.getsize(output_path) < 4096:
         fail(f"Exported PNG is unexpectedly small: {output_path}")
 
     unreal.EditorLevelLibrary.destroy_actor(capture_actor)
     unreal.log(
-        f"[HotelSpineCapture] Wrote {output_path} "
-        f"(average luma {metrics['average_luma']:.1f}, "
-        f"average RGB energy {metrics['average_rgb_energy']:.1f}, "
-        f"peak RGB energy {metrics['peak_rgb_energy']}, "
-        f"visible samples {metrics['visible_sample_count']}/{metrics['sample_count']})"
+        f"[HotelSpineCapture] Wrote {output_path} from {chosen_attempt} "
+        f"(average luma {chosen_metrics['average_luma']:.1f}, "
+        f"average RGB energy {chosen_metrics['average_rgb_energy']:.1f}, "
+        f"peak RGB energy {chosen_metrics['peak_rgb_energy']}, "
+        f"visible samples {chosen_metrics['visible_sample_count']}/{chosen_metrics['sample_count']})"
     )
-    return output_path, dark_frame_message
+    return output_path, chosen_dark_frame_message
 
 
 unreal.EditorLevelLibrary.load_level(MAP_PATH)

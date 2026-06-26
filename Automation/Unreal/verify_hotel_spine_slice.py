@@ -16,6 +16,8 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Materials/M_Hotel_WornFloor_v0",
     "/Game/Hotel/Materials/M_Hotel_AgedWall_v0",
     "/Game/Hotel/Materials/M_Hotel_RoomDoorPaint_v0",
+    "/Game/Hotel/Materials/M_Hotel_FluorescentPanelGlow_v0",
+    "/Game/Hotel/Materials/M_Hotel_MonitorGreenGlow_v0",
 ]
 
 REQUIRED_ACTOR_LABELS = [
@@ -23,6 +25,7 @@ REQUIRED_ACTOR_LABELS = [
     "PROP_FrontDesk_Phone_AnswerLoopPlaceholder",
     "PROP_Surveillance_Monitor_PlayerChecksHall",
     "PROP_ReportLog_ReturnAndRecordPoint",
+    "AREA_FrontDesk_Ceiling_LowPressure",
     "TRANSITION_Elevator_Door_AudibleBeforeSeen",
     "TRANSITION_EmergencyStair_Door_AlternateRoute",
     "AREA_GuestHall_Floor_OneDoorSlice",
@@ -34,6 +37,12 @@ REQUIRED_ACTOR_LABELS = [
     "CAPTURE_FrontDesk_FirstSteamShotCandidate",
     "CAPTURE_GuestDoor_15SecondBeatCandidate",
     "CAPTURE_MonitorToHall_MismatchCandidate",
+    "LIGHTMESH_FrontDesk_OverheadFluorescent",
+    "LIGHTMESH_GuestHall_FluorescentPanelA",
+    "LIGHTMESH_GuestHall_FluorescentPanelB",
+    "LIGHT_FrontDesk_WorkSurfacePracticalFill",
+    "LIGHT_GuestHall_Room203PlatePractical",
+    "PPV_HotelNightShift_ReadableHorrorExposure",
 ]
 
 
