@@ -8,6 +8,17 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/AmbientSound.h"
 
+namespace
+{
+const FVector PhoneAnchor(-430.0f, -525.0f, 128.0f);
+const FVector MonitorAnchor(-620.0f, -525.0f, 160.0f);
+const FVector Door203Anchor(3920.0f, 302.0f, 120.0f);
+const FVector ReportLogAnchor(-255.0f, -522.0f, 128.0f);
+const FVector PhoneSoundAnchor(-430.0f, -525.0f, 150.0f);
+const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
+const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
+}
+
 AHotelNightShiftPawn::AHotelNightShiftPawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -110,8 +121,7 @@ void AHotelNightShiftPawn::Interact()
 		return;
 	}
 
-	const FString TargetLabel = CurrentLookActor->GetActorLabel();
-	if (TargetLabel.Contains(TEXT("Phone")) && LoopStage == EHotelLoopStage::PhoneRinging)
+	if (IsActorNear(CurrentLookActor, PhoneAnchor, 90.0f) && LoopStage == EHotelLoopStage::PhoneRinging)
 	{
 		GetWorldTimerManager().ClearTimer(PhoneRingTimerHandle);
 		if (AAmbientSound* PhoneSound = Cast<AAmbientSound>(PhoneRingSoundActor))
@@ -130,7 +140,7 @@ void AHotelNightShiftPawn::Interact()
 		return;
 	}
 
-	if (TargetLabel.Contains(TEXT("Monitor")) && LoopStage >= EHotelLoopStage::RequestKnown)
+	if (IsActorNear(CurrentLookActor, MonitorAnchor, 130.0f) && LoopStage >= EHotelLoopStage::RequestKnown)
 	{
 		bMonitorChecked = true;
 		PulseHallLight(85.0f);
@@ -142,7 +152,7 @@ void AHotelNightShiftPawn::Interact()
 		return;
 	}
 
-	if (TargetLabel.Contains(TEXT("RoomDoor203")) && LoopStage >= EHotelLoopStage::RequestKnown)
+	if (IsActorNear(CurrentLookActor, Door203Anchor, 190.0f) && LoopStage >= EHotelLoopStage::RequestKnown)
 	{
 		PlayActorSound(DoorKnockSoundActor);
 		PulseHallLight(24.0f);
@@ -156,7 +166,7 @@ void AHotelNightShiftPawn::Interact()
 		return;
 	}
 
-	if (TargetLabel.Contains(TEXT("ReportLog")) && LoopStage == EHotelLoopStage::DoorRefused)
+	if (IsActorNear(CurrentLookActor, ReportLogAnchor, 120.0f) && LoopStage == EHotelLoopStage::DoorRefused)
 	{
 		SetWorkState(
 			EHotelLoopStage::ReportFiled,
@@ -168,9 +178,9 @@ void AHotelNightShiftPawn::Interact()
 
 void AHotelNightShiftPawn::CacheHotelActors()
 {
-	PhoneRingSoundActor = FindActorByLabelFragment(TEXT("PhoneRing_FrontDesk"));
-	DoorKnockSoundActor = FindActorByLabelFragment(TEXT("DoorKnock203"));
-	HallTargetLightActor = FindActorByLabelFragment(TEXT("LIGHT_GuestHall_WeakFluorescentB_TargetDoor"));
+	PhoneRingSoundActor = FindAudioActorNear(PhoneSoundAnchor, 90.0f);
+	DoorKnockSoundActor = FindAudioActorNear(DoorKnockSoundAnchor, 140.0f);
+	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 }
 
 void AHotelNightShiftPawn::UpdateLookTarget()
@@ -194,23 +204,22 @@ void AHotelNightShiftPawn::UpdateLookTarget()
 		return;
 	}
 
-	const FString Label = HitActor->GetActorLabel();
-	if (Label.Contains(TEXT("Phone")) && LoopStage == EHotelLoopStage::PhoneRinging)
+	if (IsActorNear(HitActor, PhoneAnchor, 90.0f) && LoopStage == EHotelLoopStage::PhoneRinging)
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Answer phone");
 	}
-	else if (Label.Contains(TEXT("Monitor")) && LoopStage >= EHotelLoopStage::RequestKnown)
+	else if (IsActorNear(HitActor, MonitorAnchor, 130.0f) && LoopStage >= EHotelLoopStage::RequestKnown)
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Check camera feed");
 	}
-	else if (Label.Contains(TEXT("RoomDoor203")) && LoopStage >= EHotelLoopStage::RequestKnown)
+	else if (IsActorNear(HitActor, Door203Anchor, 190.0f) && LoopStage >= EHotelLoopStage::RequestKnown)
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Refuse and keep closed");
 	}
-	else if (Label.Contains(TEXT("ReportLog")) && LoopStage == EHotelLoopStage::DoorRefused)
+	else if (IsActorNear(HitActor, ReportLogAnchor, 120.0f) && LoopStage == EHotelLoopStage::DoorRefused)
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Record incident");
@@ -271,13 +280,32 @@ void AHotelNightShiftPawn::SetWorkState(
 	FearPressure = NewFearPressure;
 }
 
-AActor* AHotelNightShiftPawn::FindActorByLabelFragment(const FString& LabelFragment) const
+bool AHotelNightShiftPawn::IsActorNear(const AActor* Actor, const FVector& Anchor, float Radius) const
+{
+	return Actor && FVector::DistSquared(Actor->GetActorLocation(), Anchor) <= FMath::Square(Radius);
+}
+
+AActor* AHotelNightShiftPawn::FindAudioActorNear(const FVector& Anchor, float Radius) const
+{
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(this, AAmbientSound::StaticClass(), Actors);
+	for (AActor* Actor : Actors)
+	{
+		if (IsActorNear(Actor, Anchor, Radius))
+		{
+			return Actor;
+		}
+	}
+	return nullptr;
+}
+
+AActor* AHotelNightShiftPawn::FindLightActorNear(const FVector& Anchor, float Radius) const
 {
 	TArray<AActor*> Actors;
 	UGameplayStatics::GetAllActorsOfClass(this, AActor::StaticClass(), Actors);
 	for (AActor* Actor : Actors)
 	{
-		if (Actor && Actor->GetActorLabel().Contains(LabelFragment))
+		if (IsActorNear(Actor, Anchor, Radius) && Actor->FindComponentByClass<ULightComponent>())
 		{
 			return Actor;
 		}

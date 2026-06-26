@@ -151,7 +151,13 @@ def prepare_level() -> None:
         unreal.EditorLevelLibrary.new_level(MAP_PATH)
 
 
-def add_cube(label: str, location, size, material: unreal.MaterialInterface) -> unreal.Actor:
+def tag_actor(actor: unreal.Actor, *tags: str) -> None:
+    if not tags:
+        return
+    actor.tags = [unreal.Name(tag) for tag in tags]
+
+
+def add_cube(label: str, location, size, material: unreal.MaterialInterface, tags=()) -> unreal.Actor:
     cube = unreal.EditorAssetLibrary.load_asset("/Engine/BasicShapes/Cube.Cube")
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.StaticMeshActor,
@@ -164,10 +170,11 @@ def add_cube(label: str, location, size, material: unreal.MaterialInterface) -> 
     component.set_static_mesh(cube)
     component.set_material(0, material)
     component.set_editor_property("mobility", unreal.ComponentMobility.STATIC)
+    tag_actor(actor, *tags)
     return actor
 
 
-def add_light(label: str, cls, location, rotation, intensity: float, color: unreal.Color):
+def add_light(label: str, cls, location, rotation, intensity: float, color: unreal.Color, tags=()):
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         cls,
         unreal.Vector(*location),
@@ -180,6 +187,7 @@ def add_light(label: str, cls, location, rotation, intensity: float, color: unre
     component = actor.get_editor_property(component_name)
     component.set_editor_property("intensity", intensity)
     component.set_editor_property("light_color", color)
+    tag_actor(actor, *tags)
     return actor
 
 
@@ -193,7 +201,7 @@ def add_camera(label: str, location, rotation) -> unreal.Actor:
     return actor
 
 
-def add_audio(label: str, sound: unreal.SoundWave, location, auto_activate: bool) -> unreal.Actor:
+def add_audio(label: str, sound: unreal.SoundWave, location, auto_activate: bool, tags=()) -> unreal.Actor:
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.AmbientSound,
         unreal.Vector(*location),
@@ -203,6 +211,7 @@ def add_audio(label: str, sound: unreal.SoundWave, location, auto_activate: bool
     component = actor.get_editor_property("audio_component")
     component.set_editor_property("sound", sound)
     component.set_editor_property("auto_activate", auto_activate)
+    tag_actor(actor, *tags)
     return actor
 
 
@@ -227,10 +236,10 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_FrontDesk_RightWall_ServiceEdge", (0, 790, 140), (2500, 24, 280), materials["wall"])
     add_cube("PROP_FrontDesk_Counter_PlayerWorkSurface", (-430, -410, 55), (520, 120, 110), materials["desk"])
     add_cube("PROP_FrontDesk_BackShelf_KeyAndLogSilhouette", (-880, -400, 145), (30, 520, 170), materials["trim"])
-    add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 128), (58, 34, 22), materials["black"])
+    add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 128), (58, 34, 22), materials["black"], ("Hotel.Interact.Phone",))
     add_cube("PROP_FrontDesk_Phone_ReceiverCue", (-430, -558, 150), (74, 14, 12), materials["black"])
-    add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen"])
-    add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn"])
+    add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen"], ("Hotel.Interact.Monitor",))
+    add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn"], ("Hotel.Interact.ReportLog",))
     add_cube("AREA_Lobby_GuestAdmissionThreshold", (780, 0, -8), (620, 1280, 16), materials["floor"])
     add_cube("PROP_Lobby_MainGlassDoor_Silhouette", (1080, -250, 110), (28, 270, 220), materials["screen"])
     add_cube("PROP_Lobby_MainGlassDoor_RefuseLine", (1080, 250, 110), (28, 270, 220), materials["screen"])
@@ -247,7 +256,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_GuestHall_RightWall_DoorDecisionSide", (3250, 290, 140), (2500, 24, 280), materials["wall"])
     add_cube("AREA_GuestHall_Ceiling_LowPressure", (3250, 0, 286), (2500, 560, 20), materials["trim"])
     add_cube("PROP_GuestHall_Camera_MonitorMismatchAnchor", (2600, -282, 220), (36, 20, 28), materials["black"])
-    add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"])
+    add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"], ("Hotel.Interact.Room203Door",))
     add_cube("PROP_GuestHall_Room203_NumberPlate", (3840, 272, 178), (55, 8, 28), materials["warn"])
     add_cube("PROP_GuestHall_ServiceCart_BlockingSightline", (3380, -205, 58), (150, 82, 116), materials["trim"])
     add_cube("PROP_GuestHall_EndShadow_NoSmallRoomExtension", (4450, 0, 125), (44, 520, 250), materials["black"])
@@ -257,7 +266,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 230.0, unreal.Color(120, 165, 255, 255))
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 260.0, unreal.Color(255, 198, 90, 255))
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 260), (-90, 0, 0), 360.0, unreal.Color(205, 225, 255, 255))
-    add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 260), (-90, 0, 0), 210.0, unreal.Color(178, 206, 255, 255))
+    add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 260), (-90, 0, 0), 210.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",))
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.ExponentialHeightFog,
@@ -282,9 +291,9 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     if "AMB_GuestHallDrone_v0" in sounds:
         add_audio("AMB_GuestHall_Drone_Source_v0", sounds["AMB_GuestHallDrone_v0"], (3380, 0, 210), True)
     if "SFX_PhoneRing_v0" in sounds:
-        add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False)
+        add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_DoorKnock203_v0" in sounds:
-        add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False)
+        add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False, ("Hotel.Audio.Room203Knock",))
 
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
 

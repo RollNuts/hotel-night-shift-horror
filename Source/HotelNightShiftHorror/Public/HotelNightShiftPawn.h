@@ -57,7 +57,9 @@ private:
 	void PlayActorSound(AActor* SoundActor) const;
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(EHotelLoopStage NewStage, const FString& NewObjective, const FString& NewMessage, float NewFearPressure);
-	AActor* FindActorByLabelFragment(const FString& LabelFragment) const;
+	bool IsActorNear(const AActor* Actor, const FVector& Anchor, float Radius) const;
+	AActor* FindAudioActorNear(const FVector& Anchor, float Radius) const;
+	AActor* FindLightActorNear(const FVector& Anchor, float Radius) const;
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhoneRingSoundActor;
