@@ -13,6 +13,7 @@
 
 - Files/assets touched:
   - `Automation/Unreal/create_hotel_spine_slice.py`
+  - `Automation/Unreal/capture_hotel_spine_slice.py`
   - `Content/Hotel/Maps/L_HotelNightShift_Slice.umap`
   - `Content/Hotel/Materials/*.uasset`
   - `Content/Hotel/Audio/*_v0.uasset`
@@ -45,7 +46,9 @@
 - UI feedback: no UI yet; future work must add work-equipment flavored feedback.
 - Level context: production hotel slice, not `TestHarness`.
 - Performance: expected low geometry cost; requires Unreal runtime stat capture after map opens.
-- Capture readiness: cameras exist; screenshot/video capture still required after map generation.
+- Capture readiness: cameras exist and a reusable PNG capture script exists;
+  screenshot/video capture still requires a successful Unreal rendering
+  commandlet or interactive editor session.
 
 ## Risk And Compliance
 
@@ -65,12 +68,22 @@
 - Screenshot/video/log path:
   - Generation log: Unreal commandlet run for `create_hotel_spine_slice.py` completed with 0 errors and deprecation warnings only.
   - Verification log: Unreal commandlet run for `verify_hotel_spine_slice.py` completed with 0 errors and deprecation warnings only.
-  - Capture target: `Evidence/Captures/HotelSpineSlice/` after a valid screenshot/video pass.
+  - Capture script: `capture_hotel_spine_slice.py` creates PNG evidence from
+    the three in-map `CAPTURE_*` camera actors and performs a nonblack pixel
+    sanity check.
+  - Capture target: `Saved/Captures/HotelSpineSlice/` after a valid rendering
+    pass. These captures are evidence artifacts, not source assets.
 - Performance note: commandlet map load/import completed; runtime stat capture is still required after playable interaction work.
 - Verification steps:
   - Ran Unreal Python generation script.
   - Verified `/Game/Hotel/Maps/L_HotelNightShift_Slice` exists.
   - Verified required hotel actors exist in the map.
+  - Ran Python syntax validation for `capture_hotel_spine_slice.py`.
+  - Attempted Unreal capture/verify commandlets after the capture script was
+    added; current local UnrealEditor-Cmd startup is blocked before project
+    script execution. Even `UnrealEditor-Cmd -help` reaches the same macOS
+    service connection warning and then waits. This is an environment/tool
+    startup blocker, not a capture-script result.
   - Confirmed the Unreal macOS Metal toolchain path works for Unreal commandlets.
   - Ran public repo safety scan before PR; no non-empty token, local path, or private key match was found in the intended committed files.
   - Confirmed Git LFS filter applies to `.umap`, `.uasset`, and `.wav` paths.
