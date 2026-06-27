@@ -97,6 +97,16 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
                 total += math.exp(-dt * 28.0) * (math.sin(2 * math.pi * 135 * dt) + 0.35 * math.sin(2 * math.pi * 260 * dt))
         return 0.55 * total
 
+    def report_log_filed(t: float) -> float:
+        stamp = 0.0
+        for start, pitch in ((0.035, 190), (0.085, 520), (0.16, 132)):
+            dt = t - start
+            if 0.0 <= dt <= 0.11:
+                stamp += math.exp(-dt * 38.0) * math.sin(2 * math.pi * pitch * dt)
+        scratch = 0.05 * math.sin(2 * math.pi * 1550 * t) if 0.18 <= t <= 0.38 else 0.0
+        paper = 0.08 * math.sin(2 * math.pi * 240 * t) if 0.10 <= t <= 0.34 else 0.0
+        return 0.48 * stamp + scratch + paper
+
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
@@ -104,6 +114,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "AMB_LobbyFluorescentHum_v0": (6.0, lobby_hum),
         "AMB_GuestHallDrone_v0": (6.0, hallway_drone),
         "SFX_DoorKnock203_v0": (1.4, door_knock),
+        "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -455,6 +466,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn_glow"], ("Hotel.Interact.ReportLog",))
     add_cube("PROP_FrontDesk_NightLog_OpenPage_Readable", (-255, -522, 137), (88, 54, 4), materials["paper"], ("Hotel.Capture.Readability",), no_collision=True)
     report_log_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual")
+    report_log_filed_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual", "Hotel.Feedback.ReportLogFiled")
     add_cube("PROP_FrontDesk_ReportLog_ClipboardClip_Readable", (-255, -550, 144), (44, 8, 5), materials["trim"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_IncidentHeaderCue", (-255, -540, 142), (58, 3, 3), materials["black"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_Room203EntryLine", (-262, -528, 142), (64, 3, 2), materials["black"], report_log_tags, no_collision=True)
@@ -462,7 +474,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_ReportLog_RefusedCheckbox", (-292, -513, 142), (8, 8, 2), materials["black"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_RefusedCheckmarkShort", (-295, -511, 144), (3, 9, 2), materials["warn"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_RefusedCheckmarkLong", (-288, -509, 144), (16, 3, 2), materials["warn"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_FiledStampCue", (-236, -504, 143), (38, 16, 3), materials["warn"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_FiledStampCue", (-236, -504, 143), (38, 16, 3), materials["warn"], report_log_filed_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PenRest", (-207, -536, 144), (42, 5, 6), materials["black"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PenTip", (-184, -536, 144), (8, 5, 5), materials["warn"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue", (-315, -565, 131), (76, 38, 4), materials["paper"], phone_visual_tags, no_collision=True)
@@ -571,6 +583,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0", sounds["SFX_PhoneLineStatic_v0"], (-438, -552, 154), False, ("Hotel.Audio.PhoneLineStatic",))
     if "SFX_DoorKnock203_v0" in sounds:
         add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False, ("Hotel.Audio.Room203Knock",))
+    if "SFX_ReportLogFiled_v0" in sounds:
+        add_audio("SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0", sounds["SFX_ReportLogFiled_v0"], (-242, -500, 152), False, ("Hotel.Audio.ReportLogFiled",))
 
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
 

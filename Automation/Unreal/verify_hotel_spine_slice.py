@@ -13,6 +13,7 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Audio/SFX_PhonePickup_v0",
     "/Game/Hotel/Audio/SFX_PhoneLineStatic_v0",
     "/Game/Hotel/Audio/SFX_DoorKnock203_v0",
+    "/Game/Hotel/Audio/SFX_ReportLogFiled_v0",
     "/Game/Hotel/Audio/AMB_LobbyFluorescentHum_v0",
     "/Game/Hotel/Audio/AMB_GuestHallDrone_v0",
     "/Game/Hotel/Materials/M_Hotel_WornFloor_v0",
@@ -84,6 +85,7 @@ REQUIRED_ACTOR_LABELS = [
     "SFX_PhonePickup_FrontDesk_ManualTrigger_v0",
     "SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0",
     "SFX_DoorKnock203_ManualTrigger_v0",
+    "SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0",
     "AMB_Lobby_FluorescentHum_Source_v0",
     "AMB_GuestHall_Drone_Source_v0",
     "CAPTURE_FrontDesk_FirstSteamShotCandidate",
@@ -138,13 +140,14 @@ REQUIRED_ACTOR_TAGS = {
     "PROP_FrontDesk_ReportLog_RefusedCheckbox": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "PROP_FrontDesk_ReportLog_RefusedCheckmarkShort": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "PROP_FrontDesk_ReportLog_RefusedCheckmarkLong": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
-    "PROP_FrontDesk_ReportLog_FiledStampCue": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
+    "PROP_FrontDesk_ReportLog_FiledStampCue": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual", "Hotel.Feedback.ReportLogFiled"],
     "PROP_FrontDesk_ReportLog_PenRest": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "PROP_FrontDesk_ReportLog_PenTip": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "LIGHT_FrontDesk_PhoneCallLampPulse": ["Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"],
     "SFX_PhoneRing_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhoneRing"],
     "SFX_PhonePickup_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhonePickup"],
     "SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0": ["Hotel.Audio.PhoneLineStatic"],
+    "SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.ReportLogFiled"],
 }
 
 REQUIRED_AUDIO_LABELS = [
@@ -152,6 +155,7 @@ REQUIRED_AUDIO_LABELS = [
     "SFX_PhonePickup_FrontDesk_ManualTrigger_v0",
     "SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0",
     "SFX_DoorKnock203_ManualTrigger_v0",
+    "SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0",
     "AMB_Lobby_FluorescentHum_Source_v0",
     "AMB_GuestHall_Drone_Source_v0",
 ]
@@ -162,6 +166,7 @@ MOVABLE_STATIC_MESH_LABELS = [
     "PROP_FrontDesk_Phone_ReceiverRightCap",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
+    "PROP_FrontDesk_ReportLog_FiledStampCue",
 ]
 
 NON_INTERACTIVE_POLISH_LABELS = [

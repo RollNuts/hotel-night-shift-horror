@@ -17,6 +17,7 @@ const FName MonitorTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorTag(TEXT("Hotel.Interact.Room203Door"));
 const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
+const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -107,13 +108,15 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* Room203Door = FindActorByTag(World, Room203DoorTag);
 		AActor* Room203DoorFeedback = FindActorByTag(World, Room203DoorRefusalFeedbackTag);
 		AActor* ReportLog = FindActorByTag(World, ReportLogTag);
+		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
 		TestNotNull(TEXT("Room 203 door interaction actor exists"), Room203Door);
 		TestNotNull(TEXT("Room 203 door refusal feedback actor exists"), Room203DoorFeedback);
 		TestNotNull(TEXT("Report log interaction actor exists"), ReportLog);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog)
+		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback)
 		{
 			return true;
 		}
@@ -143,8 +146,12 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Room 203 refusal feedback starts"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() > 0.0f);
 		TestTrue(TEXT("Room 203 latch feedback moves visibly"), FVector::DistSquared(DoorFeedbackRestLocation, Pawn->AutomationGetDoorRefusalFeedbackLocation()) > FMath::Square(2.0f));
 
+		const FVector ReportFiledRestLocation = Pawn->AutomationGetReportLogFiledFeedbackLocation();
 		TestTrue(TEXT("Filing report succeeds"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestEqual(TEXT("Report advances to ReportFiled"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
+		Pawn->AutomationAdvanceReportLogFiledFeedback(0.12f);
+		TestTrue(TEXT("Report filed feedback starts"), Pawn->AutomationGetReportLogFiledFeedbackAlpha() > 0.0f);
+		TestTrue(TEXT("Report filed stamp feedback moves visibly"), FVector::DistSquared(ReportFiledRestLocation, Pawn->AutomationGetReportLogFiledFeedbackLocation()) > FMath::Square(2.0f));
 
 		TestFalse(TEXT("Monitor cannot regress after report"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Stage remains ReportFiled after monitor retry"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
