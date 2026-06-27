@@ -88,6 +88,7 @@ private:
 	bool IsActorNear(const AActor* Actor, const FVector& Anchor, float Radius) const;
 	AActor* FindAudioActorNear(const FVector& Anchor, float Radius) const;
 	AActor* FindActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
+	TArray<AActor*> FindActorsWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
 	AActor* FindLightActorNear(const FVector& Anchor, float Radius) const;
 
 	UPROPERTY()
@@ -101,6 +102,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhoneReceiverActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PhoneReceiverActors;
 
 	UPROPERTY()
 	TObjectPtr<AActor> DoorKnockSoundActor;
@@ -128,6 +132,8 @@ private:
 	FVector PhoneReceiverLiftLocation = FVector::ZeroVector;
 	FRotator PhoneReceiverRestRotation = FRotator::ZeroRotator;
 	FRotator PhoneReceiverLiftRotation = FRotator::ZeroRotator;
+	TArray<FVector> PhoneReceiverPartRestLocations;
+	TArray<FRotator> PhoneReceiverPartRestRotations;
 	int32 PhoneRingCount = 0;
 	bool bMonitorChecked = false;
 	bool bPhoneReceiverLiftActive = false;

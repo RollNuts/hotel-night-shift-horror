@@ -20,6 +20,8 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Materials/M_Hotel_RoomDoorPaint_v0",
     "/Game/Hotel/Materials/M_Hotel_FluorescentPanelGlow_v0",
     "/Game/Hotel/Materials/M_Hotel_MonitorGreenGlow_v0",
+    "/Game/Hotel/Materials/M_Hotel_AgedCallSlipPaper_v0",
+    "/Game/Hotel/Materials/M_Hotel_PhoneBoneButton_v0",
     "/Game/Hotel/Cinematics/LS_HotelSpine_Stills",
     "/Game/Hotel/Cinematics/MRQ_HotelEvidencePng",
 ]
@@ -27,12 +29,28 @@ REQUIRED_ASSETS = [
 REQUIRED_ACTOR_LABELS = [
     "PLAYERSTART_FrontDesk_FacingPhoneAndMonitor",
     "PROP_FrontDesk_Phone_AnswerLoopPlaceholder",
+    "PROP_FrontDesk_DeskMat_UnderPhoneAndLog",
+    "PROP_FrontDesk_Phone_BaseHeavyOldDeskSet",
+    "PROP_FrontDesk_Phone_Keypad_ReadableCue",
+    "PROP_FrontDesk_Phone_ButtonRowTop",
+    "PROP_FrontDesk_Phone_ButtonRowBottom",
+    "PROP_FrontDesk_Phone_CradleLeftHook",
+    "PROP_FrontDesk_Phone_CradleRightHook",
+    "PROP_FrontDesk_Phone_HookSwitch_DepressedCue",
     "PROP_FrontDesk_Phone_ReceiverCue",
+    "PROP_FrontDesk_Phone_ReceiverLeftCap",
+    "PROP_FrontDesk_Phone_ReceiverRightCap",
     "PROP_FrontDesk_Phone_CradleShadow",
     "PROP_FrontDesk_Phone_CoiledCordCue",
+    "PROP_FrontDesk_Phone_CoiledCordLoopA",
+    "PROP_FrontDesk_Phone_CoiledCordLoopB",
+    "PROP_FrontDesk_Phone_CoiledCordLoopC",
     "LIGHTMESH_FrontDesk_PhoneCallLamp",
     "PROP_Surveillance_Monitor_PlayerChecksHall",
     "PROP_ReportLog_ReturnAndRecordPoint",
+    "PROP_FrontDesk_NightLog_OpenPage_Readable",
+    "PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue",
+    "PROP_FrontDesk_CallSlip_Underline203",
     "AREA_FrontDesk_Ceiling_LowPressure",
     "AREA_Transition_CarpetRun_ToGuestHall_NoVoid",
     "AREA_Transition_LeftSightlineWall_ToGuestHall",
@@ -69,7 +87,21 @@ REQUIRED_ACTOR_LABELS = [
 
 REQUIRED_ACTOR_TAGS = {
     "PROP_FrontDesk_Phone_AnswerLoopPlaceholder": ["Hotel.Interact.Phone"],
+    "PROP_FrontDesk_DeskMat_UnderPhoneAndLog": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_Keypad_ReadableCue": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_ButtonRowTop": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_ButtonRowBottom": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_CradleLeftHook": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_CradleRightHook": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_HookSwitch_DepressedCue": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
     "PROP_FrontDesk_Phone_ReceiverCue": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"],
+    "PROP_FrontDesk_Phone_ReceiverLeftCap": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"],
+    "PROP_FrontDesk_Phone_ReceiverRightCap": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"],
+    "PROP_FrontDesk_Phone_CoiledCordLoopA": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_CoiledCordLoopB": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_CoiledCordLoopC": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_CallSlip_Underline203": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
     "LIGHTMESH_FrontDesk_PhoneCallLamp": ["Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"],
     "PROP_Surveillance_Monitor_PlayerChecksHall": ["Hotel.Interact.Monitor"],
     "PROP_GuestHall_RoomDoor203_OpenRefuseDecision": ["Hotel.Interact.Room203Door"],
@@ -91,6 +123,23 @@ REQUIRED_AUDIO_LABELS = [
 
 MOVABLE_STATIC_MESH_LABELS = [
     "PROP_FrontDesk_Phone_ReceiverCue",
+    "PROP_FrontDesk_Phone_ReceiverLeftCap",
+    "PROP_FrontDesk_Phone_ReceiverRightCap",
+]
+
+NON_INTERACTIVE_POLISH_LABELS = [
+    "PROP_FrontDesk_DeskMat_UnderPhoneAndLog",
+    "PROP_FrontDesk_Phone_Keypad_ReadableCue",
+    "PROP_FrontDesk_Phone_ButtonRowTop",
+    "PROP_FrontDesk_Phone_ButtonRowBottom",
+    "PROP_FrontDesk_Phone_CradleLeftHook",
+    "PROP_FrontDesk_Phone_CradleRightHook",
+    "PROP_FrontDesk_Phone_HookSwitch_DepressedCue",
+    "PROP_FrontDesk_Phone_CoiledCordLoopA",
+    "PROP_FrontDesk_Phone_CoiledCordLoopB",
+    "PROP_FrontDesk_Phone_CoiledCordLoopC",
+    "PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue",
+    "PROP_FrontDesk_CallSlip_Underline203",
 ]
 
 
@@ -141,8 +190,17 @@ for label in MOVABLE_STATIC_MESH_LABELS:
     if component.get_editor_property("mobility") != unreal.ComponentMobility.MOVABLE:
         fail(f"Actor {label} must be movable for live receiver feedback")
 
+for label in NON_INTERACTIVE_POLISH_LABELS:
+    actor = actors_by_label.get(label)
+    if actor is None:
+        fail(f"Missing non-interactive polish actor: {label}")
+    interact_tags = [str(tag) for tag in actor.tags if str(tag).startswith("Hotel.Interact.")]
+    if interact_tags:
+        fail(f"Polish actor {label} must not carry interaction tags: {', '.join(interact_tags)}")
+
 unreal.log(
     f"[HotelSpineVerify] Verified {len(REQUIRED_ASSETS)} assets, "
     f"{len(REQUIRED_ACTOR_LABELS)} required actors, {len(REQUIRED_ACTOR_TAGS)} tagged actors, "
-    f"{len(REQUIRED_AUDIO_LABELS)} audio actors, and {len(MOVABLE_STATIC_MESH_LABELS)} movable feedback meshes."
+    f"{len(REQUIRED_AUDIO_LABELS)} audio actors, {len(MOVABLE_STATIC_MESH_LABELS)} movable feedback meshes, "
+    f"and {len(NON_INTERACTIVE_POLISH_LABELS)} non-interactive polish actors."
 )

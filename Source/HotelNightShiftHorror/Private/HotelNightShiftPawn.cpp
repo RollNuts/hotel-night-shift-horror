@@ -256,6 +256,11 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PhoneRingSoundActor = FindAudioActorNear(PhoneSoundAnchor, 90.0f);
 	PhonePickupSoundActor = FindAudioActorNear(PhonePickupSoundAnchor, 80.0f);
 	PhoneLineSoundActor = FindActorWithTagNear(PhoneLineAudioTag, PhoneLineSoundAnchor, 90.0f);
+	PhoneReceiverActors.Reset();
+	for (AActor* ReceiverPart : FindActorsWithTagNear(PhoneReceiverTag, PhoneReceiverAnchor, 120.0f))
+	{
+		PhoneReceiverActors.Add(ReceiverPart);
+	}
 	PhoneReceiverActor = FindActorWithTagNear(PhoneReceiverTag, PhoneReceiverAnchor, 120.0f);
 	DoorKnockSoundActor = FindAudioActorNear(DoorKnockSoundAnchor, 140.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
@@ -267,6 +272,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 		PhoneReceiverRestRotation = PhoneReceiverActor->GetActorRotation();
 		PhoneReceiverLiftLocation = PhoneReceiverRestLocation + FVector(48.0f, -20.0f, 28.0f);
 		PhoneReceiverLiftRotation = PhoneReceiverRestRotation + FRotator(-18.0f, 6.0f, -24.0f);
+	}
+
+	PhoneReceiverPartRestLocations.Reset();
+	PhoneReceiverPartRestRotations.Reset();
+	for (AActor* ReceiverPart : PhoneReceiverActors)
+	{
+		PhoneReceiverPartRestLocations.Add(ReceiverPart->GetActorLocation());
+		PhoneReceiverPartRestRotations.Add(ReceiverPart->GetActorRotation());
 	}
 }
 
@@ -411,7 +424,7 @@ void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
 
 void AHotelNightShiftPawn::LiftPhoneReceiver()
 {
-	if (!PhoneReceiverActor)
+	if (!PhoneReceiverActor || PhoneReceiverActors.IsEmpty())
 	{
 		return;
 	}
@@ -429,12 +442,24 @@ void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
 
 	PhoneReceiverLiftAlpha = FMath::Clamp(PhoneReceiverLiftAlpha + DeltaSeconds / 0.42f, 0.0f, 1.0f);
 	const float Ease = FMath::InterpEaseInOut(0.0f, 1.0f, PhoneReceiverLiftAlpha, 2.0f);
-	const FVector NewLocation = FMath::Lerp(PhoneReceiverRestLocation, PhoneReceiverLiftLocation, Ease);
-	const FQuat NewRotation = FQuat::Slerp(
-		PhoneReceiverRestRotation.Quaternion(),
-		PhoneReceiverLiftRotation.Quaternion(),
-		Ease);
-	PhoneReceiverActor->SetActorLocationAndRotation(NewLocation, NewRotation.Rotator());
+	const FVector LiftOffset = PhoneReceiverLiftLocation - PhoneReceiverRestLocation;
+	const FRotator LiftRotationDelta = PhoneReceiverLiftRotation - PhoneReceiverRestRotation;
+	for (int32 Index = 0; Index < PhoneReceiverActors.Num(); ++Index)
+	{
+		AActor* ReceiverPart = PhoneReceiverActors[Index];
+		if (!ReceiverPart || !PhoneReceiverPartRestLocations.IsValidIndex(Index) || !PhoneReceiverPartRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		const FVector NewLocation = PhoneReceiverPartRestLocations[Index] + LiftOffset * Ease;
+		const FRotator TargetRotation = PhoneReceiverPartRestRotations[Index] + LiftRotationDelta;
+		const FQuat NewRotation = FQuat::Slerp(
+			PhoneReceiverPartRestRotations[Index].Quaternion(),
+			TargetRotation.Quaternion(),
+			Ease);
+		ReceiverPart->SetActorLocationAndRotation(NewLocation, NewRotation.Rotator());
+	}
 
 	if (PhoneReceiverLiftAlpha >= 1.0f)
 	{
@@ -518,6 +543,21 @@ AActor* AHotelNightShiftPawn::FindActorWithTagNear(FName RequiredTag, const FVec
 		}
 	}
 	return nullptr;
+}
+
+TArray<AActor*> AHotelNightShiftPawn::FindActorsWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const
+{
+	TArray<AActor*> MatchingActors;
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(this, AActor::StaticClass(), Actors);
+	for (AActor* Actor : Actors)
+	{
+		if (Actor && Actor->ActorHasTag(RequiredTag) && IsActorNear(Actor, Anchor, Radius))
+		{
+			MatchingActors.Add(Actor);
+		}
+	}
+	return MatchingActors;
 }
 
 AActor* AHotelNightShiftPawn::FindLightActorNear(const FVector& Anchor, float Radius) const
