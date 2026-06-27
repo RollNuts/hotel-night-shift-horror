@@ -15,6 +15,7 @@ const TCHAR* HotelMapPath = TEXT("/Game/Hotel/Maps/L_HotelNightShift_Slice");
 const FName PhoneTag(TEXT("Hotel.Interact.Phone"));
 const FName MonitorTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorTag(TEXT("Hotel.Interact.Room203Door"));
+const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
@@ -104,13 +105,15 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* Phone = FindActorByTag(World, PhoneTag);
 		AActor* Monitor = FindActorByTag(World, MonitorTag);
 		AActor* Room203Door = FindActorByTag(World, Room203DoorTag);
+		AActor* Room203DoorFeedback = FindActorByTag(World, Room203DoorRefusalFeedbackTag);
 		AActor* ReportLog = FindActorByTag(World, ReportLogTag);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
 		TestNotNull(TEXT("Room 203 door interaction actor exists"), Room203Door);
+		TestNotNull(TEXT("Room 203 door refusal feedback actor exists"), Room203DoorFeedback);
 		TestNotNull(TEXT("Report log interaction actor exists"), ReportLog);
-		if (!Phone || !Monitor || !Room203Door || !ReportLog)
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog)
 		{
 			return true;
 		}
@@ -133,8 +136,12 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Monitor advances to MonitorChecked"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::MonitorChecked);
 		TestFalse(TEXT("Phone line disconnects after monitor check"), Pawn->AutomationIsPhoneLineConnected());
 
+		const FVector DoorFeedbackRestLocation = Pawn->AutomationGetDoorRefusalFeedbackLocation();
 		TestTrue(TEXT("Refusing Room 203 succeeds"), Pawn->AutomationInteractWithActor(Room203Door));
 		TestEqual(TEXT("Door refusal advances to DoorRefused"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::DoorRefused);
+		Pawn->AutomationAdvanceDoorRefusalFeedback(0.12f);
+		TestTrue(TEXT("Room 203 refusal feedback starts"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() > 0.0f);
+		TestTrue(TEXT("Room 203 latch feedback moves visibly"), FVector::DistSquared(DoorFeedbackRestLocation, Pawn->AutomationGetDoorRefusalFeedbackLocation()) > FMath::Square(2.0f));
 
 		TestTrue(TEXT("Filing report succeeds"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestEqual(TEXT("Report advances to ReportFiled"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);

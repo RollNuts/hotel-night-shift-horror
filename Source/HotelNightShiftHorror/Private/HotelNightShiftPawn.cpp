@@ -20,12 +20,14 @@ const FVector PhoneLineSoundAnchor(-438.0f, -552.0f, 154.0f);
 const FVector PhoneReceiverAnchor(-430.0f, -558.0f, 150.0f);
 const FVector PhoneIndicatorLightAnchor(-395.0f, -555.0f, 158.0f);
 const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
+const FVector DoorRefusalFeedbackAnchor(4020.0f, 258.0f, 150.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
 const FName PhoneLineAudioTag(TEXT("Hotel.Audio.PhoneLineStatic"));
 const FName MonitorInteractTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorInteractTag(TEXT("Hotel.Interact.Room203Door"));
+const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName ReportLogInteractTag(TEXT("Hotel.Interact.ReportLog"));
 }
 
@@ -65,6 +67,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	UpdateLookTarget();
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
+	UpdateDoorRefusalFeedback(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -144,6 +147,21 @@ float AHotelNightShiftPawn::AutomationGetPhoneReceiverLiftAlpha() const
 FVector AHotelNightShiftPawn::AutomationGetPhoneReceiverLocation() const
 {
 	return PhoneReceiverActor ? PhoneReceiverActor->GetActorLocation() : FVector::ZeroVector;
+}
+
+void AHotelNightShiftPawn::AutomationAdvanceDoorRefusalFeedback(float DeltaSeconds)
+{
+	UpdateDoorRefusalFeedback(DeltaSeconds);
+}
+
+float AHotelNightShiftPawn::AutomationGetDoorRefusalFeedbackAlpha() const
+{
+	return DoorRefusalFeedbackAlpha;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetDoorRefusalFeedbackLocation() const
+{
+	return DoorRefusalFeedbackActor ? DoorRefusalFeedbackActor->GetActorLocation() : FVector::ZeroVector;
 }
 #endif
 
@@ -225,6 +243,7 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 	{
 		PlayActorSound(DoorKnockSoundActor);
 		PulseHallLight(24.0f);
+		TriggerDoorRefusalFeedback();
 		SetWorkState(
 			EHotelLoopStage::DoorRefused,
 			TEXT("Return to the front desk and record the refusal."),
@@ -263,6 +282,12 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	}
 	PhoneReceiverActor = FindActorWithTagNear(PhoneReceiverTag, PhoneReceiverAnchor, 120.0f);
 	DoorKnockSoundActor = FindAudioActorNear(DoorKnockSoundAnchor, 140.0f);
+	DoorRefusalFeedbackActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(Room203DoorRefusalFeedbackTag, DoorRefusalFeedbackAnchor, 190.0f))
+	{
+		DoorRefusalFeedbackActors.Add(FeedbackPart);
+	}
+	DoorRefusalFeedbackActor = FindActorWithTagNear(Room203DoorRefusalFeedbackTag, DoorRefusalFeedbackAnchor, 190.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -280,6 +305,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		PhoneReceiverPartRestLocations.Add(ReceiverPart->GetActorLocation());
 		PhoneReceiverPartRestRotations.Add(ReceiverPart->GetActorRotation());
+	}
+
+	DoorRefusalFeedbackRestLocations.Reset();
+	DoorRefusalFeedbackRestRotations.Reset();
+	for (AActor* FeedbackPart : DoorRefusalFeedbackActors)
+	{
+		DoorRefusalFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
+		DoorRefusalFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 }
 
@@ -464,6 +497,58 @@ void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
 	if (PhoneReceiverLiftAlpha >= 1.0f)
 	{
 		bPhoneReceiverLiftActive = false;
+	}
+}
+
+void AHotelNightShiftPawn::TriggerDoorRefusalFeedback()
+{
+	if (!DoorRefusalFeedbackActor || DoorRefusalFeedbackActors.IsEmpty())
+	{
+		return;
+	}
+
+	bDoorRefusalFeedbackActive = true;
+	DoorRefusalFeedbackAlpha = 0.0f;
+}
+
+void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
+{
+	if (!bDoorRefusalFeedbackActive || !DoorRefusalFeedbackActor)
+	{
+		return;
+	}
+
+	DoorRefusalFeedbackAlpha = FMath::Clamp(DoorRefusalFeedbackAlpha + DeltaSeconds / 0.34f, 0.0f, 1.0f);
+	const float Kick = FMath::Sin(DoorRefusalFeedbackAlpha * UE_PI * 4.0f) * (1.0f - DoorRefusalFeedbackAlpha);
+	const FVector KnockOffset(0.0f, -10.0f * Kick, 2.0f * FMath::Abs(Kick));
+	const FRotator KnockRotation(0.0f, 0.0f, 4.0f * Kick);
+
+	for (int32 Index = 0; Index < DoorRefusalFeedbackActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = DoorRefusalFeedbackActors[Index];
+		if (!FeedbackPart || !DoorRefusalFeedbackRestLocations.IsValidIndex(Index) || !DoorRefusalFeedbackRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		FeedbackPart->SetActorLocationAndRotation(
+			DoorRefusalFeedbackRestLocations[Index] + KnockOffset,
+			DoorRefusalFeedbackRestRotations[Index] + KnockRotation);
+	}
+
+	if (DoorRefusalFeedbackAlpha >= 1.0f)
+	{
+		for (int32 Index = 0; Index < DoorRefusalFeedbackActors.Num(); ++Index)
+		{
+			AActor* FeedbackPart = DoorRefusalFeedbackActors[Index];
+			if (!FeedbackPart || !DoorRefusalFeedbackRestLocations.IsValidIndex(Index) || !DoorRefusalFeedbackRestRotations.IsValidIndex(Index))
+			{
+				continue;
+			}
+
+			FeedbackPart->SetActorLocationAndRotation(DoorRefusalFeedbackRestLocations[Index], DoorRefusalFeedbackRestRotations[Index]);
+		}
+		bDoorRefusalFeedbackActive = false;
 	}
 }
 
