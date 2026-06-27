@@ -55,6 +55,9 @@ public:
 	void AutomationAdvanceDoorRefusalFeedback(float DeltaSeconds);
 	float AutomationGetDoorRefusalFeedbackAlpha() const;
 	FVector AutomationGetDoorRefusalFeedbackLocation() const;
+	void AutomationAdvanceReportLogFiledFeedback(float DeltaSeconds);
+	float AutomationGetReportLogFiledFeedbackAlpha() const;
+	FVector AutomationGetReportLogFiledFeedbackLocation() const;
 #endif
 
 protected:
@@ -81,6 +84,8 @@ private:
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
 	void TriggerDoorRefusalFeedback();
 	void UpdateDoorRefusalFeedback(float DeltaSeconds);
+	void TriggerReportLogFiledFeedback();
+	void UpdateReportLogFiledFeedback(float DeltaSeconds);
 	void SetPhoneIndicatorIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
@@ -121,6 +126,15 @@ private:
 	TArray<TObjectPtr<AActor>> DoorRefusalFeedbackActors;
 
 	UPROPERTY()
+	TObjectPtr<AActor> ReportFiledSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> ReportLogFiledFeedbackActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> ReportLogFiledFeedbackActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -147,10 +161,14 @@ private:
 	TArray<FRotator> PhoneReceiverPartRestRotations;
 	TArray<FVector> DoorRefusalFeedbackRestLocations;
 	TArray<FRotator> DoorRefusalFeedbackRestRotations;
+	TArray<FVector> ReportLogFiledFeedbackRestLocations;
+	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
 	int32 PhoneRingCount = 0;
 	bool bMonitorChecked = false;
 	bool bPhoneReceiverLiftActive = false;
 	bool bPhoneLineConnected = false;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
+	float ReportLogFiledFeedbackAlpha = 0.0f;
+	bool bReportLogFiledFeedbackActive = false;
 };

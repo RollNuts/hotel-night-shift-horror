@@ -21,6 +21,8 @@ const FVector PhoneReceiverAnchor(-430.0f, -558.0f, 150.0f);
 const FVector PhoneIndicatorLightAnchor(-395.0f, -555.0f, 158.0f);
 const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
 const FVector DoorRefusalFeedbackAnchor(4020.0f, 258.0f, 150.0f);
+const FVector ReportFiledSoundAnchor(-242.0f, -500.0f, 152.0f);
+const FVector ReportLogFiledFeedbackAnchor(-232.0f, -503.0f, 145.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
@@ -29,6 +31,8 @@ const FName MonitorInteractTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorInteractTag(TEXT("Hotel.Interact.Room203Door"));
 const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName ReportLogInteractTag(TEXT("Hotel.Interact.ReportLog"));
+const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
+const FName ReportLogFiledAudioTag(TEXT("Hotel.Audio.ReportLogFiled"));
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -68,6 +72,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
+	UpdateReportLogFiledFeedback(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -163,6 +168,21 @@ FVector AHotelNightShiftPawn::AutomationGetDoorRefusalFeedbackLocation() const
 {
 	return DoorRefusalFeedbackActor ? DoorRefusalFeedbackActor->GetActorLocation() : FVector::ZeroVector;
 }
+
+void AHotelNightShiftPawn::AutomationAdvanceReportLogFiledFeedback(float DeltaSeconds)
+{
+	UpdateReportLogFiledFeedback(DeltaSeconds);
+}
+
+float AHotelNightShiftPawn::AutomationGetReportLogFiledFeedbackAlpha() const
+{
+	return ReportLogFiledFeedbackAlpha;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetReportLogFiledFeedbackLocation() const
+{
+	return ReportLogFiledFeedbackActor ? ReportLogFiledFeedbackActor->GetActorLocation() : FVector::ZeroVector;
+}
 #endif
 
 void AHotelNightShiftPawn::MoveForward(float Value)
@@ -257,13 +277,15 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 
 	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused)
 	{
-		StopPhoneLineAudio();
 		SetWorkState(
 			EHotelLoopStage::ReportFiled,
 			TEXT("Entry filed. Stay at the desk and wait for the next call."),
 			TEXT("Night log: 203 refused, hallway camera mismatch, knock confirmed."),
 			TEXT("DESK LINE: CLOSED / INCIDENT LOGGED"),
 			0.63f);
+		StopPhoneLineAudio();
+		PlayActorSound(ReportFiledSoundActor);
+		TriggerReportLogFiledFeedback();
 		return true;
 	}
 
@@ -288,6 +310,13 @@ void AHotelNightShiftPawn::CacheHotelActors()
 		DoorRefusalFeedbackActors.Add(FeedbackPart);
 	}
 	DoorRefusalFeedbackActor = FindActorWithTagNear(Room203DoorRefusalFeedbackTag, DoorRefusalFeedbackAnchor, 190.0f);
+	ReportFiledSoundActor = FindActorWithTagNear(ReportLogFiledAudioTag, ReportFiledSoundAnchor, 120.0f);
+	ReportLogFiledFeedbackActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(ReportLogFiledFeedbackTag, ReportLogFiledFeedbackAnchor, 150.0f))
+	{
+		ReportLogFiledFeedbackActors.Add(FeedbackPart);
+	}
+	ReportLogFiledFeedbackActor = FindActorWithTagNear(ReportLogFiledFeedbackTag, ReportLogFiledFeedbackAnchor, 150.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -313,6 +342,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		DoorRefusalFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
 		DoorRefusalFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	ReportLogFiledFeedbackRestLocations.Reset();
+	ReportLogFiledFeedbackRestRotations.Reset();
+	for (AActor* FeedbackPart : ReportLogFiledFeedbackActors)
+	{
+		ReportLogFiledFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
+		ReportLogFiledFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 }
 
@@ -549,6 +586,49 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 			FeedbackPart->SetActorLocationAndRotation(DoorRefusalFeedbackRestLocations[Index], DoorRefusalFeedbackRestRotations[Index]);
 		}
 		bDoorRefusalFeedbackActive = false;
+	}
+}
+
+void AHotelNightShiftPawn::TriggerReportLogFiledFeedback()
+{
+	if (!ReportLogFiledFeedbackActor || ReportLogFiledFeedbackActors.IsEmpty())
+	{
+		return;
+	}
+
+	bReportLogFiledFeedbackActive = true;
+	ReportLogFiledFeedbackAlpha = 0.0f;
+}
+
+void AHotelNightShiftPawn::UpdateReportLogFiledFeedback(float DeltaSeconds)
+{
+	if (!bReportLogFiledFeedbackActive || !ReportLogFiledFeedbackActor)
+	{
+		return;
+	}
+
+	ReportLogFiledFeedbackAlpha = FMath::Clamp(ReportLogFiledFeedbackAlpha + DeltaSeconds / 0.30f, 0.0f, 1.0f);
+	const float Ease = FMath::InterpEaseOut(0.0f, 1.0f, ReportLogFiledFeedbackAlpha, 3.0f);
+	const float Impact = FMath::Sin(ReportLogFiledFeedbackAlpha * UE_PI) * (1.0f - ReportLogFiledFeedbackAlpha);
+	const FVector StampOffset(0.0f, 6.0f * Ease, 8.0f * Impact);
+	const FRotator StampRotation(-4.0f * Impact, 0.0f, -9.0f * Impact);
+
+	for (int32 Index = 0; Index < ReportLogFiledFeedbackActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = ReportLogFiledFeedbackActors[Index];
+		if (!FeedbackPart || !ReportLogFiledFeedbackRestLocations.IsValidIndex(Index) || !ReportLogFiledFeedbackRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		FeedbackPart->SetActorLocationAndRotation(
+			ReportLogFiledFeedbackRestLocations[Index] + StampOffset,
+			ReportLogFiledFeedbackRestRotations[Index] + StampRotation);
+	}
+
+	if (ReportLogFiledFeedbackAlpha >= 1.0f)
+	{
+		bReportLogFiledFeedbackActive = false;
 	}
 }
 

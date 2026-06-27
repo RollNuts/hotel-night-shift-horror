@@ -16,7 +16,9 @@ import zlib
 
 EXPECTED_CAPTURE_COUNT = 5
 MIN_AVERAGE_LUMA = 12.0
+MIN_AVERAGE_LUMA_RANGE = 8.0
 MIN_AVERAGE_RGB_ENERGY = 36.0
+MIN_AVERAGE_RGB_ENERGY_RANGE = 24.0
 MIN_PEAK_RGB_ENERGY = 60
 VISIBLE_SAMPLE_MIN_LUMA = 12.0
 MIN_VISIBLE_SAMPLE_COUNT = 5
@@ -144,10 +146,12 @@ def main() -> None:
         fail(f"Expected exactly {EXPECTED_CAPTURE_COUNT} MRQ evidence PNGs in {args.capture_dir}, found {len(paths)}.")
 
     hashes = []
+    all_metrics = []
     for path in paths:
         with open(path, "rb") as f:
             hashes.append(hashlib.sha256(f.read()).hexdigest())
         metrics = metrics_for(path)
+        all_metrics.append(metrics)
         if metrics["width"] != 1280 or metrics["height"] != 720:
             fail(f"{path} has wrong resolution: {metrics['width']}x{metrics['height']}")
         if is_too_dark(metrics):
@@ -165,6 +169,18 @@ def main() -> None:
 
     if len(set(hashes)) < len(paths):
         fail("MRQ evidence PNGs are not unique; this usually means the capture path ignored the camera cuts.")
+
+    luma_values = [float(metrics["average_luma"]) for metrics in all_metrics]
+    rgb_energy_values = [float(metrics["average_rgb_energy"]) for metrics in all_metrics]
+    luma_range = max(luma_values) - min(luma_values)
+    rgb_energy_range = max(rgb_energy_values) - min(rgb_energy_values)
+    if luma_range < MIN_AVERAGE_LUMA_RANGE or rgb_energy_range < MIN_AVERAGE_RGB_ENERGY_RANGE:
+        fail(
+            "MRQ evidence PNGs have too little shot-to-shot exposure variation; "
+            f"average luma range {luma_range:.1f}/{MIN_AVERAGE_LUMA_RANGE:.1f}, "
+            f"average RGB energy range {rgb_energy_range:.1f}/{MIN_AVERAGE_RGB_ENERGY_RANGE:.1f}. "
+            "This usually means the camera cuts did not bind to the expected capture actors."
+        )
 
     print(f"[HotelMRQCaptureGate] Passed {len(paths)} hotel MRQ evidence PNGs.")
 
