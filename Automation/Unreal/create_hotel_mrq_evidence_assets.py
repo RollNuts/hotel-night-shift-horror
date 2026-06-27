@@ -19,6 +19,7 @@ MRQ_CONFIG_PATH = f"{CINEMATICS_DIR}/{MRQ_CONFIG_NAME}"
 
 CAPTURE_CAMERAS = [
     "CAPTURE_FrontDesk_FirstSteamShotCandidate",
+    "CAPTURE_ReportLog_ReadabilityCandidate",
     "CAPTURE_PhoneResponse_LiftReceiverCandidate",
     "CAPTURE_GuestDoor_15SecondBeatCandidate",
     "CAPTURE_MonitorToHall_MismatchCandidate",
