@@ -14,7 +14,7 @@ import struct
 import zlib
 
 
-MIN_CAPTURE_COUNT = 4
+EXPECTED_CAPTURE_COUNT = 5
 MIN_AVERAGE_LUMA = 12.0
 MIN_AVERAGE_RGB_ENERGY = 36.0
 MIN_PEAK_RGB_ENERGY = 60
@@ -140,11 +140,11 @@ def main() -> None:
     args = parser.parse_args()
 
     paths = sorted(glob.glob(os.path.join(args.capture_dir, "hotel_spine_evidence_*.png")))
-    if len(paths) < MIN_CAPTURE_COUNT:
-        fail(f"Expected at least {MIN_CAPTURE_COUNT} MRQ evidence PNGs in {args.capture_dir}, found {len(paths)}.")
+    if len(paths) != EXPECTED_CAPTURE_COUNT:
+        fail(f"Expected exactly {EXPECTED_CAPTURE_COUNT} MRQ evidence PNGs in {args.capture_dir}, found {len(paths)}.")
 
     hashes = []
-    for path in paths[:MIN_CAPTURE_COUNT]:
+    for path in paths:
         with open(path, "rb") as f:
             hashes.append(hashlib.sha256(f.read()).hexdigest())
         metrics = metrics_for(path)
@@ -163,10 +163,10 @@ def main() -> None:
             f"visible pixels {metrics['visible_sample_count']}/{metrics['sample_count']}"
         )
 
-    if len(set(hashes)) < MIN_CAPTURE_COUNT:
+    if len(set(hashes)) < len(paths):
         fail("MRQ evidence PNGs are not unique; this usually means the capture path ignored the camera cuts.")
 
-    print(f"[HotelMRQCaptureGate] Passed {MIN_CAPTURE_COUNT} hotel MRQ evidence PNGs.")
+    print(f"[HotelMRQCaptureGate] Passed {len(paths)} hotel MRQ evidence PNGs.")
 
 
 if __name__ == "__main__":
