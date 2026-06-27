@@ -89,6 +89,22 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         pulse = 0.5 + 0.5 * math.sin(2 * math.pi * 0.11 * t)
         return 0.16 * math.sin(2 * math.pi * 82 * t) + 0.035 * pulse * math.sin(2 * math.pi * 610 * t)
 
+    def elevator_shaft_groan(t: float) -> float:
+        motor_gate = 0.45 + 0.55 * math.sin(2 * math.pi * 0.08 * t)
+        cable = 0.12 * math.sin(2 * math.pi * 47 * t) + 0.07 * math.sin(2 * math.pi * 93 * t)
+        brake_ticks = 0.0
+        for start in (0.8, 2.55, 4.2):
+            dt = t - start
+            if 0.0 <= dt <= 0.08:
+                brake_ticks += math.exp(-dt * 34.0) * math.sin(2 * math.pi * 310 * dt)
+        return 0.7 * motor_gate * cable + 0.26 * brake_ticks
+
+    def stairwell_air(t: float) -> float:
+        vent = 0.09 * math.sin(2 * math.pi * 71 * t) + 0.035 * math.sin(2 * math.pi * 143 * t)
+        flutter = (0.5 + 0.5 * math.sin(2 * math.pi * 0.21 * t)) * 0.035 * math.sin(2 * math.pi * 520 * t)
+        distant = 0.045 * math.sin(2 * math.pi * 38 * t)
+        return vent + flutter + distant
+
     def door_knock(t: float) -> float:
         total = 0.0
         for start in (0.18, 0.42, 0.91):
@@ -113,6 +129,8 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_PhoneLineStatic_v0": (3.2, phone_line_static),
         "AMB_LobbyFluorescentHum_v0": (6.0, lobby_hum),
         "AMB_GuestHallDrone_v0": (6.0, hallway_drone),
+        "AMB_ElevatorShaftGroan_v0": (6.0, elevator_shaft_groan),
+        "AMB_StairwellAir_v0": (6.0, stairwell_air),
         "SFX_DoorKnock203_v0": (1.4, door_knock),
         "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
     }
@@ -488,10 +506,16 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_Transition_CarpetRun_ToGuestHall_NoVoid", (1625, 0, -9), (750, 560, 18), materials["floor"])
     add_cube("AREA_Transition_LeftSightlineWall_ToGuestHall", (1625, -290, 140), (750, 24, 280), materials["wall"])
     add_cube("AREA_Transition_RightSightlineWall_ToGuestHall", (1625, 290, 140), (750, 24, 280), materials["wall"])
-    add_cube("TRANSITION_Elevator_Door_AudibleBeforeSeen", (1160, 565, 120), (34, 280, 240), materials["door"])
-    add_cube("TRANSITION_Elevator_CallPanel_SoundCueAnchor", (1125, 385, 120), (12, 30, 80), materials["warn_glow"])
-    add_cube("TRANSITION_EmergencyStair_Door_AlternateRoute", (1160, -565, 120), (34, 280, 240), materials["door"])
-    add_cube("TRANSITION_ServiceBackHall_LockedShortcut", (430, 770, 110), (330, 26, 220), materials["trim"])
+    transition_tags = ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear")
+    add_cube("TRANSITION_Elevator_Door_AudibleBeforeSeen", (1160, 565, 120), (34, 280, 240), materials["door"], transition_tags)
+    add_cube("TRANSITION_Elevator_CallPanel_SoundCueAnchor", (1125, 385, 120), (12, 30, 80), materials["warn_glow"], transition_tags, no_collision=True)
+    add_cube("TRANSITION_Elevator_FloorIndicator_WrongFloorCue", (1124, 565, 214), (10, 92, 24), materials["warn_glow"], transition_tags, no_collision=True)
+    add_cube("TRANSITION_Elevator_ClosedSeam_ShadowCue", (1142, 565, 121), (6, 10, 214), materials["black"], transition_tags, no_collision=True)
+    add_cube("TRANSITION_EmergencyStair_Door_AlternateRoute", (1160, -565, 120), (34, 280, 240), materials["door"], transition_tags)
+    add_cube("TRANSITION_EmergencyStair_ExitSign_ColdCue", (1125, -565, 230), (10, 120, 26), materials["screen_glow"], transition_tags, no_collision=True)
+    add_cube("TRANSITION_EmergencyStair_DoorHandle_ShadowCue", (1135, -450, 126), (12, 30, 16), materials["black"], transition_tags, no_collision=True)
+    add_cube("TRANSITION_ServiceBackHall_LockedShortcut", (430, 770, 110), (330, 26, 220), materials["trim"], transition_tags)
+    add_cube("TRANSITION_ServiceBackHall_ChainLockedShortcutCue", (430, 745, 142), (210, 8, 10), materials["warn"], transition_tags, no_collision=True)
 
     # Guest hallway response line.
     add_cube("AREA_GuestHall_Floor_OneDoorSlice", (3250, 0, -10), (2500, 560, 20), materials["floor"])
@@ -544,6 +568,9 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 1800.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=860.0)
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 2200.0, unreal.Color(120, 165, 255, 255), attenuation_radius=950.0, source_width=280.0, source_height=240.0)
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 1400.0, unreal.Color(255, 198, 90, 255), attenuation_radius=780.0)
+    add_light("LIGHT_Transition_ElevatorCallPanelDread", unreal.PointLight, (1122, 398, 150), (0, 0, 0), 980.0, unreal.Color(255, 155, 58, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=360.0)
+    add_light("LIGHT_Transition_StairExitCold", unreal.PointLight, (1122, -560, 230), (0, 0, 0), 720.0, unreal.Color(92, 210, 170, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=420.0)
+    add_light("LIGHT_Transition_CaptureEvidenceSoftFill", unreal.PointLight, (925, 0, 190), (0, 0, 0), 1850.0, unreal.Color(178, 218, 205, 255), ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"), attenuation_radius=760.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
@@ -568,6 +595,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-130, -690, 178), (2, 151, 0), 60.0)
     add_camera("CAPTURE_ReportLog_ReadabilityCandidate", (-255, -660, 218), (-28, 90, 0), 48.0)
     add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
+    add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
     add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
 
@@ -575,6 +603,10 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("AMB_Lobby_FluorescentHum_Source_v0", sounds["AMB_LobbyFluorescentHum_v0"], (-180, -450, 210), True)
     if "AMB_GuestHallDrone_v0" in sounds:
         add_audio("AMB_GuestHall_Drone_Source_v0", sounds["AMB_GuestHallDrone_v0"], (3380, 0, 210), True)
+    if "AMB_ElevatorShaftGroan_v0" in sounds:
+        add_audio("AMB_Elevator_ShaftGroan_Source_v0", sounds["AMB_ElevatorShaftGroan_v0"], (1120, 565, 180), True, ("Hotel.Audio.ElevatorShaftGroan",))
+    if "AMB_StairwellAir_v0" in sounds:
+        add_audio("AMB_Stairwell_Air_Source_v0", sounds["AMB_StairwellAir_v0"], (1120, -565, 180), True, ("Hotel.Audio.StairwellAir",))
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:
