@@ -63,6 +63,13 @@ REQUIRED_ACTOR_LABELS = [
     "PROP_GuestHall_Room203_RightDoorJamb",
     "PROP_GuestHall_Room203_TopDoorJamb",
     "PROP_GuestHall_Room203_DarkLatchGap",
+    "PROP_GuestHall_Room203_HandleBackplate_Readable",
+    "PROP_GuestHall_Room203_LatchJoltCue",
+    "PROP_GuestHall_Room203_ChainJoltCue",
+    "PROP_GuestHall_Room203_PeepholeBlackCue",
+    "PROP_GuestHall_Room203_DoNotOpenNotice",
+    "PROP_GuestHall_Room203_NoticeUnderline",
+    "PROP_GuestHall_Room203_ThresholdShadow",
     "SFX_PhoneRing_FrontDesk_ManualTrigger_v0",
     "SFX_PhonePickup_FrontDesk_ManualTrigger_v0",
     "SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0",
@@ -105,6 +112,13 @@ REQUIRED_ACTOR_TAGS = {
     "LIGHTMESH_FrontDesk_PhoneCallLamp": ["Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"],
     "PROP_Surveillance_Monitor_PlayerChecksHall": ["Hotel.Interact.Monitor"],
     "PROP_GuestHall_RoomDoor203_OpenRefuseDecision": ["Hotel.Interact.Room203Door"],
+    "PROP_GuestHall_Room203_HandleBackplate_Readable": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_LatchJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability"],
+    "PROP_GuestHall_Room203_ChainJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability"],
+    "PROP_GuestHall_Room203_PeepholeBlackCue": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_DoNotOpenNotice": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_NoticeUnderline": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_ThresholdShadow": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
     "PROP_ReportLog_ReturnAndRecordPoint": ["Hotel.Interact.ReportLog"],
     "LIGHT_FrontDesk_PhoneCallLampPulse": ["Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"],
     "SFX_PhoneRing_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhoneRing"],
@@ -125,6 +139,8 @@ MOVABLE_STATIC_MESH_LABELS = [
     "PROP_FrontDesk_Phone_ReceiverCue",
     "PROP_FrontDesk_Phone_ReceiverLeftCap",
     "PROP_FrontDesk_Phone_ReceiverRightCap",
+    "PROP_GuestHall_Room203_LatchJoltCue",
+    "PROP_GuestHall_Room203_ChainJoltCue",
 ]
 
 NON_INTERACTIVE_POLISH_LABELS = [
@@ -140,6 +156,13 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PROP_FrontDesk_Phone_CoiledCordLoopC",
     "PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue",
     "PROP_FrontDesk_CallSlip_Underline203",
+    "PROP_GuestHall_Room203_HandleBackplate_Readable",
+    "PROP_GuestHall_Room203_LatchJoltCue",
+    "PROP_GuestHall_Room203_ChainJoltCue",
+    "PROP_GuestHall_Room203_PeepholeBlackCue",
+    "PROP_GuestHall_Room203_DoNotOpenNotice",
+    "PROP_GuestHall_Room203_NoticeUnderline",
+    "PROP_GuestHall_Room203_ThresholdShadow",
 ]
 
 
@@ -188,7 +211,7 @@ for label in MOVABLE_STATIC_MESH_LABELS:
     if component is None:
         fail(f"Actor {label} must have a static mesh component")
     if component.get_editor_property("mobility") != unreal.ComponentMobility.MOVABLE:
-        fail(f"Actor {label} must be movable for live receiver feedback")
+        fail(f"Actor {label} must be movable for live interaction feedback")
 
 for label in NON_INTERACTIVE_POLISH_LABELS:
     actor = actors_by_label.get(label)

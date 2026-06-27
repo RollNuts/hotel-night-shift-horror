@@ -52,6 +52,9 @@ public:
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
+	void AutomationAdvanceDoorRefusalFeedback(float DeltaSeconds);
+	float AutomationGetDoorRefusalFeedbackAlpha() const;
+	FVector AutomationGetDoorRefusalFeedbackLocation() const;
 #endif
 
 protected:
@@ -76,6 +79,8 @@ private:
 	void UpdatePhoneRingVisual(float DeltaSeconds);
 	void LiftPhoneReceiver();
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
+	void TriggerDoorRefusalFeedback();
+	void UpdateDoorRefusalFeedback(float DeltaSeconds);
 	void SetPhoneIndicatorIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
@@ -110,6 +115,12 @@ private:
 	TObjectPtr<AActor> DoorKnockSoundActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> DoorRefusalFeedbackActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> DoorRefusalFeedbackActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -134,8 +145,12 @@ private:
 	FRotator PhoneReceiverLiftRotation = FRotator::ZeroRotator;
 	TArray<FVector> PhoneReceiverPartRestLocations;
 	TArray<FRotator> PhoneReceiverPartRestRotations;
+	TArray<FVector> DoorRefusalFeedbackRestLocations;
+	TArray<FRotator> DoorRefusalFeedbackRestRotations;
 	int32 PhoneRingCount = 0;
 	bool bMonitorChecked = false;
 	bool bPhoneReceiverLiftActive = false;
 	bool bPhoneLineConnected = false;
+	float DoorRefusalFeedbackAlpha = 0.0f;
+	bool bDoorRefusalFeedbackActive = false;
 };

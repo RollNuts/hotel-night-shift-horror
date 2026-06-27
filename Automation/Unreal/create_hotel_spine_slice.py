@@ -476,12 +476,37 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_GuestHall_RightWall_DoorDecisionSide", (3250, 290, 140), (2500, 24, 280), materials["wall"])
     add_cube("AREA_GuestHall_Ceiling_LowPressure", (3250, 0, 286), (2500, 560, 20), materials["trim"])
     add_cube("PROP_GuestHall_Camera_MonitorMismatchAnchor", (2600, -282, 220), (36, 20, 28), materials["black"])
+    door_decision_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual")
+    door_refusal_tags = ("Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability")
     add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"], ("Hotel.Interact.Room203Door",))
     add_cube("PROP_GuestHall_Room203_LeftDoorJamb", (3784, 272, 122), (14, 12, 244), materials["trim"])
     add_cube("PROP_GuestHall_Room203_RightDoorJamb", (4056, 272, 122), (14, 12, 244), materials["trim"])
     add_cube("PROP_GuestHall_Room203_TopDoorJamb", (3920, 272, 245), (286, 12, 14), materials["trim"])
     add_cube("PROP_GuestHall_Room203_DarkLatchGap", (4042, 266, 122), (8, 8, 188), materials["black"])
     add_cube("PROP_GuestHall_Room203_NumberPlate", (3840, 272, 178), (55, 8, 28), materials["warn_glow"])
+    add_cube("PROP_GuestHall_Room203_HandleBackplate_Readable", (4028, 264, 132), (22, 8, 70), materials["black"], door_decision_tags, no_collision=True)
+    add_cube(
+        "PROP_GuestHall_Room203_LatchJoltCue",
+        (4046, 257, 143),
+        (54, 10, 10),
+        materials["warn"],
+        door_refusal_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
+    add_cube(
+        "PROP_GuestHall_Room203_ChainJoltCue",
+        (3992, 258, 166),
+        (72, 8, 8),
+        materials["trim"],
+        door_refusal_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
+    add_cube("PROP_GuestHall_Room203_PeepholeBlackCue", (3920, 262, 186), (22, 7, 22), materials["black"], door_decision_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_DoNotOpenNotice", (3880, 260, 112), (62, 5, 42), materials["paper"], door_decision_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_NoticeUnderline", (3880, 256, 101), (46, 5, 4), materials["warn"], door_decision_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_ThresholdShadow", (3920, 257, 2), (230, 18, 6), materials["black"], door_decision_tags, no_collision=True)
     add_cube("LIGHTMESH_GuestHall_Room203DoorPractical", (3775, 268, 212), (96, 8, 24), materials["warn_glow"], ("Hotel.Capture.Readability",))
     add_cube("PROP_GuestHall_ServiceCart_BlockingSightline", (3380, -205, 58), (150, 82, 116), materials["trim"])
     add_cube("PROP_GuestHall_EndShadow_NoSmallRoomExtension", (4450, 0, 125), (44, 520, 250), materials["black"])
