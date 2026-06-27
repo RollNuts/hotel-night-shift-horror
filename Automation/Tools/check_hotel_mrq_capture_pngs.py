@@ -14,7 +14,7 @@ import struct
 import zlib
 
 
-MIN_CAPTURE_COUNT = 4
+EXPECTED_CAPTURE_COUNT = 5
 MIN_AVERAGE_LUMA = 12.0
 MIN_AVERAGE_RGB_ENERGY = 36.0
 MIN_PEAK_RGB_ENERGY = 60
@@ -140,8 +140,8 @@ def main() -> None:
     args = parser.parse_args()
 
     paths = sorted(glob.glob(os.path.join(args.capture_dir, "hotel_spine_evidence_*.png")))
-    if len(paths) < MIN_CAPTURE_COUNT:
-        fail(f"Expected at least {MIN_CAPTURE_COUNT} MRQ evidence PNGs in {args.capture_dir}, found {len(paths)}.")
+    if len(paths) != EXPECTED_CAPTURE_COUNT:
+        fail(f"Expected exactly {EXPECTED_CAPTURE_COUNT} MRQ evidence PNGs in {args.capture_dir}, found {len(paths)}.")
 
     hashes = []
     for path in paths:
