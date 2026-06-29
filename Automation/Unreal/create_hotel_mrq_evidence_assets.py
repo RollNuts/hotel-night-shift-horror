@@ -66,6 +66,108 @@ def camera_binding_id(binding) -> unreal.MovieSceneObjectBindingID:
     return binding_id
 
 
+def get_actor_camera_fov(actor) -> float:
+    for component_getter in (
+        "get_cine_camera_component",
+        "get_camera_component",
+    ):
+        getter = getattr(actor, component_getter, None)
+        if not getter:
+            continue
+        try:
+            component = getter()
+            return float(component.get_editor_property("field_of_view"))
+        except Exception:
+            pass
+
+    try:
+        component = actor.get_editor_property("camera_component")
+        return float(component.get_editor_property("field_of_view"))
+    except Exception:
+        return 62.0
+
+
+def focal_length_from_fov_degrees(fov_degrees: float, sensor_width_mm: float = 36.0) -> float:
+    # CineCamera stores lens angle through focal length. Keep the spawned
+    # evidence camera visually close to the authored map camera FOV.
+    import math
+
+    half_angle = math.radians(max(1.0, min(160.0, fov_degrees)) * 0.5)
+    return (sensor_width_mm * 0.5) / math.tan(half_angle)
+
+
+def set_float_channel_default(section, channel_name: str, value: float) -> None:
+    for channel in section.get_all_channels():
+        if str(getattr(channel, "channel_name", "")) == channel_name:
+            channel.set_default(value)
+            return
+
+
+def set_transform_defaults(section, location, rotation) -> None:
+    transform_defaults = {
+        "Location.X": float(location.x),
+        "Location.Y": float(location.y),
+        "Location.Z": float(location.z),
+        "Rotation.X": float(rotation.roll),
+        "Rotation.Y": float(rotation.pitch),
+        "Rotation.Z": float(rotation.yaw),
+        "Scale.X": 1.0,
+        "Scale.Y": 1.0,
+        "Scale.Z": 1.0,
+    }
+    for channel_name, value in transform_defaults.items():
+        set_float_channel_default(section, channel_name, value)
+
+
+def add_spawnable_evidence_camera(sequence: unreal.LevelSequence, camera_label: str, frame_number: int):
+    source_camera = find_actor_by_label(camera_label)
+    if not source_camera:
+        fail(f"Missing camera actor in hotel map: {camera_label}")
+
+    location = source_camera.get_actor_location()
+    rotation = source_camera.get_actor_rotation()
+    fov_degrees = get_actor_camera_fov(source_camera)
+
+    temp_camera = unreal.EditorLevelLibrary.spawn_actor_from_class(
+        unreal.CineCameraActor,
+        location,
+        rotation,
+    )
+    temp_camera.set_actor_label(f"TMP_MRQ_{camera_label}")
+    try:
+        cine_component = temp_camera.get_cine_camera_component()
+        try_set_property(cine_component, "current_focal_length", focal_length_from_fov_degrees(fov_degrees))
+        try_set_property(cine_component, "current_aperture", 8.0)
+    except Exception:
+        pass
+
+    binding = sequence.add_spawnable_from_instance(temp_camera)
+    binding.set_display_name(camera_label)
+
+    transform_track = binding.add_track(unreal.MovieScene3DTransformTrack)
+    transform_section = transform_track.add_section()
+    transform_section.set_end_frame(frame_number + 2)
+    transform_section.set_start_frame(frame_number - 1)
+    set_transform_defaults(transform_section, location, rotation)
+
+    try:
+        cine_component = temp_camera.get_cine_camera_component()
+        component_binding = sequence.add_possessable(cine_component)
+        component_binding.set_parent(binding)
+        focal_length_track = component_binding.add_track(unreal.MovieSceneFloatTrack)
+        focal_length_track.set_property_name_and_path("CurrentFocalLength", "CurrentFocalLength")
+        focal_length_section = focal_length_track.add_section()
+        focal_length_section.set_end_frame(frame_number + 2)
+        focal_length_section.set_start_frame(frame_number - 1)
+        for channel in focal_length_section.find_channels_by_type(unreal.MovieSceneScriptingFloatChannel):
+            channel.set_default(focal_length_from_fov_degrees(fov_degrees))
+    except Exception:
+        pass
+
+    unreal.EditorLevelLibrary.destroy_actor(temp_camera)
+    return binding
+
+
 def sanitize_sequence_metadata(sequence: unreal.LevelSequence) -> None:
     metadata_class = getattr(unreal, "MovieSceneMetaData", None)
     if metadata_class is None:
@@ -116,15 +218,14 @@ def create_still_sequence() -> unreal.LevelSequence:
         fail("Unable to create camera cut track.")
 
     for frame_number, camera_label in enumerate(CAPTURE_CAMERAS):
-        camera = find_actor_by_label(camera_label)
-        if not camera:
-            fail(f"Missing camera actor in hotel map: {camera_label}")
-
-        binding = sequence.add_possessable(camera)
+        binding = add_spawnable_evidence_camera(sequence, camera_label, frame_number)
         cut = camera_cut_track.add_section()
         cut.set_end_frame(frame_number + 1)
-        cut.set_start_frame(frame_number)
-        cut.set_editor_property("CameraBindingID", camera_binding_id(binding))
+        cut.set_start_frame(frame_number - 1 if frame_number == 0 else frame_number)
+        try:
+            cut.set_camera_binding_id(sequence.get_binding_id(binding))
+        except Exception:
+            cut.set_editor_property("CameraBindingID", camera_binding_id(binding))
 
     # Adding camera cut sections can clamp the playback range in some editor
     # versions. Re-apply the full range so the final still is rendered.

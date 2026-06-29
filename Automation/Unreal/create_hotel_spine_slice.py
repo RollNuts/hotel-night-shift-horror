@@ -593,6 +593,74 @@ def create_room203_handle_lever_mesh() -> tuple[list[tuple[float, float, float]]
     return vertices, faces
 
 
+def append_flat_polygon(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    points: list[tuple[float, float, float]],
+    double_sided: bool = False,
+) -> None:
+    base = len(vertices)
+    vertices.extend(points)
+    for index in range(1, len(points) - 1):
+        faces.append((base, base + index, base + index + 1))
+        if double_sided:
+            faces.append((base + index + 1, base + index, base))
+
+
+def create_guesthall_peeling_wallpaper_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    columns = 5
+    rows = 6
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    for row in range(rows + 1):
+        z_norm = row / rows
+        for column in range(columns + 1):
+            x_norm = column / columns
+            ragged = 1.0 if column in (0, columns) or row in (0, rows) else 0.0
+            lower_curl = max(0.0, 0.28 - z_norm) ** 2 * 18.0
+            side_curl = max(0.0, x_norm - 0.72) ** 2 * 14.0
+            x = -58.0 + 116.0 * x_norm + math.sin(row * 1.31 + column * 0.77) * ragged * 5.5
+            z = -76.0 + 152.0 * z_norm + math.sin(column * 1.13 + row * 0.61) * ragged * 4.5
+            y = -(lower_curl + side_curl)
+            vertices.append((x, y, z))
+
+    stride = columns + 1
+    for row in range(rows):
+        for column in range(columns):
+            a = row * stride + column
+            b = a + 1
+            c = a + stride + 1
+            d = a + stride
+            faces.append((a, b, c, d))
+    return vertices, faces
+
+
+def create_guesthall_floor_scuff_cluster_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    strips = [
+        [(-170.0, -24.0, 0.0), (-86.0, -31.0, 0.0), (4.0, -22.0, 0.0), (156.0, -30.0, 0.0), (174.0, -18.0, 0.0), (18.0, -9.0, 0.0), (-98.0, -13.0, 0.0), (-184.0, -7.0, 0.0)],
+        [(-138.0, 18.0, 0.0), (-34.0, 9.0, 0.0), (118.0, 13.0, 0.0), (166.0, 26.0, 0.0), (46.0, 34.0, 0.0), (-72.0, 32.0, 0.0), (-152.0, 30.0, 0.0)],
+        [(-82.0, -58.0, 0.0), (38.0, -64.0, 0.0), (126.0, -54.0, 0.0), (112.0, -44.0, 0.0), (-12.0, -45.0, 0.0), (-90.0, -48.0, 0.0)],
+    ]
+    for strip in strips:
+        append_flat_polygon(vertices, faces, strip)
+    return vertices, faces
+
+
+def create_guesthall_ceiling_water_stain_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    points: list[tuple[float, float, float]] = []
+    for index in range(18):
+        theta = -2.0 * math.pi * index / 18.0
+        radius_x = 92.0 + 18.0 * math.sin(index * 1.7)
+        radius_y = 46.0 + 11.0 * math.cos(index * 2.1)
+        points.append((math.cos(theta) * radius_x, math.sin(theta) * radius_y, 0.0))
+    append_flat_polygon(vertices, faces, points)
+    return vertices, faces
+
+
 def generate_source_meshes() -> dict[str, pathlib.Path]:
     UPDATED_SOURCE_MESHES.clear()
     mesh_builders = {
@@ -604,6 +672,9 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_Room203_ChainLinks_v0": create_room203_chain_links_mesh,
         "SM_Room203_TornNotice_v0": create_room203_torn_notice_mesh,
         "SM_Room203_HandleLever_v0": create_room203_handle_lever_mesh,
+        "SM_GuestHall_PeelingWallpaperPatch_v0": create_guesthall_peeling_wallpaper_mesh,
+        "SM_GuestHall_FloorScuffCluster_v0": create_guesthall_floor_scuff_cluster_mesh,
+        "SM_GuestHall_CeilingWaterStain_v0": create_guesthall_ceiling_water_stain_mesh,
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -651,10 +722,19 @@ def ensure_material(
     color: unreal.LinearColor,
     roughness: float,
     emissive: unreal.LinearColor | None = None,
+    two_sided: bool = False,
 ) -> unreal.MaterialInterface:
     path = f"/Game/Hotel/Materials/{name}"
     if unreal.EditorAssetLibrary.does_asset_exist(path):
-        return unreal.EditorAssetLibrary.load_asset(path)
+        material = unreal.EditorAssetLibrary.load_asset(path)
+        if two_sided:
+            try:
+                material.set_editor_property("two_sided", True)
+                unreal.MaterialEditingLibrary.recompile_material(material)
+                unreal.EditorAssetLibrary.save_asset(path)
+            except Exception:
+                pass
+        return material
 
     material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
         name,
@@ -662,6 +742,12 @@ def ensure_material(
         unreal.Material,
         unreal.MaterialFactoryNew(),
     )
+
+    if two_sided:
+        try:
+            material.set_editor_property("two_sided", True)
+        except Exception:
+            pass
 
     base = unreal.MaterialEditingLibrary.create_material_expression(
         material, unreal.MaterialExpressionConstant3Vector, -360, -120
@@ -855,7 +941,7 @@ def add_light(
     return actor
 
 
-def add_camera(label: str, location, rotation, fov: float = 62.0) -> unreal.Actor:
+def add_camera(label: str, location, rotation, fov: float = 62.0, tags=()) -> unreal.Actor:
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.CameraActor,
         unreal.Vector(*location),
@@ -885,6 +971,7 @@ def add_camera(label: str, location, rotation, fov: float = 62.0) -> unreal.Acto
         component.set_editor_property("post_process_settings", settings)
     except Exception:
         pass
+    tag_actor(actor, *tags)
     return actor
 
 
@@ -985,6 +1072,11 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
         "paper": ensure_material("M_Hotel_AgedCallSlipPaper_v0", unreal.LinearColor(0.72, 0.64, 0.48, 1.0), 0.81),
         "button": ensure_material("M_Hotel_PhoneBoneButton_v0", unreal.LinearColor(0.58, 0.54, 0.46, 1.0), 0.62),
         "route_mark": ensure_material("M_Hotel_WornRouteTape_v0", unreal.LinearColor(0.46, 0.42, 0.32, 1.0), 0.88),
+        "wall_peel": ensure_material("M_Hotel_PeeledWallpaperPaper_v0", unreal.LinearColor(0.72, 0.63, 0.46, 1.0), 0.93, two_sided=True),
+        "wall_damp": ensure_material("M_Hotel_WallDampStain_v0", unreal.LinearColor(0.052, 0.050, 0.044, 1.0), 0.97, two_sided=True),
+        "floor_scuff": ensure_material("M_Hotel_FloorScuffDark_v0", unreal.LinearColor(0.040, 0.035, 0.031, 1.0), 0.95, two_sided=True),
+        "ceiling_stain": ensure_material("M_Hotel_CeilingWaterStain_v0", unreal.LinearColor(0.105, 0.089, 0.063, 1.0), 0.98, two_sided=True),
+        "paint_chip": ensure_material("M_Hotel_DoorPaintChipLight_v0", unreal.LinearColor(0.55, 0.48, 0.35, 1.0), 0.9),
         "screen": ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
         "door": ensure_material("M_Hotel_RoomDoorPaint_v0", unreal.LinearColor(0.23, 0.18, 0.13, 1.0), 0.77),
         "warn": ensure_material("M_Hotel_ServiceAmber_v0", unreal.LinearColor(0.75, 0.43, 0.12, 1.0), 0.63),
@@ -1232,6 +1324,72 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     add_cube("AREA_GuestHall_RightWall_DoorDecisionSide", (3250, 290, 140), (2500, 24, 280), materials["wall"])
     add_cube("AREA_GuestHall_Ceiling_LowPressure", (3250, 0, 286), (2500, 560, 20), materials["trim"])
     add_cube("PROP_GuestHall_Camera_MonitorMismatchAnchor", (2600, -282, 220), (36, 20, 28), materials["black"])
+    guesthall_decay_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.GuestDoor",
+        "Hotel.Capture.Room203Surface",
+        "Hotel.ArtDensity.GuestHall",
+        "Hotel.ArtDensity.Room203",
+        "Hotel.ArtSurface.Room203MaterialPass",
+        "Hotel.ArtSource.ProjectAuthoredMaterial",
+    )
+    guesthall_authored_decay_tags = guesthall_decay_tags + ("Hotel.ArtSource.AuthoredMesh",)
+    add_cube("PROP_GuestHall_RightWall_Baseboard_RunTo203_A", (3260, 274, 25), (940, 12, 28), materials["trim"], guesthall_decay_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_Baseboard_RunTo203_B", (4300, 274, 25), (330, 12, 28), materials["trim"], guesthall_decay_tags, no_collision=True)
+    add_cube("PROP_GuestHall_LeftWall_Baseboard_CameraSide", (3320, -274, 24), (1460, 12, 26), materials["trim"], guesthall_decay_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_FramePaintChip_LeftTop", (3785, 255, 194), (9, 5, 31), materials["paint_chip"], guesthall_decay_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_FramePaintChip_LeftLow", (3785, 255, 83), (9, 5, 42), materials["paint_chip"], guesthall_decay_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_FramePaintChip_RightMid", (4055, 255, 142), (9, 5, 53), materials["paint_chip"], guesthall_decay_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_ThresholdDustCollect", (3920, 251, 8), (250, 20, 5), materials["floor_scuff"], guesthall_decay_tags, no_collision=True)
+    add_sphere("PROP_GuestHall_LeftWall_DampPatch_CameraSide", (2980, -273, 172), (170, 7, 92), materials["wall_damp"], guesthall_decay_tags, no_collision=True)
+    if "SM_GuestHall_PeelingWallpaperPatch_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_AuthoredDampUnderPeel_Room203Approach",
+            meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
+            (3515, 275, 162),
+            (1.85, 1.0, 1.22),
+            materials["wall_damp"],
+            guesthall_authored_decay_tags,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_CameraReadable",
+            meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
+            (3405, 276, 142),
+            (1.45, 1.0, 1.15),
+            materials["wall_peel"],
+            guesthall_authored_decay_tags,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_Room203",
+            meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
+            (3635, 276, 166),
+            (1.2, 1.0, 1.1),
+            materials["wall_peel"],
+            guesthall_authored_decay_tags,
+            no_collision=True,
+        )
+    if "SM_GuestHall_FloorScuffCluster_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Floor_AuthoredScuffPath_ToRoom203",
+            meshes["SM_GuestHall_FloorScuffCluster_v0"],
+            (3370, -20, 2),
+            (1.0, 1.0, 1.0),
+            materials["floor_scuff"],
+            guesthall_authored_decay_tags,
+            no_collision=True,
+        )
+    if "SM_GuestHall_CeilingWaterStain_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Ceiling_AuthoredWaterStain_FluorescentB",
+            meshes["SM_GuestHall_CeilingWaterStain_v0"],
+            (3920, 20, 274),
+            (1.0, 0.72, 1.0),
+            materials["ceiling_stain"],
+            guesthall_authored_decay_tags,
+            no_collision=True,
+        )
     return_route_tags = ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly")
     add_cube("RETURN_Route_FloorColdPatch_AfterRefusal", (2860, 0, 4), (310, 420, 5), materials["screen_glow"], return_route_tags, no_collision=True)
     add_cube("RETURN_Route_BackKnockDirectionStripe", (2860, -84, 10), (220, 8, 5), materials["warn"], return_route_tags, no_collision=True)
@@ -1348,22 +1506,25 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
 
     # Lighting and atmosphere: final-intent mood direction, still placeholder geometry.
     add_light("LIGHT_FrontDesk_TiredWarmCounter", unreal.RectLight, (-250, -440, 232), (-68, 0, 0), 6500.0, unreal.Color(255, 184, 116, 255), attenuation_radius=1250.0, source_width=360.0, source_height=90.0)
-    add_light("LIGHT_FrontDesk_WorkSurfacePracticalFill", unreal.PointLight, (-330, -535, 178), (0, 0, 0), 950.0, unreal.Color(255, 190, 112, 255), ("Hotel.Capture.Readability",), attenuation_radius=520.0)
-    add_light("LIGHT_FrontDesk_PhoneCallLampPulse", unreal.PointLight, (-395, -555, 158), (0, 0, 0), 280.0, unreal.Color(255, 168, 72, 255), ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"), attenuation_radius=220.0)
-    add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 1800.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=860.0)
+    add_light("LIGHT_FrontDesk_WorkSurfacePracticalFill", unreal.PointLight, (-330, -535, 178), (0, 0, 0), 2000.0, unreal.Color(255, 190, 112, 255), ("Hotel.Capture.Readability",), attenuation_radius=560.0)
+    add_light("LIGHT_FrontDesk_PhoneCallLampPulse", unreal.PointLight, (-395, -555, 158), (0, 0, 0), 760.0, unreal.Color(255, 168, 72, 255), ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"), attenuation_radius=280.0)
+    add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 2700.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=900.0)
+    add_light("LIGHT_FrontDesk_PhoneResponseEvidenceFill", unreal.PointLight, (-390, -650, 188), (0, 0, 0), 5200.0, unreal.Color(255, 196, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PhoneResponse"), attenuation_radius=720.0)
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 2200.0, unreal.Color(120, 165, 255, 255), attenuation_radius=950.0, source_width=280.0, source_height=240.0)
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 1400.0, unreal.Color(255, 198, 90, 255), attenuation_radius=780.0)
     add_light("LIGHT_Transition_ElevatorCallPanelDread", unreal.PointLight, (1122, 398, 150), (0, 0, 0), 980.0, unreal.Color(255, 155, 58, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=360.0)
     add_light("LIGHT_Transition_StairExitCold", unreal.PointLight, (1122, -560, 230), (0, 0, 0), 720.0, unreal.Color(92, 210, 170, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=420.0)
-    add_light("LIGHT_Transition_CaptureEvidenceSoftFill", unreal.PointLight, (925, 0, 190), (0, 0, 0), 1850.0, unreal.Color(178, 218, 205, 255), ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"), attenuation_radius=760.0)
+    add_light("LIGHT_Transition_CaptureEvidenceSoftFill", unreal.PointLight, (925, 0, 190), (0, 0, 0), 4300.0, unreal.Color(178, 218, 205, 255), ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"), attenuation_radius=980.0)
+    add_light("LIGHT_Transition_EvidenceWideFill", unreal.PointLight, (770, 0, 185), (0, 0, 0), 17000.0, unreal.Color(164, 214, 205, 255), ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"), attenuation_radius=1600.0)
     add_light("LIGHT_PatrolRoute_DecisionCueFloorFill", unreal.PointLight, (955, 0, 115), (0, 0, 0), 1100.0, unreal.Color(190, 218, 194, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision", "Hotel.Feedback.PatrolListenLight"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_ReturnRoute_ColdPulseAfterRefusal", unreal.PointLight, (2860, -90, 188), (0, 0, 0), 620.0, unreal.Color(120, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"), attenuation_radius=680.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
-    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 2200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability",), attenuation_radius=920.0)
+    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 3100.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=980.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
-    add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 360.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=650.0)
+    add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 1350.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=920.0)
+    add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
     add_light("LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse", unreal.PointLight, (-190, -520, 166), (0, 0, 0), 520.0, unreal.Color(255, 190, 120, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionLight"), attenuation_radius=420.0)
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
@@ -1386,7 +1547,7 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
-    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
+    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0, ("Hotel.Capture.Room203Surface",))
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)
