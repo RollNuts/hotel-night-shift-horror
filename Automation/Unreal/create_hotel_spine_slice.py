@@ -868,6 +868,254 @@ def create_guesthall_floor_scuff_cluster_mesh() -> tuple[list[tuple[float, float
     return vertices, faces
 
 
+def create_guesthall_return_route_floor_echo_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_jagged_smear(center_x: float, center_y: float, length: float, width: float, phase: float) -> None:
+        points: list[tuple[float, float, float]] = []
+        steps = 7
+        for index in range(steps):
+            alpha = index / (steps - 1)
+            x = center_x - length * 0.5 + length * alpha
+            y = center_y + math.sin(alpha * math.pi * 2.2 + phase) * width * 0.20
+            half = width * (0.26 + 0.16 * math.sin(index * 1.41 + phase))
+            points.append((x, y + half, 0.0))
+        for index in reversed(range(steps)):
+            alpha = index / (steps - 1)
+            x = center_x - length * 0.5 + length * alpha
+            y = center_y + math.sin(alpha * math.pi * 2.2 + phase) * width * 0.20
+            half = width * (0.20 + 0.12 * math.cos(index * 1.17 + phase))
+            points.append((x + math.sin(index * 0.73 + phase) * 4.0, y - half, 0.0))
+        append_flat_polygon(vertices, faces, points, double_sided=True)
+
+    append_jagged_smear(-54.0, -95.0, 170.0, 34.0, 0.4)
+    append_jagged_smear(34.0, -28.0, 235.0, 40.0, 1.6)
+    append_jagged_smear(-18.0, 52.0, 190.0, 30.0, 2.7)
+    append_jagged_smear(92.0, 104.0, 118.0, 24.0, 3.5)
+
+    echo_islands = [
+        [(-176.0, -38.0, 0.0), (-126.0, -48.0, 0.0), (-84.0, -34.0, 0.0), (-111.0, -18.0, 0.0), (-168.0, -18.0, 0.0)],
+        [(126.0, 16.0, 0.0), (176.0, 22.0, 0.0), (158.0, 44.0, 0.0), (106.0, 38.0, 0.0)],
+        [(-116.0, 96.0, 0.0), (-68.0, 86.0, 0.0), (-48.0, 110.0, 0.0), (-92.0, 126.0, 0.0)],
+    ]
+    for island in echo_islands:
+        append_flat_polygon(vertices, faces, island, double_sided=True)
+    return vertices, faces
+
+
+def create_guesthall_return_route_wall_echo_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_wall_ribbon(points: list[tuple[float, float]], thickness: float, phase: float) -> None:
+        base = len(vertices)
+        for index, (x, z) in enumerate(points):
+            if index == 0:
+                dx, dz = points[1][0] - x, points[1][1] - z
+            elif index == len(points) - 1:
+                dx, dz = x - points[index - 1][0], z - points[index - 1][1]
+            else:
+                dx, dz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+            length = math.sqrt(dx * dx + dz * dz) or 1.0
+            px, pz = -dz / length, dx / length
+            wobble = math.sin(index * 1.61 + phase) * 2.8
+            half = thickness * (0.56 + 0.22 * math.cos(index * 1.09 + phase))
+            vertices.append((x + px * (half + wobble), 0.0, z + pz * (half + wobble)))
+            vertices.append((x - px * (half - wobble * 0.45), -1.1, z - pz * (half - wobble * 0.45)))
+
+        for index in range(len(points) - 1):
+            a = base + index * 2
+            b = a + 1
+            c = a + 3
+            d = a + 2
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    append_wall_ribbon([(-130.0, 46.0), (-72.0, 68.0), (-8.0, 58.0), (62.0, 70.0), (136.0, 50.0)], 5.8, 0.1)
+    append_wall_ribbon([(-118.0, 30.0), (-90.0, -2.0), (-96.0, -46.0), (-62.0, -78.0), (-34.0, -118.0)], 5.2, 0.9)
+    append_wall_ribbon([(118.0, 28.0), (84.0, -6.0), (92.0, -46.0), (58.0, -78.0), (42.0, -112.0)], 4.8, 1.8)
+    append_wall_ribbon([(-64.0, -128.0), (-18.0, -112.0), (28.0, -126.0), (76.0, -104.0)], 4.3, 2.6)
+    append_wall_ribbon([(-20.0, 42.0), (-4.0, 4.0), (-22.0, -34.0), (2.0, -72.0), (-10.0, -108.0)], 2.6, 3.4)
+    return vertices, faces
+
+
+def create_guesthall_return_route_hand_shadow_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_shadow_blob(center_x: float, center_z: float, radius_x: float, radius_z: float, points_count: int, phase: float) -> None:
+        points: list[tuple[float, float, float]] = []
+        for index in range(points_count):
+            theta = 2.0 * math.pi * index / points_count
+            wobble = 1.0 + 0.16 * math.sin(index * 1.71 + phase) + 0.08 * math.cos(index * 2.43 + phase)
+            points.append(
+                (
+                    center_x + math.cos(theta) * radius_x * wobble,
+                    -0.6 - 0.25 * math.sin(index * 1.37 + phase),
+                    center_z + math.sin(theta) * radius_z * wobble,
+                )
+            )
+        append_flat_polygon(vertices, faces, points, double_sided=True)
+
+    def append_shadow_ribbon(points: list[tuple[float, float]], thickness: float, phase: float) -> None:
+        base = len(vertices)
+        for index, (x, z) in enumerate(points):
+            if index == 0:
+                dx, dz = points[1][0] - x, points[1][1] - z
+            elif index == len(points) - 1:
+                dx, dz = x - points[index - 1][0], z - points[index - 1][1]
+            else:
+                dx, dz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+            length = math.sqrt(dx * dx + dz * dz) or 1.0
+            px, pz = -dz / length, dx / length
+            pulse = math.sin(index * 1.19 + phase)
+            half = thickness * (0.70 + 0.18 * pulse)
+            vertices.append((x + px * half, -0.9, z + pz * half))
+            vertices.append((x - px * half * (0.82 + 0.12 * pulse), -1.4, z - pz * half * (0.82 + 0.12 * pulse)))
+
+        for index in range(len(points) - 1):
+            a = base + index * 2
+            b = a + 1
+            c = a + 3
+            d = a + 2
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    append_shadow_blob(-4.0, -2.0, 32.0, 37.0, 22, 0.2)
+    append_shadow_blob(-46.0, -12.0, 18.0, 12.0, 14, 1.7)
+    append_shadow_ribbon([(-34.0, 25.0), (-44.0, 66.0), (-54.0, 102.0)], 8.0, 0.4)
+    append_shadow_ribbon([(-16.0, 30.0), (-18.0, 76.0), (-24.0, 125.0)], 8.8, 1.2)
+    append_shadow_ribbon([(4.0, 31.0), (10.0, 82.0), (4.0, 132.0)], 8.2, 2.0)
+    append_shadow_ribbon([(24.0, 24.0), (36.0, 64.0), (36.0, 104.0)], 7.0, 2.8)
+    append_shadow_ribbon([(27.0, -24.0), (66.0, -18.0), (96.0, -8.0)], 7.5, 3.6)
+    append_shadow_ribbon([(-12.0, -36.0), (-6.0, -76.0), (16.0, -116.0)], 14.0, 4.3)
+    return vertices, faces
+
+
+def create_guesthall_return_route_torn_slip_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    main = [
+        (-52.0, -0.2, 34.0),
+        (-14.0, -0.5, 41.0),
+        (18.0, -1.2, 36.0),
+        (51.0, -0.7, 28.0),
+        (44.0, -2.4, 8.0),
+        (55.0, -1.1, -8.0),
+        (32.0, -2.8, -35.0),
+        (4.0, -4.0, -28.0),
+        (-22.0, -2.2, -42.0),
+        (-54.0, -1.5, -24.0),
+        (-44.0, -0.8, -2.0),
+    ]
+    append_flat_polygon(vertices, faces, main, double_sided=True)
+    folded_corner = [
+        (32.0, -3.0, -35.0),
+        (55.0, -8.0, -8.0),
+        (45.0, -2.0, -2.0),
+    ]
+    append_flat_polygon(vertices, faces, folded_corner, double_sided=True)
+    torn_upper = [
+        (-50.0, -0.9, 37.0),
+        (-28.0, -1.2, 45.0),
+        (-7.0, -1.0, 39.0),
+        (16.0, -1.4, 43.0),
+        (49.0, -0.9, 31.0),
+        (48.0, -2.0, 23.0),
+        (10.0, -1.7, 30.0),
+        (-30.0, -1.9, 28.0),
+    ]
+    append_flat_polygon(vertices, faces, torn_upper, double_sided=True)
+    return vertices, faces
+
+
+def create_guesthall_return_route_warning_underline_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    top: list[tuple[float, float, float]] = []
+    bottom: list[tuple[float, float, float]] = []
+    for index in range(8):
+        alpha = index / 7.0
+        x = -50.0 + alpha * 100.0
+        z = math.sin(alpha * math.pi * 3.2) * 2.5
+        top.append((x, -0.7, z + 4.2 + math.sin(index * 1.9) * 0.8))
+        bottom.append((x + math.sin(index * 0.8) * 2.4, -1.0, z - 3.8 + math.cos(index * 1.6) * 0.7))
+    append_flat_polygon(vertices, faces, top + list(reversed(bottom)), double_sided=True)
+    return vertices, faces
+
+
+def create_guesthall_return_route_slip_writing_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_stroke(points: list[tuple[float, float]], thickness: float, phase: float) -> None:
+        base = len(vertices)
+        for index, (x, z) in enumerate(points):
+            if index == 0:
+                dx, dz = points[1][0] - x, points[1][1] - z
+            elif index == len(points) - 1:
+                dx, dz = x - points[index - 1][0], z - points[index - 1][1]
+            else:
+                dx, dz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+            length = math.sqrt(dx * dx + dz * dz) or 1.0
+            px, pz = -dz / length, dx / length
+            wobble = math.sin(index * 1.43 + phase) * 0.7
+            half = thickness * (0.54 + 0.18 * math.cos(index * 1.17 + phase))
+            vertices.append((x + px * (half + wobble), -1.8, z + pz * (half + wobble)))
+            vertices.append((x - px * (half - wobble * 0.45), -2.2, z - pz * (half - wobble * 0.45)))
+
+        for index in range(len(points) - 1):
+            a = base + index * 2
+            b = a + 1
+            c = a + 3
+            d = a + 2
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    # Ragged, mostly unreadable "203 / BACK" warning strokes. It should read
+    # as frantic handwriting in the evidence shot, not UI text.
+    append_stroke([(-34.0, 20.0), (-24.0, 27.0), (-10.0, 25.0), (-20.0, 13.0), (-6.0, 8.0)], 3.5, 0.1)
+    append_stroke([(4.0, 24.0), (18.0, 26.0), (26.0, 18.0), (18.0, 8.0), (4.0, 10.0), (0.0, 18.0)], 3.3, 0.8)
+    append_stroke([(36.0, 25.0), (22.0, 18.0), (36.0, 12.0), (24.0, 4.0), (42.0, 2.0)], 3.2, 1.5)
+    append_stroke([(-40.0, -5.0), (-24.0, -10.0), (-4.0, -6.0), (16.0, -12.0), (36.0, -8.0)], 3.0, 2.1)
+    append_stroke([(-34.0, -23.0), (-16.0, -18.0), (0.0, -25.0), (18.0, -20.0), (34.0, -26.0)], 2.4, 2.9)
+    append_stroke([(43.0, -7.0), (55.0, -1.0), (43.0, 7.0), (48.0, -1.0), (42.0, -7.0)], 2.6, 3.7)
+    append_stroke([(-48.0, 0.0), (-39.0, -4.0), (-48.0, -9.0), (-38.0, -13.0)], 2.2, 4.4)
+    return vertices, faces
+
+
+def create_guesthall_return_route_footprint_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_floor_blob(center_x: float, center_y: float, radius_x: float, radius_y: float, count: int, phase: float) -> None:
+        points: list[tuple[float, float, float]] = []
+        for index in range(count):
+            theta = 2.0 * math.pi * index / count
+            wobble = 1.0 + 0.14 * math.sin(index * 1.33 + phase) + 0.06 * math.cos(index * 2.51 + phase)
+            points.append((center_x + math.cos(theta) * radius_x * wobble, center_y + math.sin(theta) * radius_y * wobble, 0.0))
+        append_flat_polygon(vertices, faces, points, double_sided=True)
+
+    append_floor_blob(-16.0, -8.0, 14.0, 33.0, 18, 0.3)
+    append_floor_blob(-19.0, 31.0, 11.0, 9.0, 14, 1.5)
+    append_floor_blob(18.0, 15.0, 13.0, 29.0, 18, 2.1)
+    append_floor_blob(21.0, 50.0, 10.0, 8.0, 14, 3.0)
+    append_flat_polygon(
+        vertices,
+        faces,
+        [(-42.0, -24.0, 0.0), (-23.0, -27.0, 0.0), (-4.0, -19.0, 0.0), (-22.0, -14.0, 0.0)],
+        double_sided=True,
+    )
+    append_flat_polygon(
+        vertices,
+        faces,
+        [(8.0, -12.0, 0.0), (30.0, -16.0, 0.0), (43.0, -7.0, 0.0), (21.0, 1.0, 0.0)],
+        double_sided=True,
+    )
+    return vertices, faces
+
+
 def create_guesthall_ceiling_water_stain_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, ...]] = []
@@ -897,6 +1145,13 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_GuestHall_Room203AftershockTearShadow_v0": create_guesthall_room203_aftershock_shadow_mesh,
         "SM_GuestHall_Room203AftershockRawEdge_v0": create_guesthall_room203_aftershock_raw_edge_mesh,
         "SM_GuestHall_FloorScuffCluster_v0": create_guesthall_floor_scuff_cluster_mesh,
+        "SM_GuestHall_ReturnRouteFloorEcho_v0": create_guesthall_return_route_floor_echo_mesh,
+        "SM_GuestHall_ReturnRouteWallEcho_v0": create_guesthall_return_route_wall_echo_mesh,
+        "SM_GuestHall_ReturnRouteHandShadow_v0": create_guesthall_return_route_hand_shadow_mesh,
+        "SM_GuestHall_ReturnRouteTornSlip_v0": create_guesthall_return_route_torn_slip_mesh,
+        "SM_GuestHall_ReturnRouteWarningUnderline_v0": create_guesthall_return_route_warning_underline_mesh,
+        "SM_GuestHall_ReturnRouteSlipWriting_v0": create_guesthall_return_route_slip_writing_mesh,
+        "SM_GuestHall_ReturnRouteFootprint_v0": create_guesthall_return_route_footprint_mesh,
         "SM_GuestHall_CeilingWaterStain_v0": create_guesthall_ceiling_water_stain_mesh,
     }
 
@@ -1436,6 +1691,20 @@ def build_level(
         "paper_edge": ensure_material("M_Hotel_TornPaperEdgeLight_v0", unreal.LinearColor(0.86, 0.74, 0.52, 1.0), 0.9, two_sided=True),
         "paper_stripe": ensure_material("M_Hotel_FadedWallpaperStripe_v0", unreal.LinearColor(0.31, 0.285, 0.225, 1.0), 0.94, two_sided=True),
         "floor_scuff": ensure_material("M_Hotel_FloorScuffDark_v0", unreal.LinearColor(0.040, 0.035, 0.031, 1.0), 0.95, two_sided=True),
+        "return_cold_glow": ensure_material(
+            "M_Hotel_ReturnRouteColdGlow_v0",
+            unreal.LinearColor(0.040, 0.18, 0.22, 1.0),
+            0.34,
+            unreal.LinearColor(0.08, 1.05, 1.55, 1.0),
+            two_sided=True,
+        ),
+        "return_slip_paper": ensure_material(
+            "M_Hotel_ReturnRouteSlipPaper_v0",
+            unreal.LinearColor(0.82, 0.73, 0.55, 1.0),
+            0.9,
+            unreal.LinearColor(0.035, 0.026, 0.015, 1.0),
+            two_sided=True,
+        ),
         "ceiling_stain": ensure_material("M_Hotel_CeilingWaterStain_v0", unreal.LinearColor(0.105, 0.089, 0.063, 1.0), 0.98, two_sided=True),
         "paint_chip": ensure_material("M_Hotel_DoorPaintChipLight_v0", unreal.LinearColor(0.55, 0.48, 0.35, 1.0), 0.9),
         "screen": ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
@@ -1728,7 +1997,7 @@ def build_level(
             meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
             (3445, 276, 135),
             (0.82, 1.0, 0.78),
-            materials["wall_peel"],
+            materials["paper_edge"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -1768,7 +2037,7 @@ def build_level(
             meshes["SM_GuestHall_Room203AftershockPaper_v0"],
             (3700, 277, 166),
             (0.82, 1.0, 0.82),
-            materials["wall_peel"],
+            materials["paper_edge"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -1778,7 +2047,7 @@ def build_level(
             meshes["SM_GuestHall_Room203AftershockPaper_v0"],
             (3568, 277, 192),
             (0.46, 1.0, 0.46),
-            materials["wall_peel"],
+            materials["paper_edge"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -1788,7 +2057,7 @@ def build_level(
             meshes["SM_GuestHall_Room203AftershockPaper_v0"],
             (3810, 278, 124),
             (0.42, 1.0, 0.40),
-            materials["wall_peel"],
+            materials["paper_edge"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -1824,14 +2093,139 @@ def build_level(
             no_collision=True,
         )
     return_route_tags = ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly")
-    add_cube("RETURN_Route_FloorColdPatch_AfterRefusal", (2860, 0, 4), (310, 420, 5), materials["screen_glow"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_BackKnockDirectionStripe", (2860, -84, 10), (220, 8, 5), materials["warn"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_BackKnockDirectionStripe_Return", (2860, 84, 10), (220, 8, 5), materials["warn"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_WallStatusSlip_ReportAfterHall", (2840, -278, 124), (82, 7, 48), materials["paper"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_WallStatusSlip_Underline", (2840, -282, 104), (56, 5, 4), materials["warn"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_FootprintBacktrackA", (3040, -90, 6), (44, 18, 4), materials["black"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_FootprintBacktrackB", (2920, -32, 6), (44, 18, 4), materials["black"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_FootprintBacktrackC", (2785, 48, 6), (44, 18, 4), materials["black"], return_route_tags, no_collision=True)
+    return_route_backknock_tags = return_route_tags + ("Hotel.Feedback.ReturnRouteBackKnock",)
+    return_route_authored_tags = return_route_backknock_tags + ("Hotel.ArtSource.AuthoredMesh",)
+    if "SM_GuestHall_ReturnRouteFloorEcho_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_Floor_AuthoredBackstepSmear_Foreground",
+            meshes["SM_GuestHall_ReturnRouteFloorEcho_v0"],
+            (2885, -38, 3),
+            (1.0, 1.0, 1.0),
+            materials["floor_scuff"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "RETURN_Route_Floor_ColdRipple_AfterRefusal",
+            meshes["SM_GuestHall_ReturnRouteFloorEcho_v0"],
+            (2862, 28, 4),
+            (0.72, 0.88, 1.0),
+            materials["return_cold_glow"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_GuestHall_ReturnRouteWallEcho_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_RightWall_BackKnockShadow_Echo",
+            meshes["SM_GuestHall_ReturnRouteWallEcho_v0"],
+            (3285, 276, 142),
+            (1.12, 1.0, 0.82),
+            materials["wall_damp"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "RETURN_Route_RightWall_ColdPressureRipple",
+            meshes["SM_GuestHall_ReturnRouteWallEcho_v0"],
+            (3195, 274, 122),
+            (0.48, 1.0, 0.46),
+            materials["return_cold_glow"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_GuestHall_ReturnRouteHandShadow_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_RightWall_PalmDragShadow_BackKnock",
+            meshes["SM_GuestHall_ReturnRouteHandShadow_v0"],
+            (3098, 277, 158),
+            (0.58, 1.0, 0.58),
+            materials["paper_tear_shadow"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    add_cube("RETURN_Route_FloorColdPatch_AfterRefusal", (2860, 0, 4), (270, 360, 3), materials["return_cold_glow"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_BackKnockDirectionStripe", (2860, -84, 9), (196, 7, 3), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("RETURN_Route_BackKnockDirectionStripe_Return", (2860, 84, 9), (196, 7, 3), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    if "SM_GuestHall_ReturnRouteTornSlip_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_WallStatusSlip_ReportAfterHall",
+            meshes["SM_GuestHall_ReturnRouteTornSlip_v0"],
+            (3135, 268, 126),
+            (1.08, 1.0, 1.08),
+            materials["return_slip_paper"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    else:
+        add_cube("RETURN_Route_WallStatusSlip_ReportAfterHall", (3135, 276, 126), (82, 6, 48), materials["paper"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    if "SM_GuestHall_ReturnRouteWarningUnderline_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_WallStatusSlip_Underline",
+            meshes["SM_GuestHall_ReturnRouteWarningUnderline_v0"],
+            (3135, 264, 101),
+            (0.68, 1.0, 0.70),
+            materials["warn"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    else:
+        add_cube("RETURN_Route_WallStatusSlip_Underline", (3135, 273, 106), (56, 4, 4), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    if "SM_GuestHall_ReturnRouteSlipWriting_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_WallStatusSlip_FranticWriting",
+            meshes["SM_GuestHall_ReturnRouteSlipWriting_v0"],
+            (3135, 263, 126),
+            (1.18, 1.0, 1.14),
+            materials["deep_red"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_GuestHall_ReturnRouteFootprint_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_FootprintBacktrackA",
+            meshes["SM_GuestHall_ReturnRouteFootprint_v0"],
+            (3040, -90, 5),
+            (0.78, 0.78, 0.78),
+            materials["black"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, -8.0, 0.0),
+        )
+        add_authored_mesh(
+            "RETURN_Route_FootprintBacktrackB",
+            meshes["SM_GuestHall_ReturnRouteFootprint_v0"],
+            (2920, -32, 5),
+            (0.70, 0.70, 0.70),
+            materials["black"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, -17.0, 0.0),
+        )
+        add_authored_mesh(
+            "RETURN_Route_FootprintBacktrackC",
+            meshes["SM_GuestHall_ReturnRouteFootprint_v0"],
+            (2785, 48, 5),
+            (0.64, 0.64, 0.64),
+            materials["black"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, -24.0, 0.0),
+        )
+    else:
+        add_cube("RETURN_Route_FootprintBacktrackA", (3040, -90, 5), (32, 12, 2), materials["black"], return_route_tags, no_collision=True)
+        add_cube("RETURN_Route_FootprintBacktrackB", (2920, -32, 5), (32, 12, 2), materials["black"], return_route_tags, no_collision=True)
+        add_cube("RETURN_Route_FootprintBacktrackC", (2785, 48, 5), (32, 12, 2), materials["black"], return_route_tags, no_collision=True)
     add_cube("RETURN_Route_CeilingLightmesh_ColdPulseCue", (2860, -90, 273), (280, 34, 9), materials["fluorescent_panel"], return_route_tags, no_collision=True)
     door_decision_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual")
     door_refusal_tags = ("Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability")
@@ -1952,6 +2346,7 @@ def build_level(
     add_light("LIGHT_PatrolRoute_DecisionCueFloorFill", unreal.PointLight, (955, 0, 115), (0, 0, 0), 1100.0, unreal.Color(190, 218, 194, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision", "Hotel.Feedback.PatrolListenLight"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_ReturnRoute_ColdPulseAfterRefusal", unreal.PointLight, (2860, -90, 188), (0, 0, 0), 620.0, unreal.Color(120, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"), attenuation_radius=680.0)
+    add_light("LIGHT_ReturnRoute_BackKnockWallSkim", unreal.PointLight, (3190, 220, 154), (0, 0, 0), 1650.0, unreal.Color(118, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 5200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=1050.0)
@@ -1983,7 +2378,7 @@ def build_level(
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (3185, -205, 164), (1.5, 30, 0), 52.0, ("Hotel.Capture.Room203Surface", "Hotel.Capture.Room203Aftershock"))
-    add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
+    add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2668, -248, 158), (0.5, 43, 0), 46.0, ("Hotel.Capture.ReturnRouteAnomaly",))
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)
     add_camera("CAPTURE_PostReportLogSelfCorrectionCandidate", (-265, -755, 232), (-31, 90, 0), 62.0)

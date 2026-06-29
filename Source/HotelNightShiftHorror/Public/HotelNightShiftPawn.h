@@ -56,6 +56,7 @@ public:
 	bool AutomationIsReturnRouteAnomalyActive() const;
 	bool AutomationIsReturnRouteAnomalyResolved() const;
 	void AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds);
+	FVector AutomationGetReturnRouteBackKnockLocation() const;
 	bool AutomationIsPostReportMonitorMismatchActive() const;
 	void AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds);
 	bool AutomationIsPostReportDeskWaitActive() const;
@@ -111,6 +112,8 @@ private:
 	void UpdateReturnRouteAnomaly(float DeltaSeconds);
 	void StartReturnRouteAnomaly();
 	void ResolveReturnRouteAnomaly();
+	void UpdateReturnRouteBackKnockFeedback(float NormalizedTime);
+	void ResetReturnRouteBackKnockFeedback();
 	void TriggerPostReportMonitorMismatch();
 	void UpdatePostReportMonitorMismatch(float DeltaSeconds);
 	void TriggerPostReportDeskWaitAnomaly();
@@ -208,6 +211,12 @@ private:
 	TObjectPtr<AActor> ReturnRouteLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> ReturnRouteBackKnockActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> ReturnRouteBackKnockActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> PostReportMonitorMismatchSoundActor;
 
 	UPROPERTY()
@@ -277,6 +286,8 @@ private:
 	TArray<FRotator> DoorRefusalWallpaperFlutterRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;
 	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
+	TArray<FVector> ReturnRouteBackKnockRestLocations;
+	TArray<FRotator> ReturnRouteBackKnockRestRotations;
 	TArray<FVector> PostReportDeskWaitRattleRestLocations;
 	TArray<FRotator> PostReportDeskWaitRattleRestRotations;
 	TArray<FVector> PostReportLogSelfCorrectionFeedbackRestLocations;

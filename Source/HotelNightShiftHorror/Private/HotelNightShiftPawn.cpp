@@ -61,6 +61,7 @@ const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName PatrolListenLightTag(TEXT("Hotel.Feedback.PatrolListenLight"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
+const FName ReturnRouteBackKnockTag(TEXT("Hotel.Feedback.ReturnRouteBackKnock"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
@@ -208,6 +209,11 @@ bool AHotelNightShiftPawn::AutomationIsReturnRouteAnomalyResolved() const
 void AHotelNightShiftPawn::AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds)
 {
 	UpdateReturnRouteAnomaly(DeltaSeconds);
+}
+
+FVector AHotelNightShiftPawn::AutomationGetReturnRouteBackKnockLocation() const
+{
+	return ReturnRouteBackKnockActor ? ReturnRouteBackKnockActor->GetActorLocation() : FVector::ZeroVector;
 }
 
 bool AHotelNightShiftPawn::AutomationIsPostReportMonitorMismatchActive() const
@@ -618,6 +624,12 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PatrolListenLightActor = FindActorWithTagNear(PatrolListenLightTag, PatrolListenLightAnchor, 120.0f);
 	ReturnRouteSoundActor = FindActorWithTagNear(ReturnRouteAudioTag, ReturnRouteSoundAnchor, 220.0f);
 	ReturnRouteLightActor = FindActorWithTagNear(ReturnRouteLightTag, ReturnRouteLightAnchor, 180.0f);
+	ReturnRouteBackKnockActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(ReturnRouteBackKnockTag, ReturnRouteAnchor, 660.0f))
+	{
+		ReturnRouteBackKnockActors.Add(FeedbackPart);
+	}
+	ReturnRouteBackKnockActor = FindActorWithTagNear(ReturnRouteBackKnockTag, ReturnRouteAnchor, 660.0f);
 	PostReportMonitorMismatchSoundActor = FindActorWithTagNear(PostReportMonitorMismatchAudioTag, PostReportMonitorMismatchSoundAnchor, 120.0f);
 	PostReportMonitorMismatchLightActor = FindActorWithTagNear(PostReportMonitorMismatchLightTag, PostReportMonitorMismatchLightAnchor, 160.0f);
 	PostReportDeskWaitSoundActor = FindActorWithTagNear(PostReportDeskWaitAudioTag, PostReportDeskWaitSoundAnchor, 180.0f);
@@ -709,6 +721,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		ReportLogFiledFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
 		ReportLogFiledFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	ReturnRouteBackKnockRestLocations.Reset();
+	ReturnRouteBackKnockRestRotations.Reset();
+	for (AActor* FeedbackPart : ReturnRouteBackKnockActors)
+	{
+		ReturnRouteBackKnockRestLocations.Add(FeedbackPart->GetActorLocation());
+		ReturnRouteBackKnockRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 
 	PostReportDeskWaitRattleRestLocations.Reset();
@@ -983,6 +1003,7 @@ void AHotelNightShiftPawn::UpdateReturnRouteAnomaly(float DeltaSeconds)
 	ReturnRouteAnomalySeconds += DeltaSeconds;
 	const float Pulse = 0.5f + 0.5f * FMath::Sin(ReturnRoutePulseClock * 9.5f);
 	SetReturnRouteLightIntensity(280.0f + Pulse * 1550.0f);
+	UpdateReturnRouteBackKnockFeedback(FMath::Clamp(ReturnRouteAnomalySeconds / 0.95f, 0.0f, 1.0f));
 
 	if (ReturnRouteAnomalySeconds >= 0.95f)
 	{
@@ -995,6 +1016,7 @@ void AHotelNightShiftPawn::StartReturnRouteAnomaly()
 	bReturnRouteAnomalyActive = true;
 	ReturnRouteAnomalySeconds = 0.0f;
 	ReturnRoutePulseClock = 0.0f;
+	ResetReturnRouteBackKnockFeedback();
 	PlayActorSound(ReturnRouteSoundActor);
 	SetWorkState(
 		EHotelLoopStage::DoorRefused,
@@ -1017,6 +1039,54 @@ void AHotelNightShiftPawn::ResolveReturnRouteAnomaly()
 		TEXT("DESK LINE: SILENT / REFUSAL READY TO LOG"),
 		0.72f);
 	SetReturnRouteLightIntensity(640.0f);
+	ResetReturnRouteBackKnockFeedback();
+}
+
+void AHotelNightShiftPawn::UpdateReturnRouteBackKnockFeedback(float NormalizedTime)
+{
+	const float Phase = FMath::Clamp(NormalizedTime, 0.0f, 1.0f);
+	const float Envelope = FMath::Sin(Phase * UE_PI);
+	const float ReverseSlide = FMath::InterpEaseOut(0.0f, 1.0f, Phase, 2.0f) * (1.0f - Phase * 0.36f);
+
+	for (int32 Index = 0; Index < ReturnRouteBackKnockActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = ReturnRouteBackKnockActors[Index];
+		if (!FeedbackPart || !ReturnRouteBackKnockRestLocations.IsValidIndex(Index) || !ReturnRouteBackKnockRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		const float Bias = static_cast<float>(Index) * 0.21f;
+		const float Beat = FMath::Sin((Phase * 4.0f + Bias) * UE_PI) * FMath::Pow(1.0f - Phase, 0.62f);
+		const float Direction = (Index % 2 == 0) ? -1.0f : 1.0f;
+		const bool bWallCue = ReturnRouteBackKnockRestLocations[Index].Z > 35.0f;
+		const FVector Offset = bWallCue
+			? FVector(-6.0f * Envelope, -9.0f * ReverseSlide, FMath::Abs(Beat) * 3.0f)
+			: FVector(-18.0f * ReverseSlide, Direction * Beat * 5.0f, FMath::Abs(Beat) * 1.6f);
+		const FRotator Rotation = bWallCue
+			? FRotator(0.0f, Direction * Envelope * 2.2f, Beat * 7.0f)
+			: FRotator(Beat * 1.2f, Direction * Envelope * 2.0f, Direction * Beat * 3.8f);
+
+		FeedbackPart->SetActorLocationAndRotation(
+			ReturnRouteBackKnockRestLocations[Index] + Offset,
+			ReturnRouteBackKnockRestRotations[Index] + Rotation);
+	}
+}
+
+void AHotelNightShiftPawn::ResetReturnRouteBackKnockFeedback()
+{
+	for (int32 Index = 0; Index < ReturnRouteBackKnockActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = ReturnRouteBackKnockActors[Index];
+		if (!FeedbackPart || !ReturnRouteBackKnockRestLocations.IsValidIndex(Index) || !ReturnRouteBackKnockRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		FeedbackPart->SetActorLocationAndRotation(
+			ReturnRouteBackKnockRestLocations[Index],
+			ReturnRouteBackKnockRestRotations[Index]);
+	}
 }
 
 void AHotelNightShiftPawn::TriggerPostReportMonitorMismatch()
