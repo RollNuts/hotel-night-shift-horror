@@ -38,6 +38,10 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Meshes/SM_FrontDesk_CurvedReceiver_v0",
     "/Game/Hotel/Meshes/SM_FrontDesk_CoiledPhoneCord_v0",
     "/Game/Hotel/Meshes/SM_FrontDesk_CurledLedgerPages_v0",
+    "/Game/Hotel/Meshes/SM_Room203_PaneledDoor_v0",
+    "/Game/Hotel/Meshes/SM_Room203_ChainLinks_v0",
+    "/Game/Hotel/Meshes/SM_Room203_TornNotice_v0",
+    "/Game/Hotel/Meshes/SM_Room203_HandleLever_v0",
     "/Game/Hotel/Cinematics/LS_HotelSpine_Stills",
     "/Game/Hotel/Cinematics/MRQ_HotelEvidencePng",
 ]
@@ -161,15 +165,19 @@ REQUIRED_ACTOR_LABELS = [
     "RETURN_Route_FootprintBacktrackC",
     "RETURN_Route_CeilingLightmesh_ColdPulseCue",
     "PROP_GuestHall_RoomDoor203_OpenRefuseDecision",
+    "PROP_GuestHall_Room203_AuthoredPaneledDoor",
     "PROP_GuestHall_Room203_LeftDoorJamb",
     "PROP_GuestHall_Room203_RightDoorJamb",
     "PROP_GuestHall_Room203_TopDoorJamb",
     "PROP_GuestHall_Room203_DarkLatchGap",
     "PROP_GuestHall_Room203_HandleBackplate_Readable",
+    "PROP_GuestHall_Room203_AuthoredHandleLever",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
+    "PROP_GuestHall_Room203_AuthoredChainLinks",
     "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue",
     "PROP_GuestHall_Room203_NoticeCornerJoltCue",
+    "PROP_GuestHall_Room203_AuthoredTornNotice",
     "PROP_GuestHall_Room203_PeepholeBlackCue",
     "PROP_GuestHall_Room203_DoNotOpenNotice",
     "PROP_GuestHall_Room203_NoticeUnderline",
@@ -269,11 +277,15 @@ REQUIRED_ACTOR_TAGS = {
     "LIGHTMESH_FrontDesk_PhoneCallLamp": ["Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"],
     "PROP_Surveillance_Monitor_PlayerChecksHall": ["Hotel.Interact.Monitor"],
     "PROP_GuestHall_RoomDoor203_OpenRefuseDecision": ["Hotel.Interact.Room203Door"],
+    "PROP_GuestHall_Room203_AuthoredPaneledDoor": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203DoorSurfaceJolt"],
     "PROP_GuestHall_Room203_HandleBackplate_Readable": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_AuthoredHandleLever": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203LatchJolt"],
     "PROP_GuestHall_Room203_LatchJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203LatchJolt"],
     "PROP_GuestHall_Room203_ChainJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203ChainJolt"],
+    "PROP_GuestHall_Room203_AuthoredChainLinks": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203ChainJolt"],
     "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorSurfaceJolt"],
     "PROP_GuestHall_Room203_NoticeCornerJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorSurfaceJolt"],
+    "PROP_GuestHall_Room203_AuthoredTornNotice": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203DoorSurfaceJolt"],
     "PROP_GuestHall_Room203_PeepholeBlackCue": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
     "PROP_GuestHall_Room203_DoNotOpenNotice": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
     "PROP_GuestHall_Room203_NoticeUnderline": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
@@ -388,10 +400,14 @@ MOVABLE_STATIC_MESH_LABELS = [
     "PROP_FrontDesk_Phone_ReceiverRightRoundCup",
     "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette",
     "PROP_FrontDesk_Phone_AuthoredCoiledCord",
+    "PROP_GuestHall_Room203_AuthoredPaneledDoor",
+    "PROP_GuestHall_Room203_AuthoredHandleLever",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
+    "PROP_GuestHall_Room203_AuthoredChainLinks",
     "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue",
     "PROP_GuestHall_Room203_NoticeCornerJoltCue",
+    "PROP_GuestHall_Room203_AuthoredTornNotice",
     "PROP_FrontDesk_ReportLog_FiledStampCue",
     "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine",
     "PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine",
@@ -469,11 +485,15 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PROP_Lobby_GlassDoor_PostReportHandleRattleBar",
     "PROP_Lobby_GlassDoor_PostReportLatchRattlePin",
     "PROP_Lobby_GlassDoor_PostReportTapeLooseEnd",
+    "PROP_GuestHall_Room203_AuthoredPaneledDoor",
     "PROP_GuestHall_Room203_HandleBackplate_Readable",
+    "PROP_GuestHall_Room203_AuthoredHandleLever",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
+    "PROP_GuestHall_Room203_AuthoredChainLinks",
     "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue",
     "PROP_GuestHall_Room203_NoticeCornerJoltCue",
+    "PROP_GuestHall_Room203_AuthoredTornNotice",
     "PROP_GuestHall_Room203_PeepholeBlackCue",
     "PROP_GuestHall_Room203_DoNotOpenNotice",
     "PROP_GuestHall_Room203_NoticeUnderline",
@@ -506,11 +526,43 @@ REQUIRED_STATIC_MESH_REFERENCES = {
     "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette": "/Game/Hotel/Meshes/SM_FrontDesk_CurvedReceiver_v0.SM_FrontDesk_CurvedReceiver_v0",
     "PROP_FrontDesk_Phone_AuthoredCoiledCord": "/Game/Hotel/Meshes/SM_FrontDesk_CoiledPhoneCord_v0.SM_FrontDesk_CoiledPhoneCord_v0",
     "PROP_FrontDesk_ReportLog_AuthoredCurledPages": "/Game/Hotel/Meshes/SM_FrontDesk_CurledLedgerPages_v0.SM_FrontDesk_CurledLedgerPages_v0",
+    "PROP_GuestHall_Room203_AuthoredPaneledDoor": "/Game/Hotel/Meshes/SM_Room203_PaneledDoor_v0.SM_Room203_PaneledDoor_v0",
+    "PROP_GuestHall_Room203_AuthoredChainLinks": "/Game/Hotel/Meshes/SM_Room203_ChainLinks_v0.SM_Room203_ChainLinks_v0",
+    "PROP_GuestHall_Room203_AuthoredTornNotice": "/Game/Hotel/Meshes/SM_Room203_TornNotice_v0.SM_Room203_TornNotice_v0",
+    "PROP_GuestHall_Room203_AuthoredHandleLever": "/Game/Hotel/Meshes/SM_Room203_HandleLever_v0.SM_Room203_HandleLever_v0",
 }
+
+FORBIDDEN_PUBLIC_ASSET_ROOTS = [
+    "/Game/Fab/",
+    "/Game/Megascans/",
+    "/Game/MSPresets/",
+    "/Game/Marketplace/",
+    "/Game/AnimationStarterPack/",
+    "/Game/GameAnimationSample/",
+    "/Game/Lyra/",
+    "/Game/Paragon",
+    "/Game/InfinityBlade",
+    "/Game/MetaHumans/",
+]
 
 
 def fail(message: str) -> None:
     raise RuntimeError(f"[HotelSpineVerify] {message}")
+
+
+def ensure_public_safe_asset_path(owner: str, asset) -> None:
+    if asset is None:
+        return
+    try:
+        asset_path = asset.get_path_name()
+    except Exception:
+        return
+    for forbidden_root in FORBIDDEN_PUBLIC_ASSET_ROOTS:
+        if asset_path.startswith(forbidden_root):
+            fail(
+                f"{owner} references forbidden public-repo asset root {forbidden_root}: {asset_path}. "
+                "Use a project-authored asset or record explicit public redistribution rights before product-map use."
+            )
 
 
 for asset_path in REQUIRED_ASSETS:
@@ -575,6 +627,24 @@ for label, expected_mesh_path in REQUIRED_STATIC_MESH_REFERENCES.items():
     actual_mesh_path = mesh.get_path_name()
     if actual_mesh_path != expected_mesh_path:
         fail(f"Actor {label} uses {actual_mesh_path}, expected {expected_mesh_path}")
+
+for actor in actors_by_label.values():
+    label = actor.get_actor_label()
+    if hasattr(actor, "static_mesh_component"):
+        component = actor.static_mesh_component
+        ensure_public_safe_asset_path(label, component.get_editor_property("static_mesh"))
+        try:
+            material_count = component.get_num_materials()
+        except Exception:
+            material_count = 0
+        for material_index in range(material_count):
+            ensure_public_safe_asset_path(f"{label} material {material_index}", component.get_material(material_index))
+    try:
+        audio_component = actor.get_editor_property("audio_component")
+    except Exception:
+        audio_component = None
+    if audio_component is not None:
+        ensure_public_safe_asset_path(label, audio_component.get_editor_property("sound"))
 
 unreal.log(
     f"[HotelSpineVerify] Verified {len(REQUIRED_ASSETS)} assets, "
