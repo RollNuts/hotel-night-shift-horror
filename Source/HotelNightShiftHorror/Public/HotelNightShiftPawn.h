@@ -75,7 +75,11 @@ public:
 	FVector AutomationGetPhoneCordTugLocation() const;
 	void AutomationAdvanceDoorRefusalFeedback(float DeltaSeconds);
 	float AutomationGetDoorRefusalFeedbackAlpha() const;
+	bool AutomationIsDoorRefusalFeedbackActive() const;
 	FVector AutomationGetDoorRefusalFeedbackLocation() const;
+	FVector AutomationGetDoorRefusalLatchLocation() const;
+	FVector AutomationGetDoorRefusalChainLocation() const;
+	FVector AutomationGetDoorRefusalSurfaceLocation() const;
 	void AutomationAdvanceReportLogFiledFeedback(float DeltaSeconds);
 	float AutomationGetReportLogFiledFeedbackAlpha() const;
 	FVector AutomationGetReportLogFiledFeedbackLocation() const;
@@ -167,6 +171,15 @@ private:
 	TArray<TObjectPtr<AActor>> DoorRefusalFeedbackActors;
 
 	UPROPERTY()
+	TArray<TObjectPtr<AActor>> DoorRefusalLatchActors;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> DoorRefusalChainActors;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> DoorRefusalSurfaceActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> ReportFiledSoundActor;
 
 	UPROPERTY()
@@ -247,6 +260,12 @@ private:
 	TArray<FRotator> PhoneCordTugRestRotations;
 	TArray<FVector> DoorRefusalFeedbackRestLocations;
 	TArray<FRotator> DoorRefusalFeedbackRestRotations;
+	TArray<FVector> DoorRefusalLatchRestLocations;
+	TArray<FRotator> DoorRefusalLatchRestRotations;
+	TArray<FVector> DoorRefusalChainRestLocations;
+	TArray<FRotator> DoorRefusalChainRestRotations;
+	TArray<FVector> DoorRefusalSurfaceRestLocations;
+	TArray<FRotator> DoorRefusalSurfaceRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;
 	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
 	TArray<FVector> PostReportDeskWaitRattleRestLocations;
@@ -278,6 +297,7 @@ private:
 	float PostReportLogSelfCorrectionPulseClock = 0.0f;
 	bool bPostReportLogSelfCorrectionActive = false;
 	bool bPostReportLogSelfCorrectionObserved = false;
+	float DoorRefusalFeedbackSeconds = 0.0f;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;
