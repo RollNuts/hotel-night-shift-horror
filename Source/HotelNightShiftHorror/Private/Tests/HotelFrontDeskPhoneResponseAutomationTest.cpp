@@ -30,6 +30,8 @@ const TCHAR* AuthoredPhoneBodyLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCurvedB
 const TCHAR* AuthoredPhoneReceiverLabel = TEXT("PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette");
 const TCHAR* AuthoredPhoneCordLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCoiledCord");
 const TCHAR* AuthoredLedgerPagesLabel = TEXT("PROP_FrontDesk_ReportLog_AuthoredCurledPages");
+const TCHAR* Room203DoorEdgeSlamShadowLabel = TEXT("PROP_GuestHall_Room203_DoorEdgeSlamShadowCue");
+const TCHAR* Room203NoticeCornerJoltLabel = TEXT("PROP_GuestHall_Room203_NoticeCornerJoltCue");
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -158,6 +160,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* AuthoredPhoneReceiver = FindActorByLabel(World, AuthoredPhoneReceiverLabel);
 		AActor* AuthoredPhoneCord = FindActorByLabel(World, AuthoredPhoneCordLabel);
 		AActor* AuthoredLedgerPages = FindActorByLabel(World, AuthoredLedgerPagesLabel);
+		AActor* Room203DoorEdgeSlamShadow = FindActorByLabel(World, Room203DoorEdgeSlamShadowLabel);
+		AActor* Room203NoticeCornerJolt = FindActorByLabel(World, Room203NoticeCornerJoltLabel);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -176,7 +180,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Authored phone receiver mesh exists in production map"), AuthoredPhoneReceiver);
 		TestNotNull(TEXT("Authored phone cord mesh exists in production map"), AuthoredPhoneCord);
 		TestNotNull(TEXT("Authored curled ledger page mesh exists in production map"), AuthoredLedgerPages);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages)
+		TestNotNull(TEXT("Room 203 door-edge slam shadow exists in production map"), Room203DoorEdgeSlamShadow);
+		TestNotNull(TEXT("Room 203 notice-corner jolt cue exists in production map"), Room203NoticeCornerJolt);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt)
 		{
 			return true;
 		}
@@ -242,12 +248,26 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Holding still at the taped line resolves patrol listen"), Pawn->AutomationIsPatrolListenResolved());
 		TestFalse(TEXT("Patrol listen anomaly stops after resolution"), Pawn->AutomationIsPatrolListenActive());
 
-		const FVector DoorFeedbackRestLocation = Pawn->AutomationGetDoorRefusalFeedbackLocation();
+		const FVector DoorLatchRestLocation = Pawn->AutomationGetDoorRefusalLatchLocation();
+		const FVector DoorChainRestLocation = Pawn->AutomationGetDoorRefusalChainLocation();
+		const FVector DoorSurfaceRestLocation = Pawn->AutomationGetDoorRefusalSurfaceLocation();
 		TestTrue(TEXT("Refusing Room 203 succeeds"), Pawn->AutomationInteractWithActor(Room203Door));
 		TestEqual(TEXT("Door refusal advances to DoorRefused"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::DoorRefused);
-		Pawn->AutomationAdvanceDoorRefusalFeedback(0.12f);
+		Pawn->AutomationAdvanceDoorRefusalFeedback(0.09f);
 		TestTrue(TEXT("Room 203 refusal feedback starts"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() > 0.0f);
-		TestTrue(TEXT("Room 203 latch feedback moves visibly"), FVector::DistSquared(DoorFeedbackRestLocation, Pawn->AutomationGetDoorRefusalFeedbackLocation()) > FMath::Square(2.0f));
+		const float EarlyLatchMove = FVector::Dist(DoorLatchRestLocation, Pawn->AutomationGetDoorRefusalLatchLocation());
+		const float EarlyChainMove = FVector::Dist(DoorChainRestLocation, Pawn->AutomationGetDoorRefusalChainLocation());
+		TestTrue(TEXT("Room 203 latch jolts before the chain catches"), EarlyLatchMove > 8.0f && EarlyLatchMove > EarlyChainMove + 4.0f);
+		TestTrue(TEXT("Room 203 refusal remains active after latch contact"), Pawn->AutomationIsDoorRefusalFeedbackActive());
+		Pawn->AutomationAdvanceDoorRefusalFeedback(0.16f);
+		TestTrue(TEXT("Room 203 chain catches after the latch"), FVector::DistSquared(DoorChainRestLocation, Pawn->AutomationGetDoorRefusalChainLocation()) > FMath::Square(5.0f));
+		TestTrue(TEXT("Room 203 door-surface cue reacts without opening the door"), FVector::DistSquared(DoorSurfaceRestLocation, Pawn->AutomationGetDoorRefusalSurfaceLocation()) > FMath::Square(2.0f));
+		Pawn->AutomationAdvanceDoorRefusalFeedback(0.38f);
+		TestTrue(TEXT("Room 203 refusal feedback reaches completion"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() >= 1.0f);
+		TestFalse(TEXT("Room 203 refusal feedback settles after the knockback"), Pawn->AutomationIsDoorRefusalFeedbackActive());
+		TestTrue(TEXT("Room 203 latch returns to rest"), FVector::DistSquared(DoorLatchRestLocation, Pawn->AutomationGetDoorRefusalLatchLocation()) < FMath::Square(1.5f));
+		TestTrue(TEXT("Room 203 chain returns to rest"), FVector::DistSquared(DoorChainRestLocation, Pawn->AutomationGetDoorRefusalChainLocation()) < FMath::Square(1.5f));
+		TestTrue(TEXT("Room 203 door-surface cue returns to rest"), FVector::DistSquared(DoorSurfaceRestLocation, Pawn->AutomationGetDoorRefusalSurfaceLocation()) < FMath::Square(1.5f));
 
 		TestFalse(TEXT("Report filing is blocked before the return route anomaly resolves"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestEqual(TEXT("Early report attempt remains DoorRefused"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::DoorRefused);

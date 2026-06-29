@@ -1073,6 +1073,9 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     add_cube("RETURN_Route_CeilingLightmesh_ColdPulseCue", (2860, -90, 273), (280, 34, 9), materials["fluorescent_panel"], return_route_tags, no_collision=True)
     door_decision_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual")
     door_refusal_tags = ("Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability")
+    door_latch_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203LatchJolt",)
+    door_chain_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203ChainJolt",)
+    door_surface_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203DoorSurfaceJolt",)
     add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"], ("Hotel.Interact.Room203Door",))
     add_cube("PROP_GuestHall_Room203_LeftDoorJamb", (3784, 272, 122), (14, 12, 244), materials["trim"])
     add_cube("PROP_GuestHall_Room203_RightDoorJamb", (4056, 272, 122), (14, 12, 244), materials["trim"])
@@ -1085,7 +1088,7 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
         (4046, 257, 143),
         (54, 10, 10),
         materials["warn"],
-        door_refusal_tags,
+        door_latch_refusal_tags,
         unreal.ComponentMobility.MOVABLE,
         no_collision=True,
     )
@@ -1094,7 +1097,25 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
         (3992, 258, 166),
         (72, 8, 8),
         materials["trim"],
-        door_refusal_tags,
+        door_chain_refusal_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
+    add_cube(
+        "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue",
+        (4042, 255, 124),
+        (10, 6, 168),
+        materials["black"],
+        door_surface_refusal_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
+    add_cube(
+        "PROP_GuestHall_Room203_NoticeCornerJoltCue",
+        (3908, 256, 124),
+        (18, 5, 14),
+        materials["paper"],
+        door_surface_refusal_tags,
         unreal.ComponentMobility.MOVABLE,
         no_collision=True,
     )
