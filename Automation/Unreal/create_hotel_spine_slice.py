@@ -163,6 +163,22 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         dead_air = 0.05 * math.sin(2 * math.pi * 52 * t) if 0.55 <= t <= 1.25 else 0.0
         return scan + 0.42 * low_relay + 0.30 * frame_skip + dead_air
 
+    def post_report_desk_wait_rattle(t: float) -> float:
+        glass = 0.0
+        for start, pitch in ((0.05, 162), (0.18, 91), (0.42, 126), (0.68, 73)):
+            dt = t - start
+            if 0.0 <= dt <= 0.22:
+                glass += math.exp(-dt * 20.0) * (
+                    math.sin(2 * math.pi * pitch * dt) + 0.28 * math.sin(2 * math.pi * (pitch * 3.1) * dt)
+                )
+        handle_tick = 0.0
+        for start in (0.11, 0.55, 0.92):
+            dt = t - start
+            if 0.0 <= dt <= 0.035:
+                handle_tick += math.exp(-dt * 95.0) * math.sin(2 * math.pi * 780 * dt)
+        outside_air = 0.055 * math.sin(2 * math.pi * 46 * t) * math.exp(-max(0.0, t - 0.25) * 0.9)
+        return 0.48 * glass + 0.26 * handle_tick + outside_air
+
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
@@ -176,6 +192,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
         "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
         "SFX_PostReportMonitorMismatch_v0": (1.55, post_report_monitor_mismatch),
+        "SFX_PostReportDeskWaitRattle_v0": (1.65, post_report_desk_wait_rattle),
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -552,6 +569,13 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_Lobby_GuestAdmissionThreshold", (780, 0, -8), (620, 1280, 16), materials["floor"])
     add_cube("PROP_Lobby_MainGlassDoor_Silhouette", (1080, -250, 110), (28, 270, 220), materials["screen_glow"])
     add_cube("PROP_Lobby_MainGlassDoor_RefuseLine", (1080, 250, 110), (28, 270, 220), materials["screen_glow"])
+    post_report_desk_wait_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitVisual")
+    add_cube("PROP_FrontDesk_FloorWaitMarker_PostReport", (-260, -620, 4), (220, 80, 4), materials["route_mark"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_CounterHoldLine_PostReport", (-210, -475, 122), (180, 6, 5), materials["warn"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportHoldClosedTape", (1062, -250, 172), (8, 210, 12), materials["warn"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportOutsidePalmSmear", (1060, -312, 132), (7, 46, 54), materials["paper"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportNoGuestReflection", (1058, -188, 112), (7, 54, 82), materials["black"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("LIGHTMESH_LobbyDoor_PostReportRattleCue", (1035, -250, 170), (10, 170, 18), materials["screen_glow"], post_report_desk_wait_tags, no_collision=True)
 
     # Controlled transition from work hub to guest-floor response.
     add_cube("AREA_Transition_CarpetRun_ToGuestHall_NoVoid", (1625, 0, -9), (750, 560, 18), materials["floor"])
@@ -655,6 +679,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 2200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability",), attenuation_radius=920.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
+    add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 360.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=650.0)
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.ExponentialHeightFog,
@@ -679,6 +704,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
+    add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)
 
     if "AMB_LobbyFluorescentHum_v0" in sounds:
         add_audio("AMB_Lobby_FluorescentHum_Source_v0", sounds["AMB_LobbyFluorescentHum_v0"], (-180, -450, 210), True)
@@ -696,6 +722,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("SFX_ReturnRoute_BackKnock_ManualTrigger_v0", sounds["SFX_ReturnRouteKnockback_v0"], (3420, 270, 150), False, ("Hotel.Audio.ReturnRoute",))
     if "SFX_PostReportMonitorMismatch_v0" in sounds:
         add_audio("SFX_PostReportMonitorMismatch_ManualTrigger_v0", sounds["SFX_PostReportMonitorMismatch_v0"], (-620, -542, 172), False, ("Hotel.Audio.PostReportMonitorMismatch",))
+    if "SFX_PostReportDeskWaitRattle_v0" in sounds:
+        add_audio("SFX_PostReportDeskWait_Rattle_ManualTrigger_v0", sounds["SFX_PostReportDeskWaitRattle_v0"], (1080, -250, 150), False, ("Hotel.Audio.PostReportDeskWait",))
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:

@@ -22,6 +22,7 @@ const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
+const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -116,6 +117,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
 		AActor* ReturnRouteSound = FindActorByTag(World, ReturnRouteAudioTag);
 		AActor* PostReportMonitorMismatchSound = FindActorByTag(World, PostReportMonitorMismatchAudioTag);
+		AActor* PostReportDeskWaitSound = FindActorByTag(World, PostReportDeskWaitAudioTag);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -126,7 +128,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
 		TestNotNull(TEXT("Return route anomaly sound actor exists"), ReturnRouteSound);
 		TestNotNull(TEXT("Post-report monitor mismatch sound actor exists"), PostReportMonitorMismatchSound);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound)
+		TestNotNull(TEXT("Post-report desk wait sound actor exists"), PostReportDeskWaitSound);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound)
 		{
 			return true;
 		}
@@ -206,6 +209,19 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Post-report monitor mismatch feedback starts"), Pawn->AutomationIsPostReportMonitorMismatchActive());
 		Pawn->AutomationAdvancePostReportMonitorMismatch(1.20f);
 		TestFalse(TEXT("Post-report monitor mismatch feedback settles"), Pawn->AutomationIsPostReportMonitorMismatchActive());
+		TestFalse(TEXT("Post-report desk wait has not fired before waiting"), Pawn->AutomationIsPostReportDeskWaitResolved());
+		Pawn->SetActorLocation(FVector(780.0f, 0.0f, 92.0f));
+		Pawn->GetCharacterMovement()->Velocity = FVector::ZeroVector;
+		Pawn->AutomationAdvancePostReportDeskWait(1.40f);
+		TestFalse(TEXT("Post-report desk wait does not fire away from the counter"), Pawn->AutomationIsPostReportDeskWaitResolved());
+		Pawn->SetActorLocation(FVector(-260.0f, -635.0f, 92.0f));
+		Pawn->GetCharacterMovement()->Velocity = FVector::ZeroVector;
+		Pawn->AutomationAdvancePostReportDeskWait(1.40f);
+		TestTrue(TEXT("Post-report desk wait anomaly starts after holding at the counter"), Pawn->AutomationIsPostReportDeskWaitActive());
+		TestTrue(TEXT("Post-report desk wait anomaly is one-shot resolved"), Pawn->AutomationIsPostReportDeskWaitResolved());
+		TestEqual(TEXT("Desk wait anomaly keeps ReportFiled as the terminal loop stage"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
+		Pawn->AutomationAdvancePostReportDeskWait(1.30f);
+		TestFalse(TEXT("Post-report desk wait feedback settles"), Pawn->AutomationIsPostReportDeskWaitActive());
 		TestFalse(TEXT("Door cannot regress after post-report mismatch"), Pawn->AutomationInteractWithActor(Room203Door));
 		TestEqual(TEXT("Stage remains ReportFiled after door retry"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
 
