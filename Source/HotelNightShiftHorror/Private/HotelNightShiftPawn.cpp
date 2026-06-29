@@ -29,6 +29,8 @@ const FVector PatrolListenLightAnchor(955.0f, 0.0f, 115.0f);
 const FVector ReturnRouteAnchor(2860.0f, 0.0f, 92.0f);
 const FVector ReturnRouteSoundAnchor(3420.0f, 270.0f, 150.0f);
 const FVector ReturnRouteLightAnchor(2860.0f, -90.0f, 188.0f);
+const FVector PostReportMonitorMismatchSoundAnchor(-620.0f, -542.0f, 172.0f);
+const FVector PostReportMonitorMismatchLightAnchor(-575.0f, -555.0f, 188.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
@@ -43,6 +45,8 @@ const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName PatrolListenLightTag(TEXT("Hotel.Feedback.PatrolListenLight"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
+const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
+const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -81,6 +85,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	UpdateLookTarget();
 	UpdatePatrolListenAnomaly(DeltaSeconds);
 	UpdateReturnRouteAnomaly(DeltaSeconds);
+	UpdatePostReportMonitorMismatch(DeltaSeconds);
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
@@ -179,6 +184,16 @@ bool AHotelNightShiftPawn::AutomationIsReturnRouteAnomalyResolved() const
 void AHotelNightShiftPawn::AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds)
 {
 	UpdateReturnRouteAnomaly(DeltaSeconds);
+}
+
+bool AHotelNightShiftPawn::AutomationIsPostReportMonitorMismatchActive() const
+{
+	return bPostReportMonitorMismatchActive;
+}
+
+void AHotelNightShiftPawn::AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds)
+{
+	UpdatePostReportMonitorMismatch(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::AutomationAdvancePhoneReceiver(float DeltaSeconds)
@@ -348,13 +363,25 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 	{
 		SetWorkState(
 			EHotelLoopStage::ReportFiled,
-			TEXT("Entry filed. Stay at the desk and wait for the next call."),
+			TEXT("Entry filed. Check the monitor once before waiting."),
 			TEXT("Night log: 203 refused, hallway camera mismatch, knock confirmed."),
-			TEXT("DESK LINE: CLOSED / INCIDENT LOGGED"),
+			TEXT("DESK LINE: CLOSED / CAMERA CHECK REQUIRED"),
 			0.63f);
 		StopPhoneLineAudio();
 		PlayActorSound(ReportFiledSoundActor);
 		TriggerReportLogFiledFeedback();
+		return true;
+	}
+
+	if (ActorMatches(TargetActor, MonitorAnchor, 130.0f, MonitorInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportMonitorMismatchObserved)
+	{
+		TriggerPostReportMonitorMismatch();
+		SetWorkState(
+			EHotelLoopStage::ReportFiled,
+			TEXT("Stay at the desk. Do not answer the hallway."),
+			TEXT("The camera feed updates late: Room 203 is open in the monitor, but the hallway stayed closed behind you."),
+			TEXT("CAMERA FEED: DELAYED / ROOM 203 OPEN"),
+			0.88f);
 		return true;
 	}
 
@@ -390,6 +417,8 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PatrolListenLightActor = FindActorWithTagNear(PatrolListenLightTag, PatrolListenLightAnchor, 120.0f);
 	ReturnRouteSoundActor = FindActorWithTagNear(ReturnRouteAudioTag, ReturnRouteSoundAnchor, 220.0f);
 	ReturnRouteLightActor = FindActorWithTagNear(ReturnRouteLightTag, ReturnRouteLightAnchor, 180.0f);
+	PostReportMonitorMismatchSoundActor = FindActorWithTagNear(PostReportMonitorMismatchAudioTag, PostReportMonitorMismatchSoundAnchor, 120.0f);
+	PostReportMonitorMismatchLightActor = FindActorWithTagNear(PostReportMonitorMismatchLightTag, PostReportMonitorMismatchLightAnchor, 160.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -456,6 +485,11 @@ void AHotelNightShiftPawn::UpdateLookTarget()
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Check camera feed");
+	}
+	else if (ActorMatches(HitActor, MonitorAnchor, 130.0f, MonitorInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportMonitorMismatchObserved)
+	{
+		CurrentLookActor = HitActor;
+		InteractionPromptText = TEXT("E  Recheck camera feed");
 	}
 	else if (
 		ActorMatches(HitActor, Door203Anchor, 190.0f, Room203DoorInteractTag)
@@ -692,6 +726,36 @@ void AHotelNightShiftPawn::ResolveReturnRouteAnomaly()
 	SetReturnRouteLightIntensity(640.0f);
 }
 
+void AHotelNightShiftPawn::TriggerPostReportMonitorMismatch()
+{
+	bPostReportMonitorMismatchActive = true;
+	bPostReportMonitorMismatchObserved = true;
+	PostReportMonitorMismatchSeconds = 0.0f;
+	PostReportMonitorMismatchPulseClock = 0.0f;
+	PlayActorSound(PostReportMonitorMismatchSoundActor);
+	SetPostReportMonitorMismatchLightIntensity(1900.0f);
+}
+
+void AHotelNightShiftPawn::UpdatePostReportMonitorMismatch(float DeltaSeconds)
+{
+	if (!bPostReportMonitorMismatchActive)
+	{
+		return;
+	}
+
+	PostReportMonitorMismatchSeconds += DeltaSeconds;
+	PostReportMonitorMismatchPulseClock += DeltaSeconds;
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(PostReportMonitorMismatchPulseClock * 13.0f);
+	SetPostReportMonitorMismatchLightIntensity(360.0f + Pulse * 1650.0f);
+
+	if (PostReportMonitorMismatchSeconds >= 1.10f)
+	{
+		bPostReportMonitorMismatchActive = false;
+		PostReportMonitorMismatchSeconds = 0.0f;
+		SetPostReportMonitorMismatchLightIntensity(780.0f);
+	}
+}
+
 void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
 {
 	if (LoopStage != EHotelLoopStage::PhoneRinging)
@@ -878,6 +942,19 @@ void AHotelNightShiftPawn::SetReturnRouteLightIntensity(float NewIntensity)
 	}
 
 	if (ULightComponent* LightComponent = ReturnRouteLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
+void AHotelNightShiftPawn::SetPostReportMonitorMismatchLightIntensity(float NewIntensity)
+{
+	if (!PostReportMonitorMismatchLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = PostReportMonitorMismatchLightActor->FindComponentByClass<ULightComponent>())
 	{
 		LightComponent->SetIntensity(NewIntensity);
 	}

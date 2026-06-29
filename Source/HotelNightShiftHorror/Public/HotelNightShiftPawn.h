@@ -56,6 +56,8 @@ public:
 	bool AutomationIsReturnRouteAnomalyActive() const;
 	bool AutomationIsReturnRouteAnomalyResolved() const;
 	void AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds);
+	bool AutomationIsPostReportMonitorMismatchActive() const;
+	void AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds);
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
@@ -92,6 +94,8 @@ private:
 	void UpdateReturnRouteAnomaly(float DeltaSeconds);
 	void StartReturnRouteAnomaly();
 	void ResolveReturnRouteAnomaly();
+	void TriggerPostReportMonitorMismatch();
+	void UpdatePostReportMonitorMismatch(float DeltaSeconds);
 	void UpdatePhoneRingVisual(float DeltaSeconds);
 	void LiftPhoneReceiver();
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
@@ -102,6 +106,7 @@ private:
 	void SetPhoneIndicatorIntensity(float NewIntensity);
 	void SetPatrolListenLightIntensity(float NewIntensity);
 	void SetReturnRouteLightIntensity(float NewIntensity);
+	void SetPostReportMonitorMismatchLightIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
 		EHotelLoopStage NewStage,
@@ -162,6 +167,12 @@ private:
 	TObjectPtr<AActor> ReturnRouteLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> PostReportMonitorMismatchSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PostReportMonitorMismatchLightActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -202,6 +213,10 @@ private:
 	float ReturnRoutePulseClock = 0.0f;
 	bool bReturnRouteAnomalyActive = false;
 	bool bReturnRouteAnomalyResolved = false;
+	float PostReportMonitorMismatchSeconds = 0.0f;
+	float PostReportMonitorMismatchPulseClock = 0.0f;
+	bool bPostReportMonitorMismatchActive = false;
+	bool bPostReportMonitorMismatchObserved = false;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;

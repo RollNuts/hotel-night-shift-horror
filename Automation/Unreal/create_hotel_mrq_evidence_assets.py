@@ -26,7 +26,7 @@ CAPTURE_CAMERAS = [
     "CAPTURE_PatrolRoute_DecisionCueCandidate",
     "CAPTURE_GuestDoor_15SecondBeatCandidate",
     "CAPTURE_ReturnRoute_BackKnockCandidate",
-    "CAPTURE_MonitorToHall_MismatchCandidate",
+    "CAPTURE_PostReportMonitorMismatchCandidate",
 ]
 
 

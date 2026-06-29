@@ -21,6 +21,7 @@ const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
+const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -114,6 +115,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
 		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
 		AActor* ReturnRouteSound = FindActorByTag(World, ReturnRouteAudioTag);
+		AActor* PostReportMonitorMismatchSound = FindActorByTag(World, PostReportMonitorMismatchAudioTag);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -123,7 +125,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
 		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
 		TestNotNull(TEXT("Return route anomaly sound actor exists"), ReturnRouteSound);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound)
+		TestNotNull(TEXT("Post-report monitor mismatch sound actor exists"), PostReportMonitorMismatchSound);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound)
 		{
 			return true;
 		}
@@ -198,9 +201,12 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Report filed feedback starts"), Pawn->AutomationGetReportLogFiledFeedbackAlpha() > 0.0f);
 		TestTrue(TEXT("Report filed stamp feedback moves visibly"), FVector::DistSquared(ReportFiledRestLocation, Pawn->AutomationGetReportLogFiledFeedbackLocation()) > FMath::Square(2.0f));
 
-		TestFalse(TEXT("Monitor cannot regress after report"), Pawn->AutomationInteractWithActor(Monitor));
-		TestEqual(TEXT("Stage remains ReportFiled after monitor retry"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
-		TestFalse(TEXT("Door cannot regress after report"), Pawn->AutomationInteractWithActor(Room203Door));
+		TestTrue(TEXT("Monitor recheck after report succeeds"), Pawn->AutomationInteractWithActor(Monitor));
+		TestEqual(TEXT("Monitor recheck keeps ReportFiled as the terminal loop stage"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
+		TestTrue(TEXT("Post-report monitor mismatch feedback starts"), Pawn->AutomationIsPostReportMonitorMismatchActive());
+		Pawn->AutomationAdvancePostReportMonitorMismatch(1.20f);
+		TestFalse(TEXT("Post-report monitor mismatch feedback settles"), Pawn->AutomationIsPostReportMonitorMismatchActive());
+		TestFalse(TEXT("Door cannot regress after post-report mismatch"), Pawn->AutomationInteractWithActor(Room203Door));
 		TestEqual(TEXT("Stage remains ReportFiled after door retry"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
 
 		return true;
