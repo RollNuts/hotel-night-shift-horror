@@ -70,6 +70,9 @@ public:
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
+	FRotator AutomationGetPhoneReceiverRotation() const;
+	bool AutomationIsPhoneReceiverLiftActive() const;
+	FVector AutomationGetPhoneCordTugLocation() const;
 	void AutomationAdvanceDoorRefusalFeedback(float DeltaSeconds);
 	float AutomationGetDoorRefusalFeedbackAlpha() const;
 	FVector AutomationGetDoorRefusalFeedbackLocation() const;
@@ -152,6 +155,9 @@ private:
 	TArray<TObjectPtr<AActor>> PhoneReceiverActors;
 
 	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PhoneCordTugActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> DoorKnockSoundActor;
 
 	UPROPERTY()
@@ -229,6 +235,7 @@ private:
 	FString InteractionPromptText;
 	float FearPressure = 0.0f;
 	float PhoneRingVisualClock = 0.0f;
+	float PhoneReceiverLiftSeconds = 0.0f;
 	float PhoneReceiverLiftAlpha = 0.0f;
 	FVector PhoneReceiverRestLocation = FVector::ZeroVector;
 	FVector PhoneReceiverLiftLocation = FVector::ZeroVector;
@@ -236,6 +243,8 @@ private:
 	FRotator PhoneReceiverLiftRotation = FRotator::ZeroRotator;
 	TArray<FVector> PhoneReceiverPartRestLocations;
 	TArray<FRotator> PhoneReceiverPartRestRotations;
+	TArray<FVector> PhoneCordTugRestLocations;
+	TArray<FRotator> PhoneCordTugRestRotations;
 	TArray<FVector> DoorRefusalFeedbackRestLocations;
 	TArray<FRotator> DoorRefusalFeedbackRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;

@@ -99,6 +99,14 @@ bool HasInteractEKeyBinding()
 	}
 	return false;
 }
+
+float MaxRotationDeltaDegrees(const FRotator& From, const FRotator& To)
+{
+	const float PitchDelta = FMath::Abs(FRotator::NormalizeAxis(To.Pitch - From.Pitch));
+	const float YawDelta = FMath::Abs(FRotator::NormalizeAxis(To.Yaw - From.Yaw));
+	const float RollDelta = FMath::Abs(FRotator::NormalizeAxis(To.Roll - From.Roll));
+	return FMath::Max(FMath::Max(PitchDelta, YawDelta), RollDelta);
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -178,16 +186,32 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Phone line static source is cached"), Pawn->AutomationHasPhoneLineSound());
 
 		const FVector ReceiverRestLocation = Pawn->AutomationGetPhoneReceiverLocation();
+		const FRotator ReceiverRestRotation = Pawn->AutomationGetPhoneReceiverRotation();
 		const FVector AuthoredReceiverRestLocation = AuthoredPhoneReceiver->GetActorLocation();
+		const FVector CordRestLocation = Pawn->AutomationGetPhoneCordTugLocation();
+		TestTrue(TEXT("Authored coiled cord is cached for the phone pickup tug"), FVector::DistSquared(CordRestLocation, AuthoredPhoneCord->GetActorLocation()) < FMath::Square(2.0f));
 		TestTrue(TEXT("Answering the phone succeeds"), Pawn->AutomationInteractWithActor(Phone));
 		TestEqual(TEXT("Phone answer advances to RequestKnown"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::RequestKnown);
 		TestFalse(TEXT("Phone ring timer stops after answer"), Pawn->AutomationIsPhoneRingTimerActive());
 		TestTrue(TEXT("Phone line is connected after answer"), Pawn->AutomationIsPhoneLineConnected());
 
-		Pawn->AutomationAdvancePhoneReceiver(0.50f);
+		Pawn->AutomationAdvancePhoneReceiver(0.06f);
+		const FVector ReceiverAnticipationDelta = Pawn->AutomationGetPhoneReceiverLocation() - ReceiverRestLocation;
+		TestTrue(TEXT("Receiver pickup has a visible contact anticipation"), ReceiverAnticipationDelta.SizeSquared() > FMath::Square(2.0f) && ReceiverAnticipationDelta.SizeSquared() < FMath::Square(10.0f));
+		TestTrue(TEXT("Receiver anticipation moves against the final pickup direction"), ReceiverAnticipationDelta.X < 0.0f && ReceiverAnticipationDelta.Y > 0.0f && ReceiverAnticipationDelta.Z < 0.0f);
+		TestTrue(TEXT("Receiver remains in active pickup after anticipation"), Pawn->AutomationIsPhoneReceiverLiftActive());
+
+		Pawn->AutomationAdvancePhoneReceiver(0.18f);
+		TestTrue(TEXT("Receiver active lift moves substantially from the cradle"), FVector::DistSquared(ReceiverRestLocation, Pawn->AutomationGetPhoneReceiverLocation()) > FMath::Square(18.0f));
+		TestTrue(TEXT("Receiver active lift has readable rotation"), MaxRotationDeltaDegrees(ReceiverRestRotation, Pawn->AutomationGetPhoneReceiverRotation()) > 8.0f);
+		TestTrue(TEXT("Receiver remains active during lift before settle"), Pawn->AutomationIsPhoneReceiverLiftActive());
+
+		Pawn->AutomationAdvancePhoneReceiver(0.34f);
 		TestTrue(TEXT("Receiver lift animation reaches the held pose"), Pawn->AutomationGetPhoneReceiverLiftAlpha() >= 1.0f);
+		TestFalse(TEXT("Receiver pickup settles after the held pose"), Pawn->AutomationIsPhoneReceiverLiftActive());
 		TestTrue(TEXT("Receiver moves visibly after answer"), FVector::DistSquared(ReceiverRestLocation, Pawn->AutomationGetPhoneReceiverLocation()) > FMath::Square(18.0f));
 		TestTrue(TEXT("Authored receiver silhouette moves with the phone lift"), FVector::DistSquared(AuthoredReceiverRestLocation, AuthoredPhoneReceiver->GetActorLocation()) > FMath::Square(18.0f));
+		TestTrue(TEXT("Authored coiled cord tugs with the lifted receiver"), FVector::DistSquared(CordRestLocation, Pawn->AutomationGetPhoneCordTugLocation()) > FMath::Square(5.0f));
 
 		TestTrue(TEXT("Checking monitor succeeds"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Monitor advances to MonitorChecked"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::MonitorChecked);
