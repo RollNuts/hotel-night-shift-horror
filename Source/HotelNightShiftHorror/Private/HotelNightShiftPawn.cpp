@@ -1355,7 +1355,8 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 	const float LatchKick = FMath::Sin(LatchPhase * UE_PI) * (1.0f - 0.10f * LatchPhase);
 	const float ChainKick = FMath::Sin(ChainPhase * UE_PI) * (1.0f - 0.18f * ChainPhase);
 	const float SurfaceKick = FMath::Sin(SurfacePhase * UE_PI * 2.0f) * (1.0f - SurfacePhase);
-	const float LightPulse = FMath::Sin(WallpaperPhase * UE_PI * 5.0f) * FMath::Square(1.0f - WallpaperPhase);
+	const float WallpaperHold = FMath::Sin(FMath::Min(WallpaperPhase * 1.25f, 1.0f) * UE_PI);
+	const float LightPulse = FMath::Sin(WallpaperPhase * UE_PI * 5.0f) * FMath::Pow(1.0f - WallpaperPhase, 1.35f);
 
 	if (!bDoorRefusalAftershockSoundPlayed && DoorRefusalFeedbackSeconds >= 0.34f)
 	{
@@ -1391,16 +1392,16 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 		}
 
 		const float DelayBias = static_cast<float>(Index) * 0.37f;
-		const float Flutter = FMath::Sin((WallpaperPhase * 7.0f + DelayBias) * UE_PI) * (1.0f - WallpaperPhase);
-		const float Lift = FMath::Sin(WallpaperPhase * UE_PI) * (1.0f - 0.22f * Index);
+		const float Flutter = FMath::Sin((WallpaperPhase * 6.0f + DelayBias) * UE_PI) * FMath::Pow(1.0f - WallpaperPhase, 0.72f);
+		const float Lift = WallpaperHold * (1.0f - 0.16f * Index);
 		FeedbackPart->SetActorLocationAndRotation(
-			DoorRefusalWallpaperFlutterRestLocations[Index] + FVector(0.0f, -8.0f * Flutter, 3.0f * FMath::Max(0.0f, Lift)),
-			DoorRefusalWallpaperFlutterRestRotations[Index] + FRotator(0.0f, 2.5f * Lift, 7.5f * Flutter));
+			DoorRefusalWallpaperFlutterRestLocations[Index] + FVector(0.0f, -12.0f * Flutter, 5.0f * FMath::Max(0.0f, Lift)),
+			DoorRefusalWallpaperFlutterRestRotations[Index] + FRotator(0.0f, 4.0f * Lift, 10.0f * Flutter));
 	}
 
 	if (WallpaperPhase > 0.0f && WallpaperPhase < 1.0f)
 	{
-		PulseHallLight(3600.0f + FMath::Abs(LightPulse) * 1650.0f);
+		PulseHallLight(3600.0f + FMath::Abs(LightPulse) * 2250.0f + FMath::Max(0.0f, WallpaperHold) * 420.0f);
 	}
 
 	if (DoorRefusalFeedbackAlpha >= 1.0f)
