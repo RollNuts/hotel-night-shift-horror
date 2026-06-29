@@ -179,6 +179,21 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         outside_air = 0.055 * math.sin(2 * math.pi * 46 * t) * math.exp(-max(0.0, t - 0.25) * 0.9)
         return 0.48 * glass + 0.26 * handle_tick + outside_air
 
+    def post_report_log_self_correction(t: float) -> float:
+        paper_drag = 0.0
+        for start, pitch in ((0.04, 420), (0.16, 680), (0.32, 510)):
+            dt = t - start
+            if 0.0 <= dt <= 0.16:
+                paper_drag += math.exp(-dt * 26.0) * math.sin(2 * math.pi * pitch * dt)
+        pen_tick = 0.0
+        for start in (0.22, 0.48, 0.82):
+            dt = t - start
+            if 0.0 <= dt <= 0.028:
+                pen_tick += math.exp(-dt * 120.0) * math.sin(2 * math.pi * 1120 * dt)
+        low_page = 0.06 * math.sin(2 * math.pi * 73 * t) * math.exp(-t * 1.6)
+        dry_line = 0.04 * math.sin(2 * math.pi * 1780 * t) if 0.36 <= t <= 0.98 else 0.0
+        return 0.36 * paper_drag + 0.24 * pen_tick + low_page + dry_line
+
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
@@ -193,6 +208,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
         "SFX_PostReportMonitorMismatch_v0": (1.55, post_report_monitor_mismatch),
         "SFX_PostReportDeskWaitRattle_v0": (1.65, post_report_desk_wait_rattle),
+        "SFX_PostReportLogSelfCorrection_v0": (1.25, post_report_log_self_correction),
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -563,6 +579,20 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_ReportLog_FiledStampCue", (-236, -504, 143), (38, 16, 3), materials["warn"], report_log_filed_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PenRest", (-207, -536, 144), (42, 5, 6), materials["black"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PenTip", (-184, -536, 144), (8, 5, 5), materials["warn"], report_log_tags, no_collision=True)
+    log_self_correction_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.PostReportLogSelfCorrection",
+        "Hotel.Feedback.PostReportLogSelfCorrection",
+    )
+    log_self_correction_visual_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.PostReportLogSelfCorrection",
+        "Hotel.Feedback.PostReportLogSelfCorrectionVisual",
+    )
+    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine", (-205, -510, 146), (66, 4, 3), materials["warn_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine", (-202, -500, 146), (58, 4, 3), materials["screen_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash", (-226, -490, 146), (34, 4, 3), materials["warn"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue", (-190, -520, 166), (42, 8, 10), materials["warn_glow"], log_self_correction_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue", (-315, -565, 131), (76, 38, 4), materials["paper"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Underline203", (-315, -565, 135), (42, 4, 3), materials["warn"], phone_visual_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-320, -548, 176), (72, 18, 18), materials["desk_lamp"], ("Hotel.Capture.Readability",))
@@ -680,6 +710,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 2200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability",), attenuation_radius=920.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
     add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 360.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=650.0)
+    add_light("LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse", unreal.PointLight, (-190, -520, 166), (0, 0, 0), 520.0, unreal.Color(255, 190, 120, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionLight"), attenuation_radius=420.0)
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.ExponentialHeightFog,
@@ -705,6 +736,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)
+    add_camera("CAPTURE_PostReportLogSelfCorrectionCandidate", (-265, -755, 232), (-31, 90, 0), 62.0)
 
     if "AMB_LobbyFluorescentHum_v0" in sounds:
         add_audio("AMB_Lobby_FluorescentHum_Source_v0", sounds["AMB_LobbyFluorescentHum_v0"], (-180, -450, 210), True)
@@ -724,6 +756,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("SFX_PostReportMonitorMismatch_ManualTrigger_v0", sounds["SFX_PostReportMonitorMismatch_v0"], (-620, -542, 172), False, ("Hotel.Audio.PostReportMonitorMismatch",))
     if "SFX_PostReportDeskWaitRattle_v0" in sounds:
         add_audio("SFX_PostReportDeskWait_Rattle_ManualTrigger_v0", sounds["SFX_PostReportDeskWaitRattle_v0"], (1080, -250, 150), False, ("Hotel.Audio.PostReportDeskWait",))
+    if "SFX_PostReportLogSelfCorrection_v0" in sounds:
+        add_audio("SFX_PostReportLogSelfCorrection_ManualTrigger_v0", sounds["SFX_PostReportLogSelfCorrection_v0"], (-214, -494, 154), False, ("Hotel.Audio.PostReportLogSelfCorrection",))
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:

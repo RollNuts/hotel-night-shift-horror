@@ -18,6 +18,7 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Audio/SFX_ReturnRouteKnockback_v0",
     "/Game/Hotel/Audio/SFX_PostReportMonitorMismatch_v0",
     "/Game/Hotel/Audio/SFX_PostReportDeskWaitRattle_v0",
+    "/Game/Hotel/Audio/SFX_PostReportLogSelfCorrection_v0",
     "/Game/Hotel/Audio/AMB_LobbyFluorescentHum_v0",
     "/Game/Hotel/Audio/AMB_GuestHallDrone_v0",
     "/Game/Hotel/Audio/AMB_ElevatorShaftGroan_v0",
@@ -67,6 +68,10 @@ REQUIRED_ACTOR_LABELS = [
     "PROP_FrontDesk_ReportLog_FiledStampCue",
     "PROP_FrontDesk_ReportLog_PenRest",
     "PROP_FrontDesk_ReportLog_PenTip",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash",
+    "LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue",
     "PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue",
     "PROP_FrontDesk_CallSlip_Underline203",
     "PROP_Surveillance_Monitor_PostReportFeedFrame",
@@ -146,6 +151,7 @@ REQUIRED_ACTOR_LABELS = [
     "SFX_ReturnRoute_BackKnock_ManualTrigger_v0",
     "SFX_PostReportMonitorMismatch_ManualTrigger_v0",
     "SFX_PostReportDeskWait_Rattle_ManualTrigger_v0",
+    "SFX_PostReportLogSelfCorrection_ManualTrigger_v0",
     "CAPTURE_FrontDesk_FirstSteamShotCandidate",
     "CAPTURE_ReportLog_ReadabilityCandidate",
     "CAPTURE_PhoneResponse_LiftReceiverCandidate",
@@ -155,6 +161,7 @@ REQUIRED_ACTOR_LABELS = [
     "CAPTURE_ReturnRoute_BackKnockCandidate",
     "CAPTURE_PostReportMonitorMismatchCandidate",
     "CAPTURE_PostReportDeskWait_DoNotAnswerCandidate",
+    "CAPTURE_PostReportLogSelfCorrectionCandidate",
     "LIGHTMESH_FrontDesk_OverheadFluorescent",
     "LIGHTMESH_GuestHall_FluorescentPanelA",
     "LIGHTMESH_GuestHall_FluorescentPanelB",
@@ -170,6 +177,7 @@ REQUIRED_ACTOR_LABELS = [
     "LIGHT_GuestHall_CaptureEvidenceDoorFill",
     "LIGHT_MonitorToHall_CaptureEvidenceGreenFill",
     "LIGHT_LobbyDoor_PostReportRattleColdPulse",
+    "LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse",
     "PPV_HotelNightShift_ReadableHorrorExposure",
 ]
 
@@ -223,6 +231,10 @@ REQUIRED_ACTOR_TAGS = {
     "PROP_FrontDesk_ReportLog_FiledStampCue": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual", "Hotel.Feedback.ReportLogFiled"],
     "PROP_FrontDesk_ReportLog_PenRest": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "PROP_FrontDesk_ReportLog_PenTip": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
+    "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrection"],
+    "PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrection"],
+    "PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrection"],
+    "LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionVisual"],
     "TRANSITION_Elevator_Door_AudibleBeforeSeen": ["Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"],
     "TRANSITION_Elevator_CallPanel_SoundCueAnchor": ["Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"],
     "TRANSITION_Elevator_FloorIndicator_WrongFloorCue": ["Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"],
@@ -264,6 +276,7 @@ REQUIRED_ACTOR_TAGS = {
     "LIGHT_ReturnRoute_ColdPulseAfterRefusal": ["Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"],
     "LIGHT_MonitorToHall_CaptureEvidenceGreenFill": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"],
     "LIGHT_LobbyDoor_PostReportRattleColdPulse": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"],
+    "LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse": ["Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionLight"],
     "SFX_PhoneRing_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhoneRing"],
     "SFX_PhonePickup_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhonePickup"],
     "SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0": ["Hotel.Audio.PhoneLineStatic"],
@@ -276,6 +289,7 @@ REQUIRED_ACTOR_TAGS = {
     "SFX_ReturnRoute_BackKnock_ManualTrigger_v0": ["Hotel.Audio.ReturnRoute"],
     "SFX_PostReportMonitorMismatch_ManualTrigger_v0": ["Hotel.Audio.PostReportMonitorMismatch"],
     "SFX_PostReportDeskWait_Rattle_ManualTrigger_v0": ["Hotel.Audio.PostReportDeskWait"],
+    "SFX_PostReportLogSelfCorrection_ManualTrigger_v0": ["Hotel.Audio.PostReportLogSelfCorrection"],
 }
 
 REQUIRED_AUDIO_LABELS = [
@@ -294,6 +308,7 @@ REQUIRED_AUDIO_LABELS = [
     "SFX_ReturnRoute_BackKnock_ManualTrigger_v0",
     "SFX_PostReportMonitorMismatch_ManualTrigger_v0",
     "SFX_PostReportDeskWait_Rattle_ManualTrigger_v0",
+    "SFX_PostReportLogSelfCorrection_ManualTrigger_v0",
 ]
 
 MOVABLE_STATIC_MESH_LABELS = [
@@ -303,6 +318,9 @@ MOVABLE_STATIC_MESH_LABELS = [
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
     "PROP_FrontDesk_ReportLog_FiledStampCue",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash",
 ]
 
 NON_INTERACTIVE_POLISH_LABELS = [
@@ -340,6 +358,10 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PROP_FrontDesk_ReportLog_FiledStampCue",
     "PROP_FrontDesk_ReportLog_PenRest",
     "PROP_FrontDesk_ReportLog_PenTip",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine",
+    "PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash",
+    "LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue",
     "PROP_GuestHall_Room203_HandleBackplate_Readable",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
