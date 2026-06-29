@@ -31,7 +31,9 @@ const FVector PatrolListenSoundAnchor(930.0f, 0.0f, 72.0f);
 const FVector PatrolListenLightAnchor(955.0f, 0.0f, 115.0f);
 const FVector ReturnRouteAnchor(2860.0f, 0.0f, 92.0f);
 const FVector ReturnRouteSoundAnchor(3420.0f, 270.0f, 150.0f);
+const FVector ReturnRouteTailSoundAnchor(3020.0f, -70.0f, 155.0f);
 const FVector ReturnRouteLightAnchor(2860.0f, -90.0f, 188.0f);
+const FVector ReturnRouteTailLightAnchor(3020.0f, -30.0f, 174.0f);
 const FVector PostReportMonitorMismatchSoundAnchor(-620.0f, -542.0f, 172.0f);
 const FVector PostReportMonitorMismatchLightAnchor(-575.0f, -555.0f, 188.0f);
 const FVector PostReportDeskWaitAnchor(-260.0f, -635.0f, 92.0f);
@@ -60,7 +62,9 @@ const FName ReportLogFiledAudioTag(TEXT("Hotel.Audio.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName PatrolListenLightTag(TEXT("Hotel.Feedback.PatrolListenLight"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
+const FName ReturnRouteTailAudioTag(TEXT("Hotel.Audio.ReturnRouteTail"));
 const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
+const FName ReturnRouteTailLightTag(TEXT("Hotel.Feedback.ReturnRouteTailLight"));
 const FName ReturnRouteBackKnockTag(TEXT("Hotel.Feedback.ReturnRouteBackKnock"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
@@ -70,6 +74,8 @@ const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitR
 const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionLightTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrectionLight"));
+constexpr float ReturnRouteAnomalyTotalSeconds = 2.35f;
+constexpr float ReturnRouteTailSoundDelaySeconds = 0.48f;
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -214,6 +220,43 @@ void AHotelNightShiftPawn::AutomationAdvanceReturnRouteAnomaly(float DeltaSecond
 FVector AHotelNightShiftPawn::AutomationGetReturnRouteBackKnockLocation() const
 {
 	return ReturnRouteBackKnockActor ? ReturnRouteBackKnockActor->GetActorLocation() : FVector::ZeroVector;
+}
+
+bool AHotelNightShiftPawn::AutomationHasReturnRouteTailSound() const
+{
+	const AAmbientSound* TailSound = Cast<AAmbientSound>(ReturnRouteTailSoundActor);
+	const UAudioComponent* AudioComponent = TailSound ? TailSound->GetAudioComponent() : nullptr;
+	return AudioComponent && AudioComponent->Sound;
+}
+
+float AHotelNightShiftPawn::AutomationGetReturnRouteLightIntensity() const
+{
+	return GetLightIntensity(ReturnRouteLightActor);
+}
+
+float AHotelNightShiftPawn::AutomationGetReturnRouteTailLightIntensity() const
+{
+	return GetLightIntensity(ReturnRouteTailLightActor);
+}
+
+int32 AHotelNightShiftPawn::AutomationCountMovedReturnRouteBackKnockActors(float MinDistance) const
+{
+	const float MinDistanceSquared = FMath::Square(MinDistance);
+	int32 MovedCount = 0;
+	for (int32 Index = 0; Index < ReturnRouteBackKnockActors.Num(); ++Index)
+	{
+		const AActor* FeedbackPart = ReturnRouteBackKnockActors[Index];
+		if (!FeedbackPart || !ReturnRouteBackKnockRestLocations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		if (FVector::DistSquared(FeedbackPart->GetActorLocation(), ReturnRouteBackKnockRestLocations[Index]) >= MinDistanceSquared)
+		{
+			++MovedCount;
+		}
+	}
+	return MovedCount;
 }
 
 bool AHotelNightShiftPawn::AutomationIsPostReportMonitorMismatchActive() const
@@ -623,7 +666,9 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PatrolListenSoundActor = FindActorWithTagNear(PatrolListenAudioTag, PatrolListenSoundAnchor, 120.0f);
 	PatrolListenLightActor = FindActorWithTagNear(PatrolListenLightTag, PatrolListenLightAnchor, 120.0f);
 	ReturnRouteSoundActor = FindActorWithTagNear(ReturnRouteAudioTag, ReturnRouteSoundAnchor, 220.0f);
-	ReturnRouteLightActor = FindActorWithTagNear(ReturnRouteLightTag, ReturnRouteLightAnchor, 180.0f);
+	ReturnRouteTailSoundActor = FindActorWithTagNear(ReturnRouteTailAudioTag, ReturnRouteTailSoundAnchor, 260.0f);
+	ReturnRouteLightActor = FindLightActorWithTagNear(ReturnRouteLightTag, ReturnRouteLightAnchor, 180.0f);
+	ReturnRouteTailLightActor = FindLightActorWithTagNear(ReturnRouteTailLightTag, ReturnRouteTailLightAnchor, 260.0f);
 	ReturnRouteBackKnockActors.Reset();
 	for (AActor* FeedbackPart : FindActorsWithTagNear(ReturnRouteBackKnockTag, ReturnRouteAnchor, 660.0f))
 	{
@@ -1001,11 +1046,25 @@ void AHotelNightShiftPawn::UpdateReturnRouteAnomaly(float DeltaSeconds)
 
 	ReturnRoutePulseClock += DeltaSeconds;
 	ReturnRouteAnomalySeconds += DeltaSeconds;
+	const float Phase = FMath::Clamp(ReturnRouteAnomalySeconds / ReturnRouteAnomalyTotalSeconds, 0.0f, 1.0f);
 	const float Pulse = 0.5f + 0.5f * FMath::Sin(ReturnRoutePulseClock * 9.5f);
-	SetReturnRouteLightIntensity(280.0f + Pulse * 1550.0f);
-	UpdateReturnRouteBackKnockFeedback(FMath::Clamp(ReturnRouteAnomalySeconds / 0.95f, 0.0f, 1.0f));
+	const float ImpactEnvelope = FMath::Pow(1.0f - Phase, 1.15f);
+	SetReturnRouteLightIntensity(260.0f + Pulse * (920.0f + 720.0f * ImpactEnvelope));
 
-	if (ReturnRouteAnomalySeconds >= 0.95f)
+	const float TailPhase = FMath::Clamp((ReturnRouteAnomalySeconds - 0.36f) / 1.48f, 0.0f, 1.0f);
+	const float TailEnvelope = FMath::Sin(TailPhase * UE_PI);
+	SetReturnRouteTailLightIntensity(90.0f + TailEnvelope * (1180.0f + Pulse * 260.0f));
+	UpdateReturnRouteBackKnockFeedback(FMath::Clamp(ReturnRouteAnomalySeconds / 1.45f, 0.0f, 1.0f));
+
+	if (!bReturnRouteTailSoundPlayed && ReturnRouteAnomalySeconds >= ReturnRouteTailSoundDelaySeconds)
+	{
+		bReturnRouteTailSoundPlayed = true;
+		PlayActorSound(ReturnRouteTailSoundActor);
+		WorkMessageText = TEXT("The first knock was behind you. The paper answers from the wall ahead.");
+		DeskStatusText = TEXT("RETURN ROUTE: BACK KNOCK / FOLLOWING");
+	}
+
+	if (ReturnRouteAnomalySeconds >= ReturnRouteAnomalyTotalSeconds)
 	{
 		ResolveReturnRouteAnomaly();
 	}
@@ -1016,6 +1075,7 @@ void AHotelNightShiftPawn::StartReturnRouteAnomaly()
 	bReturnRouteAnomalyActive = true;
 	ReturnRouteAnomalySeconds = 0.0f;
 	ReturnRoutePulseClock = 0.0f;
+	bReturnRouteTailSoundPlayed = false;
 	ResetReturnRouteBackKnockFeedback();
 	PlayActorSound(ReturnRouteSoundActor);
 	SetWorkState(
@@ -1025,6 +1085,7 @@ void AHotelNightShiftPawn::StartReturnRouteAnomaly()
 		TEXT("RETURN ROUTE: LISTEN / DO NOT RUN"),
 		0.84f);
 	SetReturnRouteLightIntensity(1600.0f);
+	SetReturnRouteTailLightIntensity(90.0f);
 }
 
 void AHotelNightShiftPawn::ResolveReturnRouteAnomaly()
@@ -1039,6 +1100,7 @@ void AHotelNightShiftPawn::ResolveReturnRouteAnomaly()
 		TEXT("DESK LINE: SILENT / REFUSAL READY TO LOG"),
 		0.72f);
 	SetReturnRouteLightIntensity(640.0f);
+	SetReturnRouteTailLightIntensity(120.0f);
 	ResetReturnRouteBackKnockFeedback();
 }
 
@@ -1568,6 +1630,19 @@ void AHotelNightShiftPawn::SetReturnRouteLightIntensity(float NewIntensity)
 	}
 }
 
+void AHotelNightShiftPawn::SetReturnRouteTailLightIntensity(float NewIntensity)
+{
+	if (!ReturnRouteTailLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = ReturnRouteTailLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
 void AHotelNightShiftPawn::SetPostReportMonitorMismatchLightIntensity(float NewIntensity)
 {
 	if (!PostReportMonitorMismatchLightActor)
@@ -1699,4 +1774,33 @@ AActor* AHotelNightShiftPawn::FindLightActorNear(const FVector& Anchor, float Ra
 		}
 	}
 	return nullptr;
+}
+
+AActor* AHotelNightShiftPawn::FindLightActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const
+{
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsOfClass(this, AActor::StaticClass(), Actors);
+	for (AActor* Actor : Actors)
+	{
+		if (
+			Actor
+			&& Actor->ActorHasTag(RequiredTag)
+			&& IsActorNear(Actor, Anchor, Radius)
+			&& Actor->FindComponentByClass<ULightComponent>())
+		{
+			return Actor;
+		}
+	}
+	return nullptr;
+}
+
+float AHotelNightShiftPawn::GetLightIntensity(const AActor* LightActor) const
+{
+	if (!LightActor)
+	{
+		return 0.0f;
+	}
+
+	const ULightComponent* LightComponent = LightActor->FindComponentByClass<ULightComponent>();
+	return LightComponent ? LightComponent->Intensity : 0.0f;
 }

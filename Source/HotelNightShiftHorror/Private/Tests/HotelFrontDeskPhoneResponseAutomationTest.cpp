@@ -22,6 +22,9 @@ const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
+const FName ReturnRouteTailAudioTag(TEXT("Hotel.Audio.ReturnRouteTail"));
+const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
+const FName ReturnRouteTailLightTag(TEXT("Hotel.Feedback.ReturnRouteTailLight"));
 const FName ReturnRouteBackKnockTag(TEXT("Hotel.Feedback.ReturnRouteBackKnock"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
@@ -156,6 +159,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
 		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
 		AActor* ReturnRouteSound = FindActorByTag(World, ReturnRouteAudioTag);
+		AActor* ReturnRouteTailSound = FindActorByTag(World, ReturnRouteTailAudioTag);
+		AActor* ReturnRouteLight = FindActorByTag(World, ReturnRouteLightTag);
+		AActor* ReturnRouteTailLight = FindActorByTag(World, ReturnRouteTailLightTag);
 		AActor* ReturnRouteBackKnock = FindActorByTag(World, ReturnRouteBackKnockTag);
 		AActor* PostReportMonitorMismatchSound = FindActorByTag(World, PostReportMonitorMismatchAudioTag);
 		AActor* PostReportDeskWaitSound = FindActorByTag(World, PostReportDeskWaitAudioTag);
@@ -180,6 +186,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
 		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
 		TestNotNull(TEXT("Return route anomaly sound actor exists"), ReturnRouteSound);
+		TestNotNull(TEXT("Return route pursuit-tail sound actor exists"), ReturnRouteTailSound);
+		TestNotNull(TEXT("Return route cold pulse light exists"), ReturnRouteLight);
+		TestNotNull(TEXT("Return route pursuit-tail light exists"), ReturnRouteTailLight);
 		TestNotNull(TEXT("Return route back-knock visible feedback actor exists"), ReturnRouteBackKnock);
 		TestNotNull(TEXT("Post-report monitor mismatch sound actor exists"), PostReportMonitorMismatchSound);
 		TestNotNull(TEXT("Post-report desk wait sound actor exists"), PostReportDeskWaitSound);
@@ -194,7 +203,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Room 203 notice-corner jolt cue exists in production map"), Room203NoticeCornerJolt);
 		TestNotNull(TEXT("Room 203 aftershock loose-paper mesh exists in production map"), Room203AftershockLoosePaper);
 		TestNotNull(TEXT("Room 203 aftershock high-curl mesh exists in production map"), Room203AftershockHighCurl);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
 		{
 			return true;
 		}
@@ -292,17 +301,26 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("Return route anomaly is not already resolved"), Pawn->AutomationIsReturnRouteAnomalyResolved());
 
 		const FVector ReturnRouteBackKnockRestLocation = Pawn->AutomationGetReturnRouteBackKnockLocation();
+		const float ReturnRouteRestLightIntensity = Pawn->AutomationGetReturnRouteLightIntensity();
+		const float ReturnRouteRestTailLightIntensity = Pawn->AutomationGetReturnRouteTailLightIntensity();
 		TestTrue(TEXT("Return route back-knock feedback is cached for visible response"), ReturnRouteBackKnockRestLocation.SizeSquared() > 0.0f);
+		TestTrue(TEXT("Return route pursuit-tail sound source is cached"), Pawn->AutomationHasReturnRouteTailSound());
 		Pawn->SetActorLocation(FVector(2860.0f, 0.0f, 92.0f));
 		Pawn->AutomationAdvanceReturnRouteAnomaly(0.10f);
 		TestTrue(TEXT("Return route anomaly starts in the guest hall"), Pawn->AutomationIsReturnRouteAnomalyActive());
 		TestFalse(TEXT("Return route anomaly does not resolve instantly"), Pawn->AutomationIsReturnRouteAnomalyResolved());
+		TestTrue(TEXT("Return route cold pulse light rises on the first back-knock"), Pawn->AutomationGetReturnRouteLightIntensity() > ReturnRouteRestLightIntensity + 220.0f);
 		TestTrue(TEXT("Return route back-knock cue moves with the hallway answer"), FVector::DistSquared(ReturnRouteBackKnockRestLocation, Pawn->AutomationGetReturnRouteBackKnockLocation()) > FMath::Square(2.0f));
-		Pawn->AutomationAdvanceReturnRouteAnomaly(1.00f);
+		Pawn->AutomationAdvanceReturnRouteAnomaly(0.55f);
+		TestTrue(TEXT("Return route remains active long enough to read in a short capture"), Pawn->AutomationIsReturnRouteAnomalyActive());
+		TestTrue(TEXT("Return route pursuit-tail light rises after the first knock"), Pawn->AutomationGetReturnRouteTailLightIntensity() > ReturnRouteRestTailLightIntensity + 360.0f);
+		TestTrue(TEXT("Return route moves multiple visible hallway cues, not only one marker"), Pawn->AutomationCountMovedReturnRouteBackKnockActors(2.0f) >= 4);
+		Pawn->AutomationAdvanceReturnRouteAnomaly(1.85f);
 		TestTrue(TEXT("Return route anomaly resolves after the hallway answer"), Pawn->AutomationIsReturnRouteAnomalyResolved());
 		TestFalse(TEXT("Return route anomaly stops after resolution"), Pawn->AutomationIsReturnRouteAnomalyActive());
 		TestEqual(TEXT("Return route clear stage enables report filing"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReturnRouteCleared);
 		TestTrue(TEXT("Return route back-knock cue returns to rest"), FVector::DistSquared(ReturnRouteBackKnockRestLocation, Pawn->AutomationGetReturnRouteBackKnockLocation()) < FMath::Square(1.5f));
+		TestEqual(TEXT("Return route feedback actors return to rest after the pursuit tail"), Pawn->AutomationCountMovedReturnRouteBackKnockActors(1.5f), 0);
 
 		const FVector ReportFiledRestLocation = Pawn->AutomationGetReportLogFiledFeedbackLocation();
 		TestTrue(TEXT("Filing report succeeds"), Pawn->AutomationInteractWithActor(ReportLog));
