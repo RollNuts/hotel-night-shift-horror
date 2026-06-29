@@ -23,6 +23,9 @@ const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
 const FVector DoorRefusalFeedbackAnchor(4020.0f, 258.0f, 150.0f);
 const FVector ReportFiledSoundAnchor(-242.0f, -500.0f, 152.0f);
 const FVector ReportLogFiledFeedbackAnchor(-232.0f, -503.0f, 145.0f);
+const FVector PatrolListenAnchor(930.0f, 0.0f, 92.0f);
+const FVector PatrolListenSoundAnchor(930.0f, 0.0f, 72.0f);
+const FVector PatrolListenLightAnchor(955.0f, 0.0f, 115.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
@@ -33,6 +36,8 @@ const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"))
 const FName ReportLogInteractTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName ReportLogFiledAudioTag(TEXT("Hotel.Audio.ReportLogFiled"));
+const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
+const FName PatrolListenLightTag(TEXT("Hotel.Feedback.PatrolListenLight"));
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -69,6 +74,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	UpdateLookTarget();
+	UpdatePatrolListenAnomaly(DeltaSeconds);
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
@@ -137,6 +143,21 @@ bool AHotelNightShiftPawn::AutomationHasPhoneLineSound() const
 	const AAmbientSound* PhoneLineSound = Cast<AAmbientSound>(PhoneLineSoundActor);
 	const UAudioComponent* AudioComponent = PhoneLineSound ? PhoneLineSound->GetAudioComponent() : nullptr;
 	return AudioComponent && AudioComponent->Sound;
+}
+
+bool AHotelNightShiftPawn::AutomationIsPatrolListenActive() const
+{
+	return bPatrolListenActive;
+}
+
+bool AHotelNightShiftPawn::AutomationIsPatrolListenResolved() const
+{
+	return bPatrolListenResolved;
+}
+
+void AHotelNightShiftPawn::AutomationAdvancePatrolListen(float DeltaSeconds)
+{
+	UpdatePatrolListenAnomaly(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::AutomationAdvancePhoneReceiver(float DeltaSeconds)
@@ -250,7 +271,7 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 		PulseHallLight(85.0f);
 		SetWorkState(
 			EHotelLoopStage::MonitorChecked,
-			TEXT("Go to Room 203 and keep the door closed."),
+			TEXT("Cross the taped line, listen, then go to Room 203."),
 			TEXT("Monitor feed: empty hallway. The call says that should be impossible."),
 			TEXT("DESK LINE: HOLDING / CAMERA MISMATCH"),
 			0.54f);
@@ -261,6 +282,22 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 		ActorMatches(TargetActor, Door203Anchor, 190.0f, Room203DoorInteractTag)
 		&& (LoopStage == EHotelLoopStage::RequestKnown || LoopStage == EHotelLoopStage::MonitorChecked))
 	{
+		if (LoopStage == EHotelLoopStage::MonitorChecked && !bPatrolListenResolved)
+		{
+			if (!bPatrolListenActive)
+			{
+				PlayActorSound(PatrolListenSoundActor);
+			}
+			SetWorkState(
+				EHotelLoopStage::MonitorChecked,
+				TEXT("Return to the taped line and listen before Room 203."),
+				TEXT("The elevator clicks behind you. You moved through the split too fast."),
+				TEXT("PATROL: LISTEN REQUIRED / DO NOT RUSH"),
+				0.68f);
+			SetPatrolListenLightIntensity(1450.0f);
+			return false;
+		}
+
 		PlayActorSound(DoorKnockSoundActor);
 		PulseHallLight(24.0f);
 		TriggerDoorRefusalFeedback();
@@ -317,6 +354,8 @@ void AHotelNightShiftPawn::CacheHotelActors()
 		ReportLogFiledFeedbackActors.Add(FeedbackPart);
 	}
 	ReportLogFiledFeedbackActor = FindActorWithTagNear(ReportLogFiledFeedbackTag, ReportLogFiledFeedbackAnchor, 150.0f);
+	PatrolListenSoundActor = FindActorWithTagNear(PatrolListenAudioTag, PatrolListenSoundAnchor, 120.0f);
+	PatrolListenLightActor = FindActorWithTagNear(PatrolListenLightTag, PatrolListenLightAnchor, 120.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -480,6 +519,82 @@ void AHotelNightShiftPawn::PlayActorSound(AActor* SoundActor) const
 	}
 }
 
+void AHotelNightShiftPawn::UpdatePatrolListenAnomaly(float DeltaSeconds)
+{
+	if (LoopStage != EHotelLoopStage::MonitorChecked || bPatrolListenResolved)
+	{
+		return;
+	}
+
+	const bool bNearListenLine = IsActorNear(this, PatrolListenAnchor, 235.0f);
+	if (bNearListenLine && !bPatrolListenActive)
+	{
+		StartPatrolListenAnomaly();
+	}
+
+	if (!bPatrolListenActive)
+	{
+		return;
+	}
+
+	PatrolListenPulseClock += DeltaSeconds;
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(PatrolListenPulseClock * 8.0f);
+	SetPatrolListenLightIntensity(520.0f + Pulse * 1250.0f);
+
+	if (!bNearListenLine)
+	{
+		PatrolListenHoldSeconds = 0.0f;
+		ObjectiveText = TEXT("Return to the taped line and listen before Room 203.");
+		WorkMessageText = TEXT("The sound thins out when you leave the mark.");
+		DeskStatusText = TEXT("PATROL: LISTEN LOST / RETURN");
+		return;
+	}
+
+	if (GetVelocity().SizeSquared2D() <= FMath::Square(12.0f))
+	{
+		PatrolListenHoldSeconds += DeltaSeconds;
+	}
+	else
+	{
+		PatrolListenHoldSeconds = FMath::Max(0.0f, PatrolListenHoldSeconds - DeltaSeconds * 1.5f);
+	}
+
+	if (PatrolListenHoldSeconds >= 1.25f)
+	{
+		ResolvePatrolListenAnomaly();
+	}
+}
+
+void AHotelNightShiftPawn::StartPatrolListenAnomaly()
+{
+	bPatrolListenActive = true;
+	PatrolListenHoldSeconds = 0.0f;
+	PatrolListenPulseClock = 0.0f;
+	PlayActorSound(PatrolListenSoundActor);
+	SetWorkState(
+		EHotelLoopStage::MonitorChecked,
+		TEXT("Hold at the taped line and listen."),
+		TEXT("The elevator groans, then the stairwell answers from the wrong side."),
+		TEXT("PATROL: HOLD POSITION / LISTEN"),
+		0.70f);
+	SetPatrolListenLightIntensity(1600.0f);
+}
+
+void AHotelNightShiftPawn::ResolvePatrolListenAnomaly()
+{
+	bPatrolListenActive = false;
+	bPatrolListenResolved = true;
+	PatrolListenHoldSeconds = 0.0f;
+	PlayActorSound(PatrolListenSoundActor);
+	SetWorkState(
+		EHotelLoopStage::MonitorChecked,
+		TEXT("Go to Room 203 and keep the door closed."),
+		TEXT("The stairwell breathes twice. The right move is to continue, not hurry."),
+		TEXT("PATROL: LISTENED / ROUTE CLEARED"),
+		0.66f);
+	SetPatrolListenLightIntensity(820.0f);
+}
+
 void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
 {
 	if (LoopStage != EHotelLoopStage::PhoneRinging)
@@ -640,6 +755,19 @@ void AHotelNightShiftPawn::SetPhoneIndicatorIntensity(float NewIntensity)
 	}
 
 	if (ULightComponent* LightComponent = PhoneIndicatorLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
+void AHotelNightShiftPawn::SetPatrolListenLightIntensity(float NewIntensity)
+{
+	if (!PatrolListenLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = PatrolListenLightActor->FindComponentByClass<ULightComponent>())
 	{
 		LightComponent->SetIntensity(NewIntensity);
 	}

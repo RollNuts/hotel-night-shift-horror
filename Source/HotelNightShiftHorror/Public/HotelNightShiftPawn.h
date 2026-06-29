@@ -49,6 +49,9 @@ public:
 	bool AutomationIsPhoneRingTimerActive() const;
 	bool AutomationIsPhoneLineConnected() const;
 	bool AutomationHasPhoneLineSound() const;
+	bool AutomationIsPatrolListenActive() const;
+	bool AutomationIsPatrolListenResolved() const;
+	void AutomationAdvancePatrolListen(float DeltaSeconds);
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
@@ -79,6 +82,9 @@ private:
 	void StartPhoneLineAudio();
 	void StopPhoneLineAudio();
 	void PlayActorSound(AActor* SoundActor) const;
+	void UpdatePatrolListenAnomaly(float DeltaSeconds);
+	void StartPatrolListenAnomaly();
+	void ResolvePatrolListenAnomaly();
 	void UpdatePhoneRingVisual(float DeltaSeconds);
 	void LiftPhoneReceiver();
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
@@ -87,6 +93,7 @@ private:
 	void TriggerReportLogFiledFeedback();
 	void UpdateReportLogFiledFeedback(float DeltaSeconds);
 	void SetPhoneIndicatorIntensity(float NewIntensity);
+	void SetPatrolListenLightIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
 		EHotelLoopStage NewStage,
@@ -135,6 +142,12 @@ private:
 	TArray<TObjectPtr<AActor>> ReportLogFiledFeedbackActors;
 
 	UPROPERTY()
+	TObjectPtr<AActor> PatrolListenSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PatrolListenLightActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -167,6 +180,10 @@ private:
 	bool bMonitorChecked = false;
 	bool bPhoneReceiverLiftActive = false;
 	bool bPhoneLineConnected = false;
+	float PatrolListenHoldSeconds = 0.0f;
+	float PatrolListenPulseClock = 0.0f;
+	bool bPatrolListenActive = false;
+	bool bPatrolListenResolved = false;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;
