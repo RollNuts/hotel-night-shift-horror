@@ -25,6 +25,7 @@ CAPTURE_CAMERAS = [
     "CAPTURE_Transition_ElevatorStair_AudioFearCandidate",
     "CAPTURE_PatrolRoute_DecisionCueCandidate",
     "CAPTURE_GuestDoor_15SecondBeatCandidate",
+    "CAPTURE_ReturnRoute_BackKnockCandidate",
     "CAPTURE_MonitorToHall_MismatchCandidate",
 ]
 

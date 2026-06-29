@@ -20,6 +20,7 @@ const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"))
 const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
+const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -112,6 +113,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* ReportLog = FindActorByTag(World, ReportLogTag);
 		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
 		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
+		AActor* ReturnRouteSound = FindActorByTag(World, ReturnRouteAudioTag);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -120,7 +122,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Report log interaction actor exists"), ReportLog);
 		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
 		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound)
+		TestNotNull(TEXT("Return route anomaly sound actor exists"), ReturnRouteSound);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound)
 		{
 			return true;
 		}
@@ -174,6 +177,19 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		Pawn->AutomationAdvanceDoorRefusalFeedback(0.12f);
 		TestTrue(TEXT("Room 203 refusal feedback starts"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() > 0.0f);
 		TestTrue(TEXT("Room 203 latch feedback moves visibly"), FVector::DistSquared(DoorFeedbackRestLocation, Pawn->AutomationGetDoorRefusalFeedbackLocation()) > FMath::Square(2.0f));
+
+		TestFalse(TEXT("Report filing is blocked before the return route anomaly resolves"), Pawn->AutomationInteractWithActor(ReportLog));
+		TestEqual(TEXT("Early report attempt remains DoorRefused"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::DoorRefused);
+		TestFalse(TEXT("Return route anomaly is not already resolved"), Pawn->AutomationIsReturnRouteAnomalyResolved());
+
+		Pawn->SetActorLocation(FVector(2860.0f, 0.0f, 92.0f));
+		Pawn->AutomationAdvanceReturnRouteAnomaly(0.10f);
+		TestTrue(TEXT("Return route anomaly starts in the guest hall"), Pawn->AutomationIsReturnRouteAnomalyActive());
+		TestFalse(TEXT("Return route anomaly does not resolve instantly"), Pawn->AutomationIsReturnRouteAnomalyResolved());
+		Pawn->AutomationAdvanceReturnRouteAnomaly(1.00f);
+		TestTrue(TEXT("Return route anomaly resolves after the hallway answer"), Pawn->AutomationIsReturnRouteAnomalyResolved());
+		TestFalse(TEXT("Return route anomaly stops after resolution"), Pawn->AutomationIsReturnRouteAnomalyActive());
+		TestEqual(TEXT("Return route clear stage enables report filing"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReturnRouteCleared);
 
 		const FVector ReportFiledRestLocation = Pawn->AutomationGetReportLogFiledFeedbackLocation();
 		TestTrue(TEXT("Filing report succeeds"), Pawn->AutomationInteractWithActor(ReportLog));

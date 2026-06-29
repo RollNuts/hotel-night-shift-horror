@@ -138,6 +138,16 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         stair_breath = 0.05 * math.sin(2 * math.pi * 186 * t) if 1.2 <= t <= 2.2 else 0.0
         return floor_bloom + 0.28 * elevator_reply + 0.24 * dry_click + stair_breath
 
+    def return_route_knockback(t: float) -> float:
+        total = 0.0
+        for start, pitch in ((0.04, 96), (0.34, 141), (0.72, 83), (1.18, 128)):
+            dt = t - start
+            if 0.0 <= dt <= 0.18:
+                total += math.exp(-dt * 24.0) * (math.sin(2 * math.pi * pitch * dt) + 0.24 * math.sin(2 * math.pi * (pitch * 2.1) * dt))
+        reverse_hum = 0.07 * math.sin(2 * math.pi * 58 * t) * math.exp(-max(0.0, t - 0.55) * 0.8)
+        cold_scrape = 0.035 * math.sin(2 * math.pi * 690 * t) if 0.92 <= t <= 1.42 else 0.0
+        return 0.52 * total + reverse_hum + cold_scrape
+
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
@@ -149,6 +159,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_DoorKnock203_v0": (1.4, door_knock),
         "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
         "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
+        "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -556,6 +567,16 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("AREA_GuestHall_RightWall_DoorDecisionSide", (3250, 290, 140), (2500, 24, 280), materials["wall"])
     add_cube("AREA_GuestHall_Ceiling_LowPressure", (3250, 0, 286), (2500, 560, 20), materials["trim"])
     add_cube("PROP_GuestHall_Camera_MonitorMismatchAnchor", (2600, -282, 220), (36, 20, 28), materials["black"])
+    return_route_tags = ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly")
+    add_cube("RETURN_Route_FloorColdPatch_AfterRefusal", (2860, 0, 4), (310, 420, 5), materials["screen_glow"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_BackKnockDirectionStripe", (2860, -84, 10), (220, 8, 5), materials["warn"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_BackKnockDirectionStripe_Return", (2860, 84, 10), (220, 8, 5), materials["warn"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_WallStatusSlip_ReportAfterHall", (2840, -278, 124), (82, 7, 48), materials["paper"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_WallStatusSlip_Underline", (2840, -282, 104), (56, 5, 4), materials["warn"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_FootprintBacktrackA", (3040, -90, 6), (44, 18, 4), materials["black"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_FootprintBacktrackB", (2920, -32, 6), (44, 18, 4), materials["black"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_FootprintBacktrackC", (2785, 48, 6), (44, 18, 4), materials["black"], return_route_tags, no_collision=True)
+    add_cube("RETURN_Route_CeilingLightmesh_ColdPulseCue", (2860, -90, 273), (280, 34, 9), materials["fluorescent_panel"], return_route_tags, no_collision=True)
     door_decision_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual")
     door_refusal_tags = ("Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability")
     add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"], ("Hotel.Interact.Room203Door",))
@@ -606,6 +627,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_Transition_CaptureEvidenceSoftFill", unreal.PointLight, (925, 0, 190), (0, 0, 0), 1850.0, unreal.Color(178, 218, 205, 255), ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"), attenuation_radius=760.0)
     add_light("LIGHT_PatrolRoute_DecisionCueFloorFill", unreal.PointLight, (955, 0, 115), (0, 0, 0), 1100.0, unreal.Color(190, 218, 194, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision", "Hotel.Feedback.PatrolListenLight"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
+    add_light("LIGHT_ReturnRoute_ColdPulseAfterRefusal", unreal.PointLight, (2860, -90, 188), (0, 0, 0), 620.0, unreal.Color(120, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"), attenuation_radius=680.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 2200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability",), attenuation_radius=920.0)
@@ -632,6 +654,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
+    add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
     add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
 
     if "AMB_LobbyFluorescentHum_v0" in sounds:
@@ -646,6 +669,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("AMB_PatrolRoute_StairAirBleed_Source_v0", sounds["AMB_StairwellAir_v0"], (960, -250, 164), True, ("Hotel.Audio.StairwellAir", "Hotel.Audio.PatrolDecision"))
     if "SFX_PatrolListenDrop_v0" in sounds:
         add_audio("SFX_PatrolListen_StopLine_ManualTrigger_v0", sounds["SFX_PatrolListenDrop_v0"], (930, 0, 72), False, ("Hotel.Audio.PatrolListen",))
+    if "SFX_ReturnRouteKnockback_v0" in sounds:
+        add_audio("SFX_ReturnRoute_BackKnock_ManualTrigger_v0", sounds["SFX_ReturnRouteKnockback_v0"], (3420, 270, 150), False, ("Hotel.Audio.ReturnRoute",))
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:

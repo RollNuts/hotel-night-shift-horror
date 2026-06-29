@@ -13,6 +13,7 @@ enum class EHotelLoopStage : uint8
 	RequestKnown,
 	MonitorChecked,
 	DoorRefused,
+	ReturnRouteCleared,
 	ReportFiled
 };
 
@@ -52,6 +53,9 @@ public:
 	bool AutomationIsPatrolListenActive() const;
 	bool AutomationIsPatrolListenResolved() const;
 	void AutomationAdvancePatrolListen(float DeltaSeconds);
+	bool AutomationIsReturnRouteAnomalyActive() const;
+	bool AutomationIsReturnRouteAnomalyResolved() const;
+	void AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds);
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
@@ -85,6 +89,9 @@ private:
 	void UpdatePatrolListenAnomaly(float DeltaSeconds);
 	void StartPatrolListenAnomaly();
 	void ResolvePatrolListenAnomaly();
+	void UpdateReturnRouteAnomaly(float DeltaSeconds);
+	void StartReturnRouteAnomaly();
+	void ResolveReturnRouteAnomaly();
 	void UpdatePhoneRingVisual(float DeltaSeconds);
 	void LiftPhoneReceiver();
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
@@ -94,6 +101,7 @@ private:
 	void UpdateReportLogFiledFeedback(float DeltaSeconds);
 	void SetPhoneIndicatorIntensity(float NewIntensity);
 	void SetPatrolListenLightIntensity(float NewIntensity);
+	void SetReturnRouteLightIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
 		EHotelLoopStage NewStage,
@@ -148,6 +156,12 @@ private:
 	TObjectPtr<AActor> PatrolListenLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> ReturnRouteSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> ReturnRouteLightActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -184,6 +198,10 @@ private:
 	float PatrolListenPulseClock = 0.0f;
 	bool bPatrolListenActive = false;
 	bool bPatrolListenResolved = false;
+	float ReturnRouteAnomalySeconds = 0.0f;
+	float ReturnRoutePulseClock = 0.0f;
+	bool bReturnRouteAnomalyActive = false;
+	bool bReturnRouteAnomalyResolved = false;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;

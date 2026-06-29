@@ -26,6 +26,9 @@ const FVector ReportLogFiledFeedbackAnchor(-232.0f, -503.0f, 145.0f);
 const FVector PatrolListenAnchor(930.0f, 0.0f, 92.0f);
 const FVector PatrolListenSoundAnchor(930.0f, 0.0f, 72.0f);
 const FVector PatrolListenLightAnchor(955.0f, 0.0f, 115.0f);
+const FVector ReturnRouteAnchor(2860.0f, 0.0f, 92.0f);
+const FVector ReturnRouteSoundAnchor(3420.0f, 270.0f, 150.0f);
+const FVector ReturnRouteLightAnchor(2860.0f, -90.0f, 188.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
@@ -38,6 +41,8 @@ const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName ReportLogFiledAudioTag(TEXT("Hotel.Audio.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName PatrolListenLightTag(TEXT("Hotel.Feedback.PatrolListenLight"));
+const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
+const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -75,6 +80,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	UpdateLookTarget();
 	UpdatePatrolListenAnomaly(DeltaSeconds);
+	UpdateReturnRouteAnomaly(DeltaSeconds);
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
@@ -158,6 +164,21 @@ bool AHotelNightShiftPawn::AutomationIsPatrolListenResolved() const
 void AHotelNightShiftPawn::AutomationAdvancePatrolListen(float DeltaSeconds)
 {
 	UpdatePatrolListenAnomaly(DeltaSeconds);
+}
+
+bool AHotelNightShiftPawn::AutomationIsReturnRouteAnomalyActive() const
+{
+	return bReturnRouteAnomalyActive;
+}
+
+bool AHotelNightShiftPawn::AutomationIsReturnRouteAnomalyResolved() const
+{
+	return bReturnRouteAnomalyResolved;
+}
+
+void AHotelNightShiftPawn::AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds)
+{
+	UpdateReturnRouteAnomaly(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::AutomationAdvancePhoneReceiver(float DeltaSeconds)
@@ -303,16 +324,27 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 		TriggerDoorRefusalFeedback();
 		SetWorkState(
 			EHotelLoopStage::DoorRefused,
-			TEXT("Return to the front desk and record the refusal."),
+			TEXT("Return through the guest hall. Do not write the report until the hall quiets."),
 			bMonitorChecked
 				? TEXT("Room 203 knocks after you refuse. The monitor still showed nobody.")
 				: TEXT("Room 203 knocks before you checked the camera. That mistake now matters."),
-			TEXT("DESK LINE: SILENT / REFUSAL PENDING"),
+			TEXT("DESK LINE: SILENT / RETURN UNCONFIRMED"),
 			0.76f);
 		return true;
 	}
 
-	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused)
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused && !bReturnRouteAnomalyResolved)
+	{
+		SetWorkState(
+			EHotelLoopStage::DoorRefused,
+			TEXT("Do the return walk first. Record it only after the hall answers."),
+			TEXT("Your pen stops above the log. The hallway has not finished with the refusal."),
+			TEXT("DESK LINE: REPORT LOCKED / RETURN PENDING"),
+			0.81f);
+		return false;
+	}
+
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReturnRouteCleared)
 	{
 		SetWorkState(
 			EHotelLoopStage::ReportFiled,
@@ -356,6 +388,8 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	ReportLogFiledFeedbackActor = FindActorWithTagNear(ReportLogFiledFeedbackTag, ReportLogFiledFeedbackAnchor, 150.0f);
 	PatrolListenSoundActor = FindActorWithTagNear(PatrolListenAudioTag, PatrolListenSoundAnchor, 120.0f);
 	PatrolListenLightActor = FindActorWithTagNear(PatrolListenLightTag, PatrolListenLightAnchor, 120.0f);
+	ReturnRouteSoundActor = FindActorWithTagNear(ReturnRouteAudioTag, ReturnRouteSoundAnchor, 220.0f);
+	ReturnRouteLightActor = FindActorWithTagNear(ReturnRouteLightTag, ReturnRouteLightAnchor, 180.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -430,7 +464,12 @@ void AHotelNightShiftPawn::UpdateLookTarget()
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Refuse and keep closed");
 	}
-	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused)
+	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::DoorRefused && !bReturnRouteAnomalyResolved)
+	{
+		CurrentLookActor = HitActor;
+		InteractionPromptText = TEXT("E  Return walk incomplete");
+	}
+	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReturnRouteCleared)
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Record incident");
@@ -593,6 +632,64 @@ void AHotelNightShiftPawn::ResolvePatrolListenAnomaly()
 		TEXT("PATROL: LISTENED / ROUTE CLEARED"),
 		0.66f);
 	SetPatrolListenLightIntensity(820.0f);
+}
+
+void AHotelNightShiftPawn::UpdateReturnRouteAnomaly(float DeltaSeconds)
+{
+	if (LoopStage != EHotelLoopStage::DoorRefused || bReturnRouteAnomalyResolved)
+	{
+		return;
+	}
+
+	const bool bNearReturnRoute = IsActorNear(this, ReturnRouteAnchor, 260.0f);
+	if (bNearReturnRoute && !bReturnRouteAnomalyActive)
+	{
+		StartReturnRouteAnomaly();
+	}
+
+	if (!bReturnRouteAnomalyActive)
+	{
+		return;
+	}
+
+	ReturnRoutePulseClock += DeltaSeconds;
+	ReturnRouteAnomalySeconds += DeltaSeconds;
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(ReturnRoutePulseClock * 9.5f);
+	SetReturnRouteLightIntensity(280.0f + Pulse * 1550.0f);
+
+	if (ReturnRouteAnomalySeconds >= 0.95f)
+	{
+		ResolveReturnRouteAnomaly();
+	}
+}
+
+void AHotelNightShiftPawn::StartReturnRouteAnomaly()
+{
+	bReturnRouteAnomalyActive = true;
+	ReturnRouteAnomalySeconds = 0.0f;
+	ReturnRoutePulseClock = 0.0f;
+	PlayActorSound(ReturnRouteSoundActor);
+	SetWorkState(
+		EHotelLoopStage::DoorRefused,
+		TEXT("Keep moving. Write the report only after this hallway quiets."),
+		TEXT("The knock returns from behind you, then arrives ahead of you."),
+		TEXT("RETURN ROUTE: LISTEN / DO NOT RUN"),
+		0.84f);
+	SetReturnRouteLightIntensity(1600.0f);
+}
+
+void AHotelNightShiftPawn::ResolveReturnRouteAnomaly()
+{
+	bReturnRouteAnomalyActive = false;
+	bReturnRouteAnomalyResolved = true;
+	ReturnRouteAnomalySeconds = 0.0f;
+	SetWorkState(
+		EHotelLoopStage::ReturnRouteCleared,
+		TEXT("Return to the front desk and record the refusal."),
+		TEXT("The hallway goes still. The report can be written now."),
+		TEXT("DESK LINE: SILENT / REFUSAL READY TO LOG"),
+		0.72f);
+	SetReturnRouteLightIntensity(640.0f);
 }
 
 void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
@@ -768,6 +865,19 @@ void AHotelNightShiftPawn::SetPatrolListenLightIntensity(float NewIntensity)
 	}
 
 	if (ULightComponent* LightComponent = PatrolListenLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
+void AHotelNightShiftPawn::SetReturnRouteLightIntensity(float NewIntensity)
+{
+	if (!ReturnRouteLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = ReturnRouteLightActor->FindComponentByClass<ULightComponent>())
 	{
 		LightComponent->SetIntensity(NewIntensity);
 	}
