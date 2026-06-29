@@ -26,32 +26,32 @@ END_FRAME = FPS * SECONDS
 
 RETURN_ROUTE_ACTOR_KEYS = {
     "RETURN_Route_RightWall_BackKnockShadow_Echo": [
-        (0, (3292, 276, 136), (0, 0, 0), (0.84, 1.0, 0.58)),
-        (72, (3292, 276, 136), (0, 0, 0), (0.84, 1.0, 0.58)),
-        (112, (3252, 276, 144), (0, -2, 0), (0.96, 1.0, 0.66)),
-        (170, (3200, 276, 126), (0, 3, 0), (0.68, 1.0, 0.48)),
-        (END_FRAME, (3200, 276, 126), (0, 3, 0), (0.68, 1.0, 0.48)),
+        (0, (3292, 276, 136), (0, 0, 0), (0.16, 1.0, 0.12)),
+        (72, (3292, 276, 136), (0, 0, 0), (0.16, 1.0, 0.12)),
+        (112, (3252, 276, 144), (0, -2, 0), (0.22, 1.0, 0.16)),
+        (170, (3200, 276, 126), (0, 3, 0), (0.18, 1.0, 0.13)),
+        (END_FRAME, (3200, 276, 126), (0, 3, 0), (0.18, 1.0, 0.13)),
     ],
     "RETURN_Route_RightWall_PalmDragShadow_BackKnock": [
-        (0, (3100, 277, 160), (0, 0, 0), (0.46, 1.0, 0.46)),
-        (96, (3100, 277, 160), (0, 0, 0), (0.46, 1.0, 0.46)),
-        (150, (3068, 277, 128), (0, -5, 0), (0.76, 1.0, 0.76)),
-        (220, (3038, 277, 112), (0, -7, 0), (0.54, 1.0, 0.58)),
-        (END_FRAME, (3038, 277, 112), (0, -7, 0), (0.54, 1.0, 0.58)),
+        (0, (3100, 277, 160), (0, 0, 0), (0.12, 1.0, 0.12)),
+        (96, (3100, 277, 160), (0, 0, 0), (0.12, 1.0, 0.12)),
+        (150, (3068, 277, 128), (0, -5, 0), (0.20, 1.0, 0.20)),
+        (220, (3038, 277, 112), (0, -7, 0), (0.16, 1.0, 0.17)),
+        (END_FRAME, (3038, 277, 112), (0, -7, 0), (0.16, 1.0, 0.17)),
     ],
     "RETURN_Route_WallStatusSlip_ReportAfterHall": [
-        (0, (3136, 268, 128), (0, 0, 0), (0.48, 1.0, 0.50)),
-        (116, (3136, 268, 128), (0, 0, 0), (0.48, 1.0, 0.50)),
-        (148, (3129, 263, 132), (0, -3, 0), (0.58, 1.0, 0.58)),
-        (190, (3140, 265, 124), (0, 2, 0), (0.52, 1.0, 0.52)),
-        (END_FRAME, (3140, 265, 124), (0, 2, 0), (0.52, 1.0, 0.52)),
+        (0, (3136, 268, 126), (0, 0, 0), (0.12, 1.0, 0.13)),
+        (116, (3136, 268, 126), (0, 0, 0), (0.12, 1.0, 0.13)),
+        (148, (3130, 264, 129), (0, -2, 0), (0.16, 1.0, 0.16)),
+        (190, (3139, 265, 123), (0, 1, 0), (0.14, 1.0, 0.14)),
+        (END_FRAME, (3139, 265, 123), (0, 1, 0), (0.14, 1.0, 0.14)),
     ],
     "RETURN_Route_WallStatusSlip_FranticWriting": [
-        (0, (3135, 260, 132), (0, 0, 0), (0.10, 1.0, 0.12)),
-        (126, (3135, 260, 132), (0, 0, 0), (0.10, 1.0, 0.12)),
-        (154, (3135, 260, 128), (0, 0, 0), (0.36, 1.0, 0.34)),
-        (190, (3135, 260, 128), (0, 0, 0), (0.52, 1.0, 0.50)),
-        (END_FRAME, (3135, 260, 128), (0, 0, 0), (0.52, 1.0, 0.50)),
+        (0, (3135, 260, 132), (0, 0, 0), (0.01, 1.0, 0.012)),
+        (126, (3135, 260, 132), (0, 0, 0), (0.01, 1.0, 0.012)),
+        (154, (3135, 260, 126), (0, 0, 0), (0.018, 1.0, 0.018)),
+        (190, (3135, 260, 126), (0, 0, 0), (0.022, 1.0, 0.022)),
+        (END_FRAME, (3135, 260, 126), (0, 0, 0), (0.022, 1.0, 0.022)),
     ],
     "RETURN_Route_Floor_AuthoredBackstepSmear_Foreground": [
         (0, (2885, -38, 3), (0, 0, 0), (1.0, 1.0, 1.0)),
@@ -64,65 +64,67 @@ RETURN_ROUTE_ACTOR_KEYS = {
 
 RETURN_ROUTE_SCALE_REVEALS = {
     "RETURN_Route_BackKnockDirectionStripe": [
-        (0, 0.20),
-        (84, 0.20),
-        (126, 0.78),
-        (190, 0.58),
-        (END_FRAME, 0.58),
+        (0, 0.04),
+        (84, 0.04),
+        (126, 0.12),
+        (190, 0.10),
+        (END_FRAME, 0.10),
     ],
     "RETURN_Route_BackKnockDirectionStripe_Return": [
-        (0, 0.15),
-        (118, 0.15),
-        (168, 0.74),
-        (230, 0.54),
-        (END_FRAME, 0.54),
+        (0, 0.01),
+        (118, 0.01),
+        (168, 0.03),
+        (230, 0.02),
+        (END_FRAME, 0.02),
     ],
     "RETURN_Route_WallStatusSlip_Underline": [
-        (0, 0.10),
-        (138, 0.10),
-        (176, 0.72),
-        (228, 0.52),
-        (END_FRAME, 0.52),
+        (0, 0.02),
+        (138, 0.02),
+        (176, 0.07),
+        (228, 0.05),
+        (END_FRAME, 0.05),
     ],
     "RETURN_Route_FootprintBacktrackA": [
-        (0, 0.18),
-        (120, 0.18),
-        (152, 0.82),
-        (END_FRAME, 0.72),
+        (0, 0.08),
+        (120, 0.08),
+        (152, 0.30),
+        (END_FRAME, 0.24),
     ],
     "RETURN_Route_FootprintBacktrackB": [
-        (0, 0.12),
-        (152, 0.12),
-        (190, 0.78),
-        (END_FRAME, 0.68),
+        (0, 0.06),
+        (152, 0.06),
+        (190, 0.26),
+        (END_FRAME, 0.20),
     ],
     "RETURN_Route_FootprintBacktrackC": [
-        (0, 0.08),
-        (184, 0.08),
-        (226, 0.72),
-        (END_FRAME, 0.62),
+        (0, 0.04),
+        (184, 0.04),
+        (226, 0.20),
+        (END_FRAME, 0.16),
     ],
 }
 
 CONTEXT_DEEMPHASIS_ACTORS = {
-    "PROP_GuestHall_RightWall_AuthoredDampUnderPeel_Room203Approach": 0.36,
-    "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_CameraReadable": 0.28,
-    "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_Room203": 0.28,
-    "PROP_GuestHall_RightWall_Room203AftershockLoosePaper": 0.28,
-    "PROP_GuestHall_RightWall_Room203AftershockHighCurl": 0.34,
-    "PROP_GuestHall_RightWall_Room203AftershockLowCurl": 0.34,
-    "PROP_GuestHall_RightWall_Room203AftershockInteriorCuts": 0.52,
+    "PROP_GuestHall_RightWall_AuthoredDampUnderPeel_Room203Approach": 0.04,
+    "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_CameraReadable": 0.02,
+    "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_Room203": 0.02,
+    "PROP_GuestHall_RightWall_Room203AftershockTearShadow": 0.01,
+    "PROP_GuestHall_RightWall_Room203AftershockLoosePaper": 0.001,
+    "PROP_GuestHall_RightWall_Room203AftershockHighCurl": 0.001,
+    "PROP_GuestHall_RightWall_Room203AftershockLowCurl": 0.001,
+    "PROP_GuestHall_RightWall_Room203AftershockInteriorCuts": 0.01,
+    "PROP_GuestHall_RightWall_Room203AftershockRawEdgeThreads": 0.004,
 }
 
 CAMERA_KEYS = [
-    (0, (2890, -250, 165), (0.5, 57.0, 0.0), 58.0),
-    (12, (2880, -257, 162), (1.3, 56.2, -1.4), 62.0),
-    (30, (2864, -247, 164), (0.2, 55.8, 0.7), 59.0),
-    (54, (2840, -250, 164), (0.5, 55.0, 0.0), 57.0),
-    (104, (2788, -250, 163), (0.5, 52.0, 0.0), 56.0),
-    (150, (2740, -248, 162), (0.4, 49.0, -0.4), 55.0),
-    (218, (2705, -248, 160), (0.5, 46.0, 0.0), 54.0),
-    (END_FRAME, (2668, -248, 158), (0.5, 43.0, 0.0), 52.0),
+    (0, (3240, -248, 151), (-1.0, 35.0, 0.0), 47.0),
+    (12, (3236, -251, 150), (-0.7, 35.4, -0.2), 46.0),
+    (30, (3240, -249, 151), (-1.3, 35.1, 0.2), 47.0),
+    (54, (3248, -251, 150), (-1.1, 34.8, 0.0), 47.0),
+    (104, (3268, -254, 150), (-1.2, 35.0, 0.0), 46.0),
+    (150, (3292, -257, 149), (-1.3, 34.7, -0.1), 47.0),
+    (218, (3308, -259, 149), (-1.1, 34.8, 0.0), 46.0),
+    (END_FRAME, (3314, -260, 149), (-1.0, 34.7, 0.0), 46.0),
 ]
 
 
@@ -242,6 +244,29 @@ def add_spawnable_trailer_camera(sequence: unreal.LevelSequence):
         cine_component = temp_camera.get_cine_camera_component()
         try_set_property(cine_component, "current_focal_length", focal_length_from_fov_degrees(first_fov))
         try_set_property(cine_component, "current_aperture", 8.0)
+        try_set_property(cine_component, "post_process_blend_weight", 1.0)
+        try:
+            settings = cine_component.get_editor_property("post_process_settings")
+            exposure_overrides = {
+                "override_auto_exposure_method": True,
+                "override_auto_exposure_min_brightness": True,
+                "override_auto_exposure_max_brightness": True,
+                "override_auto_exposure_bias": True,
+                "override_motion_blur_amount": True,
+                "auto_exposure_min_brightness": 1.0,
+                "auto_exposure_max_brightness": 1.0,
+                "auto_exposure_bias": 2.55,
+                "motion_blur_amount": 0.0,
+            }
+            for name, value in exposure_overrides.items():
+                try_set_property(settings, name, value)
+            try:
+                settings.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
+            except Exception:
+                pass
+            cine_component.set_editor_property("post_process_settings", settings)
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -401,6 +426,8 @@ def create_mrq_config() -> unreal.MoviePipelinePrimaryConfig:
     console_variables = config.find_or_add_setting_by_class(unreal.MoviePipelineConsoleVariableSetting)
     console_variables.add_or_update_console_variable("r.AntiAliasingMethod", 2.0)
     console_variables.add_or_update_console_variable("r.TemporalAA.Upsampling", 0.0)
+    console_variables.add_or_update_console_variable("r.DefaultFeature.MotionBlur", 0.0)
+    console_variables.add_or_update_console_variable("r.MotionBlur.Amount", 0.0)
 
     game_overrides = config.find_or_add_setting_by_class(unreal.MoviePipelineGameOverrideSetting)
     try_set_property(game_overrides, "cinematic_quality_settings", True)
