@@ -58,6 +58,9 @@ public:
 	void AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds);
 	bool AutomationIsPostReportMonitorMismatchActive() const;
 	void AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds);
+	bool AutomationIsPostReportDeskWaitActive() const;
+	bool AutomationIsPostReportDeskWaitResolved() const;
+	void AutomationAdvancePostReportDeskWait(float DeltaSeconds);
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
@@ -96,6 +99,8 @@ private:
 	void ResolveReturnRouteAnomaly();
 	void TriggerPostReportMonitorMismatch();
 	void UpdatePostReportMonitorMismatch(float DeltaSeconds);
+	void TriggerPostReportDeskWaitAnomaly();
+	void UpdatePostReportDeskWaitAnomaly(float DeltaSeconds);
 	void UpdatePhoneRingVisual(float DeltaSeconds);
 	void LiftPhoneReceiver();
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
@@ -107,6 +112,7 @@ private:
 	void SetPatrolListenLightIntensity(float NewIntensity);
 	void SetReturnRouteLightIntensity(float NewIntensity);
 	void SetPostReportMonitorMismatchLightIntensity(float NewIntensity);
+	void SetPostReportDeskWaitLightIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
 		EHotelLoopStage NewStage,
@@ -173,6 +179,12 @@ private:
 	TObjectPtr<AActor> PostReportMonitorMismatchLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> PostReportDeskWaitSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PostReportDeskWaitLightActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -217,6 +229,11 @@ private:
 	float PostReportMonitorMismatchPulseClock = 0.0f;
 	bool bPostReportMonitorMismatchActive = false;
 	bool bPostReportMonitorMismatchObserved = false;
+	float PostReportDeskWaitHoldSeconds = 0.0f;
+	float PostReportDeskWaitSeconds = 0.0f;
+	float PostReportDeskWaitPulseClock = 0.0f;
+	bool bPostReportDeskWaitActive = false;
+	bool bPostReportDeskWaitResolved = false;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;

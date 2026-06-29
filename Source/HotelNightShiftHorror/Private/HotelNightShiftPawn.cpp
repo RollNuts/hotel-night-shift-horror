@@ -31,6 +31,9 @@ const FVector ReturnRouteSoundAnchor(3420.0f, 270.0f, 150.0f);
 const FVector ReturnRouteLightAnchor(2860.0f, -90.0f, 188.0f);
 const FVector PostReportMonitorMismatchSoundAnchor(-620.0f, -542.0f, 172.0f);
 const FVector PostReportMonitorMismatchLightAnchor(-575.0f, -555.0f, 188.0f);
+const FVector PostReportDeskWaitAnchor(-260.0f, -635.0f, 92.0f);
+const FVector PostReportDeskWaitSoundAnchor(1080.0f, -250.0f, 150.0f);
+const FVector PostReportDeskWaitLightAnchor(1035.0f, -250.0f, 170.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
@@ -47,6 +50,8 @@ const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
+const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
+const FName PostReportDeskWaitLightTag(TEXT("Hotel.Feedback.PostReportDeskWaitLight"));
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -86,6 +91,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	UpdatePatrolListenAnomaly(DeltaSeconds);
 	UpdateReturnRouteAnomaly(DeltaSeconds);
 	UpdatePostReportMonitorMismatch(DeltaSeconds);
+	UpdatePostReportDeskWaitAnomaly(DeltaSeconds);
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
@@ -194,6 +200,21 @@ bool AHotelNightShiftPawn::AutomationIsPostReportMonitorMismatchActive() const
 void AHotelNightShiftPawn::AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds)
 {
 	UpdatePostReportMonitorMismatch(DeltaSeconds);
+}
+
+bool AHotelNightShiftPawn::AutomationIsPostReportDeskWaitActive() const
+{
+	return bPostReportDeskWaitActive;
+}
+
+bool AHotelNightShiftPawn::AutomationIsPostReportDeskWaitResolved() const
+{
+	return bPostReportDeskWaitResolved;
+}
+
+void AHotelNightShiftPawn::AutomationAdvancePostReportDeskWait(float DeltaSeconds)
+{
+	UpdatePostReportDeskWaitAnomaly(DeltaSeconds);
 }
 
 void AHotelNightShiftPawn::AutomationAdvancePhoneReceiver(float DeltaSeconds)
@@ -419,6 +440,8 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	ReturnRouteLightActor = FindActorWithTagNear(ReturnRouteLightTag, ReturnRouteLightAnchor, 180.0f);
 	PostReportMonitorMismatchSoundActor = FindActorWithTagNear(PostReportMonitorMismatchAudioTag, PostReportMonitorMismatchSoundAnchor, 120.0f);
 	PostReportMonitorMismatchLightActor = FindActorWithTagNear(PostReportMonitorMismatchLightTag, PostReportMonitorMismatchLightAnchor, 160.0f);
+	PostReportDeskWaitSoundActor = FindActorWithTagNear(PostReportDeskWaitAudioTag, PostReportDeskWaitSoundAnchor, 180.0f);
+	PostReportDeskWaitLightActor = FindActorWithTagNear(PostReportDeskWaitLightTag, PostReportDeskWaitLightAnchor, 220.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -756,6 +779,67 @@ void AHotelNightShiftPawn::UpdatePostReportMonitorMismatch(float DeltaSeconds)
 	}
 }
 
+void AHotelNightShiftPawn::TriggerPostReportDeskWaitAnomaly()
+{
+	bPostReportDeskWaitActive = true;
+	bPostReportDeskWaitResolved = true;
+	PostReportDeskWaitHoldSeconds = 0.0f;
+	PostReportDeskWaitSeconds = 0.0f;
+	PostReportDeskWaitPulseClock = 0.0f;
+	PlayActorSound(PostReportDeskWaitSoundActor);
+	SetWorkState(
+		EHotelLoopStage::ReportFiled,
+		TEXT("Remain behind the counter. Do not open the lobby door."),
+		TEXT("The lobby glass rattles once from the outside. No guest appears in the monitor."),
+		TEXT("LOBBY DOOR: HOLD CLOSED / NO GUEST"),
+		0.93f);
+	SetPostReportDeskWaitLightIntensity(2100.0f);
+}
+
+void AHotelNightShiftPawn::UpdatePostReportDeskWaitAnomaly(float DeltaSeconds)
+{
+	if (LoopStage != EHotelLoopStage::ReportFiled || !bPostReportMonitorMismatchObserved)
+	{
+		return;
+	}
+
+	if (bPostReportDeskWaitActive)
+	{
+		PostReportDeskWaitSeconds += DeltaSeconds;
+		PostReportDeskWaitPulseClock += DeltaSeconds;
+		const float Pulse = 0.5f + 0.5f * FMath::Sin(PostReportDeskWaitPulseClock * 11.5f);
+		SetPostReportDeskWaitLightIntensity(220.0f + Pulse * 1880.0f);
+
+		if (PostReportDeskWaitSeconds >= 1.25f)
+		{
+			bPostReportDeskWaitActive = false;
+			PostReportDeskWaitSeconds = 0.0f;
+			SetPostReportDeskWaitLightIntensity(360.0f);
+		}
+		return;
+	}
+
+	if (bPostReportDeskWaitResolved || bPostReportMonitorMismatchActive)
+	{
+		return;
+	}
+
+	const bool bWaitingAtDesk = IsActorNear(this, PostReportDeskWaitAnchor, 300.0f);
+	if (bWaitingAtDesk && GetVelocity().SizeSquared2D() <= FMath::Square(16.0f))
+	{
+		PostReportDeskWaitHoldSeconds += DeltaSeconds;
+	}
+	else
+	{
+		PostReportDeskWaitHoldSeconds = 0.0f;
+	}
+
+	if (PostReportDeskWaitHoldSeconds >= 1.35f)
+	{
+		TriggerPostReportDeskWaitAnomaly();
+	}
+}
+
 void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
 {
 	if (LoopStage != EHotelLoopStage::PhoneRinging)
@@ -955,6 +1039,19 @@ void AHotelNightShiftPawn::SetPostReportMonitorMismatchLightIntensity(float NewI
 	}
 
 	if (ULightComponent* LightComponent = PostReportMonitorMismatchLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
+void AHotelNightShiftPawn::SetPostReportDeskWaitLightIntensity(float NewIntensity)
+{
+	if (!PostReportDeskWaitLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = PostReportDeskWaitLightActor->FindComponentByClass<ULightComponent>())
 	{
 		LightComponent->SetIntensity(NewIntensity);
 	}

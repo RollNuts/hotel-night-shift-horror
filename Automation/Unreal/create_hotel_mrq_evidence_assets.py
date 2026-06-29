@@ -27,6 +27,7 @@ CAPTURE_CAMERAS = [
     "CAPTURE_GuestDoor_15SecondBeatCandidate",
     "CAPTURE_ReturnRoute_BackKnockCandidate",
     "CAPTURE_PostReportMonitorMismatchCandidate",
+    "CAPTURE_PostReportDeskWait_DoNotAnswerCandidate",
 ]
 
 
