@@ -22,6 +22,8 @@ const FVector PhoneCordTugAnchor(-356.0f, -558.0f, 140.0f);
 const FVector PhoneIndicatorLightAnchor(-395.0f, -555.0f, 158.0f);
 const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
 const FVector DoorRefusalFeedbackAnchor(4020.0f, 258.0f, 150.0f);
+const FVector Room203WallpaperFlutterAnchor(3635.0f, 276.0f, 166.0f);
+const FVector Room203AftershockSoundAnchor(3725.0f, 276.0f, 168.0f);
 const FVector ReportFiledSoundAnchor(-242.0f, -500.0f, 152.0f);
 const FVector ReportLogFiledFeedbackAnchor(-232.0f, -503.0f, 145.0f);
 const FVector PatrolListenAnchor(930.0f, 0.0f, 92.0f);
@@ -50,6 +52,8 @@ const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"))
 const FName Room203LatchRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203LatchJolt"));
 const FName Room203ChainRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203ChainJolt"));
 const FName Room203SurfaceRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203DoorSurfaceJolt"));
+const FName Room203WallpaperFlutterTag(TEXT("Hotel.Feedback.Room203WallpaperFlutter"));
+const FName Room203AftershockAudioTag(TEXT("Hotel.Audio.Room203Aftershock"));
 const FName ReportLogInteractTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName ReportLogFiledAudioTag(TEXT("Hotel.Audio.ReportLogFiled"));
@@ -334,6 +338,13 @@ FVector AHotelNightShiftPawn::AutomationGetDoorRefusalSurfaceLocation() const
 		: FVector::ZeroVector;
 }
 
+FVector AHotelNightShiftPawn::AutomationGetDoorRefusalWallpaperFlutterLocation() const
+{
+	return DoorRefusalWallpaperFlutterActors.IsValidIndex(0) && DoorRefusalWallpaperFlutterActors[0]
+		? DoorRefusalWallpaperFlutterActors[0]->GetActorLocation()
+		: FVector::ZeroVector;
+}
+
 void AHotelNightShiftPawn::AutomationAdvanceReportLogFiledFeedback(float DeltaSeconds)
 {
 	UpdateReportLogFiledFeedback(DeltaSeconds);
@@ -590,6 +601,12 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		DoorRefusalSurfaceActors.Add(FeedbackPart);
 	}
+	DoorRefusalWallpaperFlutterActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(Room203WallpaperFlutterTag, Room203WallpaperFlutterAnchor, 360.0f))
+	{
+		DoorRefusalWallpaperFlutterActors.Add(FeedbackPart);
+	}
+	Room203AftershockSoundActor = FindActorWithTagNear(Room203AftershockAudioTag, Room203AftershockSoundAnchor, 260.0f);
 	ReportFiledSoundActor = FindActorWithTagNear(ReportLogFiledAudioTag, ReportFiledSoundAnchor, 120.0f);
 	ReportLogFiledFeedbackActors.Reset();
 	for (AActor* FeedbackPart : FindActorsWithTagNear(ReportLogFiledFeedbackTag, ReportLogFiledFeedbackAnchor, 150.0f))
@@ -676,6 +693,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		DoorRefusalSurfaceRestLocations.Add(FeedbackPart->GetActorLocation());
 		DoorRefusalSurfaceRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	DoorRefusalWallpaperFlutterRestLocations.Reset();
+	DoorRefusalWallpaperFlutterRestRotations.Reset();
+	for (AActor* FeedbackPart : DoorRefusalWallpaperFlutterActors)
+	{
+		DoorRefusalWallpaperFlutterRestLocations.Add(FeedbackPart->GetActorLocation());
+		DoorRefusalWallpaperFlutterRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 
 	ReportLogFiledFeedbackRestLocations.Reset();
@@ -1276,7 +1301,12 @@ void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
 
 void AHotelNightShiftPawn::TriggerDoorRefusalFeedback()
 {
-	if (!DoorRefusalFeedbackActor || (DoorRefusalLatchActors.IsEmpty() && DoorRefusalChainActors.IsEmpty() && DoorRefusalSurfaceActors.IsEmpty()))
+	const bool bHasRefusalParts =
+		!DoorRefusalLatchActors.IsEmpty()
+		|| !DoorRefusalChainActors.IsEmpty()
+		|| !DoorRefusalSurfaceActors.IsEmpty()
+		|| !DoorRefusalWallpaperFlutterActors.IsEmpty();
+	if (!DoorRefusalFeedbackActor || !bHasRefusalParts)
 	{
 		return;
 	}
@@ -1284,6 +1314,7 @@ void AHotelNightShiftPawn::TriggerDoorRefusalFeedback()
 	bDoorRefusalFeedbackActive = true;
 	DoorRefusalFeedbackSeconds = 0.0f;
 	DoorRefusalFeedbackAlpha = 0.0f;
+	bDoorRefusalAftershockSoundPlayed = false;
 }
 
 void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
@@ -1293,7 +1324,7 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 		return;
 	}
 
-	constexpr float TotalSeconds = 0.58f;
+	constexpr float TotalSeconds = 1.48f;
 	DoorRefusalFeedbackSeconds = FMath::Min(DoorRefusalFeedbackSeconds + DeltaSeconds, TotalSeconds);
 	DoorRefusalFeedbackAlpha = FMath::Clamp(DoorRefusalFeedbackSeconds / TotalSeconds, 0.0f, 1.0f);
 	const auto ApplyDoorMotion = [](
@@ -1320,9 +1351,17 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 	const float LatchPhase = FMath::Clamp(DoorRefusalFeedbackSeconds / 0.20f, 0.0f, 1.0f);
 	const float ChainPhase = FMath::Clamp((DoorRefusalFeedbackSeconds - 0.10f) / 0.30f, 0.0f, 1.0f);
 	const float SurfacePhase = FMath::Clamp((DoorRefusalFeedbackSeconds - 0.06f) / 0.52f, 0.0f, 1.0f);
+	const float WallpaperPhase = FMath::Clamp((DoorRefusalFeedbackSeconds - 0.32f) / 1.10f, 0.0f, 1.0f);
 	const float LatchKick = FMath::Sin(LatchPhase * UE_PI) * (1.0f - 0.10f * LatchPhase);
 	const float ChainKick = FMath::Sin(ChainPhase * UE_PI) * (1.0f - 0.18f * ChainPhase);
 	const float SurfaceKick = FMath::Sin(SurfacePhase * UE_PI * 2.0f) * (1.0f - SurfacePhase);
+	const float LightPulse = FMath::Sin(WallpaperPhase * UE_PI * 5.0f) * FMath::Square(1.0f - WallpaperPhase);
+
+	if (!bDoorRefusalAftershockSoundPlayed && DoorRefusalFeedbackSeconds >= 0.34f)
+	{
+		PlayActorSound(Room203AftershockSoundActor);
+		bDoorRefusalAftershockSoundPlayed = true;
+	}
 
 	ApplyDoorMotion(
 		DoorRefusalLatchActors,
@@ -1343,11 +1382,34 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 		FVector(0.0f, -6.0f * SurfaceKick, 1.5f * FMath::Abs(SurfaceKick)),
 		FRotator(0.0f, 0.0f, 3.0f * SurfaceKick));
 
+	for (int32 Index = 0; Index < DoorRefusalWallpaperFlutterActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = DoorRefusalWallpaperFlutterActors[Index];
+		if (!FeedbackPart || !DoorRefusalWallpaperFlutterRestLocations.IsValidIndex(Index) || !DoorRefusalWallpaperFlutterRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		const float DelayBias = static_cast<float>(Index) * 0.37f;
+		const float Flutter = FMath::Sin((WallpaperPhase * 7.0f + DelayBias) * UE_PI) * (1.0f - WallpaperPhase);
+		const float Lift = FMath::Sin(WallpaperPhase * UE_PI) * (1.0f - 0.22f * Index);
+		FeedbackPart->SetActorLocationAndRotation(
+			DoorRefusalWallpaperFlutterRestLocations[Index] + FVector(0.0f, -8.0f * Flutter, 3.0f * FMath::Max(0.0f, Lift)),
+			DoorRefusalWallpaperFlutterRestRotations[Index] + FRotator(0.0f, 2.5f * Lift, 7.5f * Flutter));
+	}
+
+	if (WallpaperPhase > 0.0f && WallpaperPhase < 1.0f)
+	{
+		PulseHallLight(3600.0f + FMath::Abs(LightPulse) * 1650.0f);
+	}
+
 	if (DoorRefusalFeedbackAlpha >= 1.0f)
 	{
 		ApplyDoorMotion(DoorRefusalLatchActors, DoorRefusalLatchRestLocations, DoorRefusalLatchRestRotations, FVector::ZeroVector, FRotator::ZeroRotator);
 		ApplyDoorMotion(DoorRefusalChainActors, DoorRefusalChainRestLocations, DoorRefusalChainRestRotations, FVector::ZeroVector, FRotator::ZeroRotator);
 		ApplyDoorMotion(DoorRefusalSurfaceActors, DoorRefusalSurfaceRestLocations, DoorRefusalSurfaceRestRotations, FVector::ZeroVector, FRotator::ZeroRotator);
+		ApplyDoorMotion(DoorRefusalWallpaperFlutterActors, DoorRefusalWallpaperFlutterRestLocations, DoorRefusalWallpaperFlutterRestRotations, FVector::ZeroVector, FRotator::ZeroRotator);
+		PulseHallLight(3600.0f);
 		DoorRefusalFeedbackSeconds = 0.0f;
 		bDoorRefusalFeedbackActive = false;
 	}

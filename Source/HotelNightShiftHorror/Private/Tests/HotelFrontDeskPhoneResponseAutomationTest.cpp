@@ -17,6 +17,7 @@ const FName PhoneTag(TEXT("Hotel.Interact.Phone"));
 const FName MonitorTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorTag(TEXT("Hotel.Interact.Room203Door"));
 const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
+const FName Room203WallpaperFlutterTag(TEXT("Hotel.Feedback.Room203WallpaperFlutter"));
 const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
@@ -32,6 +33,8 @@ const TCHAR* AuthoredPhoneCordLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCoiledC
 const TCHAR* AuthoredLedgerPagesLabel = TEXT("PROP_FrontDesk_ReportLog_AuthoredCurledPages");
 const TCHAR* Room203DoorEdgeSlamShadowLabel = TEXT("PROP_GuestHall_Room203_DoorEdgeSlamShadowCue");
 const TCHAR* Room203NoticeCornerJoltLabel = TEXT("PROP_GuestHall_Room203_NoticeCornerJoltCue");
+const TCHAR* Room203AftershockLoosePaperLabel = TEXT("PROP_GuestHall_RightWall_Room203AftershockLoosePaper");
+const TCHAR* Room203AftershockHighCurlLabel = TEXT("PROP_GuestHall_RightWall_Room203AftershockHighCurl");
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -147,6 +150,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* Monitor = FindActorByTag(World, MonitorTag);
 		AActor* Room203Door = FindActorByTag(World, Room203DoorTag);
 		AActor* Room203DoorFeedback = FindActorByTag(World, Room203DoorRefusalFeedbackTag);
+		AActor* Room203WallpaperFlutter = FindActorByTag(World, Room203WallpaperFlutterTag);
 		AActor* ReportLog = FindActorByTag(World, ReportLogTag);
 		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
 		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
@@ -162,11 +166,14 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* AuthoredLedgerPages = FindActorByLabel(World, AuthoredLedgerPagesLabel);
 		AActor* Room203DoorEdgeSlamShadow = FindActorByLabel(World, Room203DoorEdgeSlamShadowLabel);
 		AActor* Room203NoticeCornerJolt = FindActorByLabel(World, Room203NoticeCornerJoltLabel);
+		AActor* Room203AftershockLoosePaper = FindActorByLabel(World, Room203AftershockLoosePaperLabel);
+		AActor* Room203AftershockHighCurl = FindActorByLabel(World, Room203AftershockHighCurlLabel);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
 		TestNotNull(TEXT("Room 203 door interaction actor exists"), Room203Door);
 		TestNotNull(TEXT("Room 203 door refusal feedback actor exists"), Room203DoorFeedback);
+		TestNotNull(TEXT("Room 203 wallpaper aftershock feedback actor exists"), Room203WallpaperFlutter);
 		TestNotNull(TEXT("Report log interaction actor exists"), ReportLog);
 		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
 		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
@@ -182,7 +189,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Authored curled ledger page mesh exists in production map"), AuthoredLedgerPages);
 		TestNotNull(TEXT("Room 203 door-edge slam shadow exists in production map"), Room203DoorEdgeSlamShadow);
 		TestNotNull(TEXT("Room 203 notice-corner jolt cue exists in production map"), Room203NoticeCornerJolt);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt)
+		TestNotNull(TEXT("Room 203 aftershock loose-paper mesh exists in production map"), Room203AftershockLoosePaper);
+		TestNotNull(TEXT("Room 203 aftershock high-curl mesh exists in production map"), Room203AftershockHighCurl);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
 		{
 			return true;
 		}
@@ -251,6 +260,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		const FVector DoorLatchRestLocation = Pawn->AutomationGetDoorRefusalLatchLocation();
 		const FVector DoorChainRestLocation = Pawn->AutomationGetDoorRefusalChainLocation();
 		const FVector DoorSurfaceRestLocation = Pawn->AutomationGetDoorRefusalSurfaceLocation();
+		const FVector DoorWallpaperRestLocation = Pawn->AutomationGetDoorRefusalWallpaperFlutterLocation();
+		TestTrue(TEXT("Room 203 loose wallpaper is cached for aftershock motion"), DoorWallpaperRestLocation.SizeSquared() > 0.0f);
 		TestTrue(TEXT("Refusing Room 203 succeeds"), Pawn->AutomationInteractWithActor(Room203Door));
 		TestEqual(TEXT("Door refusal advances to DoorRefused"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::DoorRefused);
 		Pawn->AutomationAdvanceDoorRefusalFeedback(0.09f);
@@ -262,12 +273,16 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		Pawn->AutomationAdvanceDoorRefusalFeedback(0.16f);
 		TestTrue(TEXT("Room 203 chain catches after the latch"), FVector::DistSquared(DoorChainRestLocation, Pawn->AutomationGetDoorRefusalChainLocation()) > FMath::Square(5.0f));
 		TestTrue(TEXT("Room 203 door-surface cue reacts without opening the door"), FVector::DistSquared(DoorSurfaceRestLocation, Pawn->AutomationGetDoorRefusalSurfaceLocation()) > FMath::Square(2.0f));
-		Pawn->AutomationAdvanceDoorRefusalFeedback(0.38f);
+		Pawn->AutomationAdvanceDoorRefusalFeedback(0.28f);
+		TestTrue(TEXT("Room 203 loose wallpaper reacts after the door impact"), FVector::DistSquared(DoorWallpaperRestLocation, Pawn->AutomationGetDoorRefusalWallpaperFlutterLocation()) > FMath::Square(2.0f));
+		TestTrue(TEXT("Room 203 refusal remains active through the wallpaper aftershock"), Pawn->AutomationIsDoorRefusalFeedbackActive());
+		Pawn->AutomationAdvanceDoorRefusalFeedback(0.96f);
 		TestTrue(TEXT("Room 203 refusal feedback reaches completion"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() >= 1.0f);
-		TestFalse(TEXT("Room 203 refusal feedback settles after the knockback"), Pawn->AutomationIsDoorRefusalFeedbackActive());
+		TestFalse(TEXT("Room 203 refusal feedback settles after the non-human aftershock"), Pawn->AutomationIsDoorRefusalFeedbackActive());
 		TestTrue(TEXT("Room 203 latch returns to rest"), FVector::DistSquared(DoorLatchRestLocation, Pawn->AutomationGetDoorRefusalLatchLocation()) < FMath::Square(1.5f));
 		TestTrue(TEXT("Room 203 chain returns to rest"), FVector::DistSquared(DoorChainRestLocation, Pawn->AutomationGetDoorRefusalChainLocation()) < FMath::Square(1.5f));
 		TestTrue(TEXT("Room 203 door-surface cue returns to rest"), FVector::DistSquared(DoorSurfaceRestLocation, Pawn->AutomationGetDoorRefusalSurfaceLocation()) < FMath::Square(1.5f));
+		TestTrue(TEXT("Room 203 loose wallpaper returns to rest"), FVector::DistSquared(DoorWallpaperRestLocation, Pawn->AutomationGetDoorRefusalWallpaperFlutterLocation()) < FMath::Square(1.5f));
 
 		TestFalse(TEXT("Report filing is blocked before the return route anomaly resolves"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestEqual(TEXT("Early report attempt remains DoorRefused"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::DoorRefused);
