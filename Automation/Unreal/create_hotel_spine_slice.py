@@ -244,6 +244,23 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         cold_scrape = 0.035 * math.sin(2 * math.pi * 690 * t) if 0.92 <= t <= 1.42 else 0.0
         return 0.52 * total + reverse_hum + cold_scrape
 
+    def return_route_pursuit_tail(t: float) -> float:
+        floor_ticks = 0.0
+        for start, pitch in ((0.05, 72), (0.42, 84), (0.92, 68), (1.44, 92)):
+            dt = t - start
+            if 0.0 <= dt <= 0.20:
+                floor_ticks += math.exp(-dt * 22.0) * (
+                    math.sin(2 * math.pi * pitch * dt) + 0.22 * math.sin(2 * math.pi * (pitch * 2.7) * dt)
+                )
+        paper_answer = 0.0
+        for start in (0.36, 0.78, 1.18, 1.70):
+            dt = t - start
+            if 0.0 <= dt <= 0.18:
+                paper_answer += math.exp(-dt * 28.0) * math.sin(2 * math.pi * (540 + 120 * math.sin(start * 5.0)) * dt)
+        air_pull = 0.06 * math.sin(2 * math.pi * 43 * t) * math.exp(-max(0.0, t - 0.18) * 0.65)
+        dry_edge = 0.028 * math.sin(2 * math.pi * 1240 * t) if 1.32 <= t <= 2.34 else 0.0
+        return 0.42 * floor_ticks + 0.20 * paper_answer + air_pull + dry_edge
+
     def post_report_monitor_mismatch(t: float) -> float:
         scan = 0.045 * math.sin(2 * math.pi * 2860 * t) + 0.028 * math.sin(2 * math.pi * 4120 * t)
         low_relay = 0.0
@@ -303,6 +320,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
         "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
         "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
+        "SFX_ReturnRoutePursuitTail_v0": (2.6, return_route_pursuit_tail),
         "SFX_PostReportMonitorMismatch_v0": (1.55, post_report_monitor_mismatch),
         "SFX_PostReportDeskWaitRattle_v0": (1.65, post_report_desk_wait_rattle),
         "SFX_PostReportLogSelfCorrection_v0": (1.25, post_report_log_self_correction),
@@ -2227,6 +2245,14 @@ def build_level(
         add_cube("RETURN_Route_FootprintBacktrackB", (2920, -32, 5), (32, 12, 2), materials["black"], return_route_tags, no_collision=True)
         add_cube("RETURN_Route_FootprintBacktrackC", (2785, 48, 5), (32, 12, 2), materials["black"], return_route_tags, no_collision=True)
     add_cube("RETURN_Route_CeilingLightmesh_ColdPulseCue", (2860, -90, 273), (280, 34, 9), materials["fluorescent_panel"], return_route_tags, no_collision=True)
+    add_cube(
+        "RETURN_Route_CeilingLightmesh_PursuitTailCue",
+        (3020, -30, 270),
+        (180, 24, 7),
+        materials["return_cold_glow"],
+        return_route_tags + ("Hotel.Feedback.ReturnRouteTailLight",),
+        no_collision=True,
+    )
     door_decision_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual")
     door_refusal_tags = ("Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability")
     door_latch_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203LatchJolt",)
@@ -2346,6 +2372,7 @@ def build_level(
     add_light("LIGHT_PatrolRoute_DecisionCueFloorFill", unreal.PointLight, (955, 0, 115), (0, 0, 0), 1100.0, unreal.Color(190, 218, 194, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision", "Hotel.Feedback.PatrolListenLight"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_ReturnRoute_ColdPulseAfterRefusal", unreal.PointLight, (2860, -90, 188), (0, 0, 0), 620.0, unreal.Color(120, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"), attenuation_radius=680.0)
+    add_light("LIGHT_ReturnRoute_PursuitTailColdSkim", unreal.PointLight, (3020, -30, 174), (0, 0, 0), 120.0, unreal.Color(95, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteTailLight"), attenuation_radius=560.0)
     add_light("LIGHT_ReturnRoute_BackKnockWallSkim", unreal.PointLight, (3190, 220, 154), (0, 0, 0), 1650.0, unreal.Color(118, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
@@ -2397,6 +2424,8 @@ def build_level(
         add_audio("SFX_PatrolListen_StopLine_ManualTrigger_v0", sounds["SFX_PatrolListenDrop_v0"], (930, 0, 72), False, ("Hotel.Audio.PatrolListen",))
     if "SFX_ReturnRouteKnockback_v0" in sounds:
         add_audio("SFX_ReturnRoute_BackKnock_ManualTrigger_v0", sounds["SFX_ReturnRouteKnockback_v0"], (3420, 270, 150), False, ("Hotel.Audio.ReturnRoute",))
+    if "SFX_ReturnRoutePursuitTail_v0" in sounds:
+        add_audio("SFX_ReturnRoute_PursuitTail_ManualTrigger_v0", sounds["SFX_ReturnRoutePursuitTail_v0"], (3020, -70, 155), False, ("Hotel.Audio.ReturnRouteTail",))
     if "SFX_PostReportMonitorMismatch_v0" in sounds:
         add_audio("SFX_PostReportMonitorMismatch_ManualTrigger_v0", sounds["SFX_PostReportMonitorMismatch_v0"], (-620, -542, 172), False, ("Hotel.Audio.PostReportMonitorMismatch",))
     if "SFX_PostReportDeskWaitRattle_v0" in sounds:

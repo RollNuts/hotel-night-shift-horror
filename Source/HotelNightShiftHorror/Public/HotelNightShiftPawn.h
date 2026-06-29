@@ -57,6 +57,10 @@ public:
 	bool AutomationIsReturnRouteAnomalyResolved() const;
 	void AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds);
 	FVector AutomationGetReturnRouteBackKnockLocation() const;
+	bool AutomationHasReturnRouteTailSound() const;
+	float AutomationGetReturnRouteLightIntensity() const;
+	float AutomationGetReturnRouteTailLightIntensity() const;
+	int32 AutomationCountMovedReturnRouteBackKnockActors(float MinDistance) const;
 	bool AutomationIsPostReportMonitorMismatchActive() const;
 	void AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds);
 	bool AutomationIsPostReportDeskWaitActive() const;
@@ -130,6 +134,7 @@ private:
 	void SetPhoneIndicatorIntensity(float NewIntensity);
 	void SetPatrolListenLightIntensity(float NewIntensity);
 	void SetReturnRouteLightIntensity(float NewIntensity);
+	void SetReturnRouteTailLightIntensity(float NewIntensity);
 	void SetPostReportMonitorMismatchLightIntensity(float NewIntensity);
 	void SetPostReportDeskWaitLightIntensity(float NewIntensity);
 	void SetPostReportLogSelfCorrectionLightIntensity(float NewIntensity);
@@ -146,6 +151,8 @@ private:
 	AActor* FindActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
 	TArray<AActor*> FindActorsWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
 	AActor* FindLightActorNear(const FVector& Anchor, float Radius) const;
+	AActor* FindLightActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
+	float GetLightIntensity(const AActor* LightActor) const;
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhoneRingSoundActor;
@@ -208,7 +215,13 @@ private:
 	TObjectPtr<AActor> ReturnRouteSoundActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> ReturnRouteTailSoundActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> ReturnRouteLightActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> ReturnRouteTailLightActor;
 
 	UPROPERTY()
 	TObjectPtr<AActor> ReturnRouteBackKnockActor;
@@ -304,6 +317,7 @@ private:
 	float ReturnRoutePulseClock = 0.0f;
 	bool bReturnRouteAnomalyActive = false;
 	bool bReturnRouteAnomalyResolved = false;
+	bool bReturnRouteTailSoundPlayed = false;
 	float PostReportMonitorMismatchSeconds = 0.0f;
 	float PostReportMonitorMismatchPulseClock = 0.0f;
 	bool bPostReportMonitorMismatchActive = false;
