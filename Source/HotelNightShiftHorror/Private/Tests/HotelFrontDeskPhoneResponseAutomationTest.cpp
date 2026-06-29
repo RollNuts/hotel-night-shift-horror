@@ -301,6 +301,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("Return route anomaly is not already resolved"), Pawn->AutomationIsReturnRouteAnomalyResolved());
 
 		const FVector ReturnRouteBackKnockRestLocation = Pawn->AutomationGetReturnRouteBackKnockLocation();
+		const FVector ReturnRouteCameraRestLocation = Pawn->AutomationGetReturnRouteCameraRelativeLocation();
+		const float ReturnRouteCameraRestFov = Pawn->AutomationGetReturnRouteCameraFieldOfView();
 		const float ReturnRouteRestLightIntensity = Pawn->AutomationGetReturnRouteLightIntensity();
 		const float ReturnRouteRestTailLightIntensity = Pawn->AutomationGetReturnRouteTailLightIntensity();
 		TestTrue(TEXT("Return route back-knock feedback is cached for visible response"), ReturnRouteBackKnockRestLocation.SizeSquared() > 0.0f);
@@ -310,10 +312,13 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Return route anomaly starts in the guest hall"), Pawn->AutomationIsReturnRouteAnomalyActive());
 		TestFalse(TEXT("Return route anomaly does not resolve instantly"), Pawn->AutomationIsReturnRouteAnomalyResolved());
 		TestTrue(TEXT("Return route cold pulse light rises on the first back-knock"), Pawn->AutomationGetReturnRouteLightIntensity() > ReturnRouteRestLightIntensity + 220.0f);
-		TestTrue(TEXT("Return route back-knock cue moves with the hallway answer"), FVector::DistSquared(ReturnRouteBackKnockRestLocation, Pawn->AutomationGetReturnRouteBackKnockLocation()) > FMath::Square(2.0f));
+		TestTrue(TEXT("Return route body pressure widens the first-person view"), Pawn->AutomationGetReturnRouteCameraFieldOfView() > ReturnRouteCameraRestFov + 1.0f);
+		TestTrue(TEXT("Return route body pressure pushes the first-person camera off rest"), FVector::DistSquared(ReturnRouteCameraRestLocation, Pawn->AutomationGetReturnRouteCameraRelativeLocation()) > FMath::Square(2.0f));
+		TestTrue(TEXT("Return route back-knock cue moves with the hallway answer"), Pawn->AutomationCountMovedReturnRouteBackKnockActors(2.0f) >= 1);
 		Pawn->AutomationAdvanceReturnRouteAnomaly(0.55f);
 		TestTrue(TEXT("Return route remains active long enough to read in a short capture"), Pawn->AutomationIsReturnRouteAnomalyActive());
 		TestTrue(TEXT("Return route pursuit-tail light rises after the first knock"), Pawn->AutomationGetReturnRouteTailLightIntensity() > ReturnRouteRestTailLightIntensity + 360.0f);
+		TestTrue(TEXT("Return route body pressure lingers into the pursuit tail"), Pawn->AutomationGetReturnRouteCameraFieldOfView() > ReturnRouteCameraRestFov + 0.3f);
 		TestTrue(TEXT("Return route moves multiple visible hallway cues, not only one marker"), Pawn->AutomationCountMovedReturnRouteBackKnockActors(2.0f) >= 4);
 		Pawn->AutomationAdvanceReturnRouteAnomaly(1.85f);
 		TestTrue(TEXT("Return route anomaly resolves after the hallway answer"), Pawn->AutomationIsReturnRouteAnomalyResolved());
@@ -321,6 +326,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Return route clear stage enables report filing"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReturnRouteCleared);
 		TestTrue(TEXT("Return route back-knock cue returns to rest"), FVector::DistSquared(ReturnRouteBackKnockRestLocation, Pawn->AutomationGetReturnRouteBackKnockLocation()) < FMath::Square(1.5f));
 		TestEqual(TEXT("Return route feedback actors return to rest after the pursuit tail"), Pawn->AutomationCountMovedReturnRouteBackKnockActors(1.5f), 0);
+		TestTrue(TEXT("Return route body camera returns to rest after the pursuit tail"), FVector::DistSquared(ReturnRouteCameraRestLocation, Pawn->AutomationGetReturnRouteCameraRelativeLocation()) < FMath::Square(0.25f));
+		TestTrue(TEXT("Return route body FOV returns to rest after the pursuit tail"), FMath::Abs(Pawn->AutomationGetReturnRouteCameraFieldOfView() - ReturnRouteCameraRestFov) < 0.05f);
 
 		const FVector ReportFiledRestLocation = Pawn->AutomationGetReportLogFiledFeedbackLocation();
 		TestTrue(TEXT("Filing report succeeds"), Pawn->AutomationInteractWithActor(ReportLog));

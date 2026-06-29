@@ -76,6 +76,9 @@ const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostRepo
 const FName PostReportLogSelfCorrectionLightTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrectionLight"));
 constexpr float ReturnRouteAnomalyTotalSeconds = 2.35f;
 constexpr float ReturnRouteTailSoundDelaySeconds = 0.48f;
+constexpr float ReturnRouteCameraMaxFovKick = 4.2f;
+const FVector ReturnRouteCameraImpactOffset(-8.0f, 0.0f, -2.4f);
+const FVector ReturnRouteCameraTailOffset(2.4f, 0.0f, 0.8f);
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -99,6 +102,7 @@ void AHotelNightShiftPawn::BeginPlay()
 	Super::BeginPlay();
 
 	CacheHotelActors();
+	CaptureReturnRouteCameraRestState();
 	SetWorkState(
 		EHotelLoopStage::PhoneRinging,
 		TEXT("Answer the front-desk phone before leaving the counter."),
@@ -220,6 +224,16 @@ void AHotelNightShiftPawn::AutomationAdvanceReturnRouteAnomaly(float DeltaSecond
 FVector AHotelNightShiftPawn::AutomationGetReturnRouteBackKnockLocation() const
 {
 	return ReturnRouteBackKnockActor ? ReturnRouteBackKnockActor->GetActorLocation() : FVector::ZeroVector;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetReturnRouteCameraRelativeLocation() const
+{
+	return FirstPersonCamera ? FirstPersonCamera->GetRelativeLocation() : FVector::ZeroVector;
+}
+
+float AHotelNightShiftPawn::AutomationGetReturnRouteCameraFieldOfView() const
+{
+	return FirstPersonCamera ? FirstPersonCamera->FieldOfView : 0.0f;
 }
 
 bool AHotelNightShiftPawn::AutomationHasReturnRouteTailSound() const
@@ -1054,7 +1068,8 @@ void AHotelNightShiftPawn::UpdateReturnRouteAnomaly(float DeltaSeconds)
 	const float TailPhase = FMath::Clamp((ReturnRouteAnomalySeconds - 0.36f) / 1.48f, 0.0f, 1.0f);
 	const float TailEnvelope = FMath::Sin(TailPhase * UE_PI);
 	SetReturnRouteTailLightIntensity(90.0f + TailEnvelope * (1180.0f + Pulse * 260.0f));
-	UpdateReturnRouteBackKnockFeedback(FMath::Clamp(ReturnRouteAnomalySeconds / 1.45f, 0.0f, 1.0f));
+	UpdateReturnRouteBackKnockFeedback(Phase);
+	ApplyReturnRouteCameraPressure(Phase, Pulse);
 
 	if (!bReturnRouteTailSoundPlayed && ReturnRouteAnomalySeconds >= ReturnRouteTailSoundDelaySeconds)
 	{
@@ -1077,6 +1092,7 @@ void AHotelNightShiftPawn::StartReturnRouteAnomaly()
 	ReturnRoutePulseClock = 0.0f;
 	bReturnRouteTailSoundPlayed = false;
 	ResetReturnRouteBackKnockFeedback();
+	ResetReturnRouteCameraPressure();
 	PlayActorSound(ReturnRouteSoundActor);
 	SetWorkState(
 		EHotelLoopStage::DoorRefused,
@@ -1102,13 +1118,12 @@ void AHotelNightShiftPawn::ResolveReturnRouteAnomaly()
 	SetReturnRouteLightIntensity(640.0f);
 	SetReturnRouteTailLightIntensity(120.0f);
 	ResetReturnRouteBackKnockFeedback();
+	ResetReturnRouteCameraPressure();
 }
 
 void AHotelNightShiftPawn::UpdateReturnRouteBackKnockFeedback(float NormalizedTime)
 {
 	const float Phase = FMath::Clamp(NormalizedTime, 0.0f, 1.0f);
-	const float Envelope = FMath::Sin(Phase * UE_PI);
-	const float ReverseSlide = FMath::InterpEaseOut(0.0f, 1.0f, Phase, 2.0f) * (1.0f - Phase * 0.36f);
 
 	for (int32 Index = 0; Index < ReturnRouteBackKnockActors.Num(); ++Index)
 	{
@@ -1118,21 +1133,86 @@ void AHotelNightShiftPawn::UpdateReturnRouteBackKnockFeedback(float NormalizedTi
 			continue;
 		}
 
-		const float Bias = static_cast<float>(Index) * 0.21f;
-		const float Beat = FMath::Sin((Phase * 4.0f + Bias) * UE_PI) * FMath::Pow(1.0f - Phase, 0.62f);
+		const float LocalDelay = FMath::Clamp(static_cast<float>(Index) * 0.055f, 0.0f, 0.34f);
+		const float LocalSpan = 1.0f - LocalDelay;
+		const float LocalPhase = LocalSpan > KINDA_SMALL_NUMBER
+			? FMath::Clamp((Phase - LocalDelay) / LocalSpan, 0.0f, 1.0f)
+			: Phase;
+		const float Envelope = FMath::Sin(LocalPhase * UE_PI);
+		const float ReverseSlide = FMath::InterpEaseOut(0.0f, 1.0f, LocalPhase, 2.0f) * (1.0f - LocalPhase * 0.22f);
+		const float Bias = static_cast<float>(Index) * 0.17f;
+		const float Beat = FMath::Sin((LocalPhase * 4.6f + Bias) * UE_PI) * FMath::Pow(1.0f - LocalPhase * 0.72f, 0.58f);
 		const float Direction = (Index % 2 == 0) ? -1.0f : 1.0f;
 		const bool bWallCue = ReturnRouteBackKnockRestLocations[Index].Z > 35.0f;
 		const FVector Offset = bWallCue
-			? FVector(-6.0f * Envelope, -9.0f * ReverseSlide, FMath::Abs(Beat) * 3.0f)
-			: FVector(-18.0f * ReverseSlide, Direction * Beat * 5.0f, FMath::Abs(Beat) * 1.6f);
+			? FVector(-7.5f * Envelope, -10.5f * ReverseSlide, FMath::Abs(Beat) * 3.4f)
+			: FVector(-20.0f * ReverseSlide, Direction * Beat * 5.8f, FMath::Abs(Beat) * 1.8f);
 		const FRotator Rotation = bWallCue
-			? FRotator(0.0f, Direction * Envelope * 2.2f, Beat * 7.0f)
-			: FRotator(Beat * 1.2f, Direction * Envelope * 2.0f, Direction * Beat * 3.8f);
+			? FRotator(0.0f, Direction * Envelope * 2.5f, Beat * 7.8f)
+			: FRotator(Beat * 1.4f, Direction * Envelope * 2.3f, Direction * Beat * 4.4f);
 
 		FeedbackPart->SetActorLocationAndRotation(
 			ReturnRouteBackKnockRestLocations[Index] + Offset,
 			ReturnRouteBackKnockRestRotations[Index] + Rotation);
 	}
+}
+
+void AHotelNightShiftPawn::CaptureReturnRouteCameraRestState()
+{
+	if (!FirstPersonCamera)
+	{
+		return;
+	}
+
+	ReturnRouteCameraRestRelativeLocation = FirstPersonCamera->GetRelativeLocation();
+	ReturnRouteCameraRestFieldOfView = FirstPersonCamera->FieldOfView;
+	bReturnRouteCameraRestCaptured = true;
+}
+
+void AHotelNightShiftPawn::ApplyReturnRouteCameraPressure(float NormalizedTime, float Pulse)
+{
+	if (!FirstPersonCamera)
+	{
+		return;
+	}
+
+	if (!bReturnRouteCameraRestCaptured)
+	{
+		CaptureReturnRouteCameraRestState();
+	}
+
+	const float Phase = FMath::Clamp(NormalizedTime, 0.0f, 1.0f);
+	const float ImpactIn = FMath::Sin(FMath::Clamp(Phase / 0.20f, 0.0f, 1.0f) * (UE_PI * 0.5f));
+	const float ImpactOut = FMath::Pow(1.0f - Phase, 1.65f);
+	const float Impact = ImpactIn * ImpactOut;
+	const float TailPhase = FMath::Clamp((Phase - 0.18f) / 0.66f, 0.0f, 1.0f);
+	const float Tail = FMath::Sin(TailPhase * UE_PI);
+	const float Sway = FMath::Sin(ReturnRoutePulseClock * 14.0f) * (Impact * 1.6f + Tail * 0.75f);
+
+	const FVector PressureOffset =
+		(ReturnRouteCameraImpactOffset * Impact)
+		+ (ReturnRouteCameraTailOffset * Tail)
+		+ FVector(0.0f, Sway, 0.0f);
+	FirstPersonCamera->SetRelativeLocation(ReturnRouteCameraRestRelativeLocation + PressureOffset);
+
+	const float FovKick = (Impact * ReturnRouteCameraMaxFovKick) + (Tail * 1.25f) + (Pulse * 0.35f * (Impact + Tail));
+	FirstPersonCamera->SetFieldOfView(ReturnRouteCameraRestFieldOfView + FovKick);
+}
+
+void AHotelNightShiftPawn::ResetReturnRouteCameraPressure()
+{
+	if (!FirstPersonCamera)
+	{
+		return;
+	}
+
+	if (!bReturnRouteCameraRestCaptured)
+	{
+		CaptureReturnRouteCameraRestState();
+	}
+
+	FirstPersonCamera->SetRelativeLocation(ReturnRouteCameraRestRelativeLocation);
+	FirstPersonCamera->SetFieldOfView(ReturnRouteCameraRestFieldOfView);
 }
 
 void AHotelNightShiftPawn::ResetReturnRouteBackKnockFeedback()

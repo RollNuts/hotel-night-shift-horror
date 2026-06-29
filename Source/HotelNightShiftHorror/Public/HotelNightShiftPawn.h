@@ -57,6 +57,8 @@ public:
 	bool AutomationIsReturnRouteAnomalyResolved() const;
 	void AutomationAdvanceReturnRouteAnomaly(float DeltaSeconds);
 	FVector AutomationGetReturnRouteBackKnockLocation() const;
+	FVector AutomationGetReturnRouteCameraRelativeLocation() const;
+	float AutomationGetReturnRouteCameraFieldOfView() const;
 	bool AutomationHasReturnRouteTailSound() const;
 	float AutomationGetReturnRouteLightIntensity() const;
 	float AutomationGetReturnRouteTailLightIntensity() const;
@@ -118,6 +120,9 @@ private:
 	void ResolveReturnRouteAnomaly();
 	void UpdateReturnRouteBackKnockFeedback(float NormalizedTime);
 	void ResetReturnRouteBackKnockFeedback();
+	void CaptureReturnRouteCameraRestState();
+	void ApplyReturnRouteCameraPressure(float NormalizedTime, float Pulse);
+	void ResetReturnRouteCameraPressure();
 	void TriggerPostReportMonitorMismatch();
 	void UpdatePostReportMonitorMismatch(float DeltaSeconds);
 	void TriggerPostReportDeskWaitAnomaly();
@@ -301,6 +306,8 @@ private:
 	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
 	TArray<FVector> ReturnRouteBackKnockRestLocations;
 	TArray<FRotator> ReturnRouteBackKnockRestRotations;
+	FVector ReturnRouteCameraRestRelativeLocation = FVector::ZeroVector;
+	float ReturnRouteCameraRestFieldOfView = 90.0f;
 	TArray<FVector> PostReportDeskWaitRattleRestLocations;
 	TArray<FRotator> PostReportDeskWaitRattleRestRotations;
 	TArray<FVector> PostReportLogSelfCorrectionFeedbackRestLocations;
@@ -318,6 +325,7 @@ private:
 	bool bReturnRouteAnomalyActive = false;
 	bool bReturnRouteAnomalyResolved = false;
 	bool bReturnRouteTailSoundPlayed = false;
+	bool bReturnRouteCameraRestCaptured = false;
 	float PostReportMonitorMismatchSeconds = 0.0f;
 	float PostReportMonitorMismatchPulseClock = 0.0f;
 	bool bPostReportMonitorMismatchActive = false;
