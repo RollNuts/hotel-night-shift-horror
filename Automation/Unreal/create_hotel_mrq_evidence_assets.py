@@ -23,6 +23,7 @@ CAPTURE_CAMERAS = [
     "CAPTURE_ReportLog_ReadabilityCandidate",
     "CAPTURE_PhoneResponse_LiftReceiverCandidate",
     "CAPTURE_Transition_ElevatorStair_AudioFearCandidate",
+    "CAPTURE_PatrolRoute_DecisionCueCandidate",
     "CAPTURE_GuestDoor_15SecondBeatCandidate",
     "CAPTURE_MonitorToHall_MismatchCandidate",
 ]
@@ -100,7 +101,7 @@ def create_still_sequence() -> unreal.LevelSequence:
         fail("Unable to create MRQ still LevelSequence.")
 
     sequence.set_playback_start(0)
-    sequence.set_playback_end(len(CAPTURE_CAMERAS) + 1)
+    sequence.set_playback_end(len(CAPTURE_CAMERAS))
     try:
         sequence.set_display_rate(unreal.FrameRate(24, 1))
         sequence.set_tick_resolution(unreal.FrameRate(24, 1))
@@ -121,6 +122,11 @@ def create_still_sequence() -> unreal.LevelSequence:
         cut.set_end_frame(frame_number + 1)
         cut.set_start_frame(frame_number)
         cut.set_editor_property("CameraBindingID", camera_binding_id(binding))
+
+    # Adding camera cut sections can clamp the playback range in some editor
+    # versions. Re-apply the full range so the final still is rendered.
+    sequence.set_playback_start(0)
+    sequence.set_playback_end(len(CAPTURE_CAMERAS))
 
     sanitize_sequence_metadata(sequence)
     unreal.EditorAssetLibrary.save_asset(SEQUENCE_PATH)
