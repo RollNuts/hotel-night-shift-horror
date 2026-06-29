@@ -26,6 +26,10 @@ const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitRattle"));
 const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrection"));
+const TCHAR* AuthoredPhoneBodyLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCurvedBody");
+const TCHAR* AuthoredPhoneReceiverLabel = TEXT("PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette");
+const TCHAR* AuthoredPhoneCordLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCoiledCord");
+const TCHAR* AuthoredLedgerPagesLabel = TEXT("PROP_FrontDesk_ReportLog_AuthoredCurledPages");
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -38,6 +42,24 @@ AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 	{
 		AActor* Actor = *It;
 		if (Actor && Actor->ActorHasTag(RequiredTag))
+		{
+			return Actor;
+		}
+	}
+	return nullptr;
+}
+
+AActor* FindActorByLabel(UWorld* World, const TCHAR* RequiredLabel)
+{
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		AActor* Actor = *It;
+		if (Actor && Actor->GetActorLabel() == RequiredLabel)
 		{
 			return Actor;
 		}
@@ -124,6 +146,10 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* PostReportDeskWaitRattle = FindActorByTag(World, PostReportDeskWaitRattleTag);
 		AActor* PostReportLogSelfCorrectionSound = FindActorByTag(World, PostReportLogSelfCorrectionAudioTag);
 		AActor* PostReportLogSelfCorrectionFeedback = FindActorByTag(World, PostReportLogSelfCorrectionFeedbackTag);
+		AActor* AuthoredPhoneBody = FindActorByLabel(World, AuthoredPhoneBodyLabel);
+		AActor* AuthoredPhoneReceiver = FindActorByLabel(World, AuthoredPhoneReceiverLabel);
+		AActor* AuthoredPhoneCord = FindActorByLabel(World, AuthoredPhoneCordLabel);
+		AActor* AuthoredLedgerPages = FindActorByLabel(World, AuthoredLedgerPagesLabel);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -138,7 +164,11 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Post-report desk wait rattle actor exists"), PostReportDeskWaitRattle);
 		TestNotNull(TEXT("Post-report log self-correction sound actor exists"), PostReportLogSelfCorrectionSound);
 		TestNotNull(TEXT("Post-report log self-correction feedback actor exists"), PostReportLogSelfCorrectionFeedback);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback)
+		TestNotNull(TEXT("Authored phone body mesh exists in production map"), AuthoredPhoneBody);
+		TestNotNull(TEXT("Authored phone receiver mesh exists in production map"), AuthoredPhoneReceiver);
+		TestNotNull(TEXT("Authored phone cord mesh exists in production map"), AuthoredPhoneCord);
+		TestNotNull(TEXT("Authored curled ledger page mesh exists in production map"), AuthoredLedgerPages);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages)
 		{
 			return true;
 		}
@@ -148,6 +178,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Phone line static source is cached"), Pawn->AutomationHasPhoneLineSound());
 
 		const FVector ReceiverRestLocation = Pawn->AutomationGetPhoneReceiverLocation();
+		const FVector AuthoredReceiverRestLocation = AuthoredPhoneReceiver->GetActorLocation();
 		TestTrue(TEXT("Answering the phone succeeds"), Pawn->AutomationInteractWithActor(Phone));
 		TestEqual(TEXT("Phone answer advances to RequestKnown"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::RequestKnown);
 		TestFalse(TEXT("Phone ring timer stops after answer"), Pawn->AutomationIsPhoneRingTimerActive());
@@ -156,6 +187,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		Pawn->AutomationAdvancePhoneReceiver(0.50f);
 		TestTrue(TEXT("Receiver lift animation reaches the held pose"), Pawn->AutomationGetPhoneReceiverLiftAlpha() >= 1.0f);
 		TestTrue(TEXT("Receiver moves visibly after answer"), FVector::DistSquared(ReceiverRestLocation, Pawn->AutomationGetPhoneReceiverLocation()) > FMath::Square(18.0f));
+		TestTrue(TEXT("Authored receiver silhouette moves with the phone lift"), FVector::DistSquared(AuthoredReceiverRestLocation, AuthoredPhoneReceiver->GetActorLocation()) > FMath::Square(18.0f));
 
 		TestTrue(TEXT("Checking monitor succeeds"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Monitor advances to MonitorChecked"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::MonitorChecked);

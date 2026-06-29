@@ -51,6 +51,8 @@ Every player-facing action must define:
 
 If the action only changes numbers or collision state, it is unfinished.
 
+Horror may use ambiguity, darkness, and partial visibility, but ambiguity cannot hide weak silhouettes, box-only props, missing contact motion, or unreadable animation on the core fear beat.
+
 ## Front Desk Art Density Animation Bar
 
 Front-desk art density is not complete because the desk has more objects. Props that imply use must either read as deliberate still dressing or have product-intent motion.
@@ -64,6 +66,21 @@ For phone, log, bell, drawers, keys, monitor controls, lamps, papers, and guest-
 - Default, test, unretargeted, or linear placeholder motion does not clear the bar.
 
 If a front-desk prop is visible in store/trailer/demo evidence, unresolved motion quality is `animation-missing` or placeholder debt, not final art density.
+
+## Authored Mesh Baseline Bar
+
+Project-authored meshes are preferred over anonymous free assets when they remove the cube-grid look without adding legal risk.
+
+An authored mesh pass only counts as product progress when:
+
+- Source geometry exists in `SourceAssets` or reproducible automation, not only as an opaque `.uasset`.
+- The mesh is placed in the production hotel level, under final-intent lighting and first-person capture cameras.
+- The mesh improves silhouette, contact, material read, or animation feel for an existing core action.
+- Runtime feedback still works after the mesh replaces or overlays blockout geometry.
+- The verifier proves the expected mesh asset is assigned to the expected production-map actor.
+- Placeholder and license ledgers state whether the mesh is store/trailer-cleared.
+
+Authored meshes remain placeholder debt if they are untextured, insufficiently dressed, lack wear/decals where needed, or cannot carry a store screenshot without obvious blockout support.
 
 ## Audio Bar
 
