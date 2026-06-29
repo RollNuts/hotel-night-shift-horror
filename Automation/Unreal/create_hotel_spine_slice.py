@@ -148,6 +148,21 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         cold_scrape = 0.035 * math.sin(2 * math.pi * 690 * t) if 0.92 <= t <= 1.42 else 0.0
         return 0.52 * total + reverse_hum + cold_scrape
 
+    def post_report_monitor_mismatch(t: float) -> float:
+        scan = 0.045 * math.sin(2 * math.pi * 2860 * t) + 0.028 * math.sin(2 * math.pi * 4120 * t)
+        low_relay = 0.0
+        for start, pitch in ((0.06, 116), (0.28, 74), (0.74, 103)):
+            dt = t - start
+            if 0.0 <= dt <= 0.18:
+                low_relay += math.exp(-dt * 18.0) * math.sin(2 * math.pi * pitch * dt)
+        frame_skip = 0.0
+        for start in (0.18, 0.42, 0.66, 0.92):
+            dt = t - start
+            if 0.0 <= dt <= 0.025:
+                frame_skip += math.exp(-dt * 120.0) * math.sin(2 * math.pi * 960 * dt)
+        dead_air = 0.05 * math.sin(2 * math.pi * 52 * t) if 0.55 <= t <= 1.25 else 0.0
+        return scan + 0.42 * low_relay + 0.30 * frame_skip + dead_air
+
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
@@ -160,6 +175,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
         "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
         "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
+        "SFX_PostReportMonitorMismatch_v0": (1.55, post_report_monitor_mismatch),
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -509,6 +525,13 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopC", (-318, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
     add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen_glow"], ("Hotel.Interact.Monitor",))
+    monitor_mismatch_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchVisual")
+    add_cube("PROP_Surveillance_Monitor_PostReportFeedFrame", (-620, -536, 160), (112, 5, 58), materials["screen"], monitor_mismatch_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportStaticBarA", (-646, -540, 178), (58, 4, 4), materials["screen_glow"], monitor_mismatch_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportStaticBarB", (-602, -540, 143), (76, 4, 4), materials["screen_glow"], monitor_mismatch_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportOpenDoorGlyph", (-585, -542, 159), (13, 5, 34), materials["warn_glow"], monitor_mismatch_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportRoom203Dot", (-608, -543, 174), (12, 5, 12), materials["warn"], monitor_mismatch_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportTimestampSmear", (-656, -542, 132), (40, 5, 4), materials["paper"], monitor_mismatch_tags, no_collision=True)
     add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn_glow"], ("Hotel.Interact.ReportLog",))
     add_cube("PROP_FrontDesk_NightLog_OpenPage_Readable", (-255, -522, 137), (88, 54, 4), materials["paper"], ("Hotel.Capture.Readability",), no_collision=True)
     report_log_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual")
@@ -631,7 +654,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 2200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability",), attenuation_radius=920.0)
-    add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability",), attenuation_radius=560.0)
+    add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.ExponentialHeightFog,
@@ -655,7 +678,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0)
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
-    add_camera("CAPTURE_MonitorToHall_MismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
+    add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
 
     if "AMB_LobbyFluorescentHum_v0" in sounds:
         add_audio("AMB_Lobby_FluorescentHum_Source_v0", sounds["AMB_LobbyFluorescentHum_v0"], (-180, -450, 210), True)
@@ -671,6 +694,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         add_audio("SFX_PatrolListen_StopLine_ManualTrigger_v0", sounds["SFX_PatrolListenDrop_v0"], (930, 0, 72), False, ("Hotel.Audio.PatrolListen",))
     if "SFX_ReturnRouteKnockback_v0" in sounds:
         add_audio("SFX_ReturnRoute_BackKnock_ManualTrigger_v0", sounds["SFX_ReturnRouteKnockback_v0"], (3420, 270, 150), False, ("Hotel.Audio.ReturnRoute",))
+    if "SFX_PostReportMonitorMismatch_v0" in sounds:
+        add_audio("SFX_PostReportMonitorMismatch_ManualTrigger_v0", sounds["SFX_PostReportMonitorMismatch_v0"], (-620, -542, 172), False, ("Hotel.Audio.PostReportMonitorMismatch",))
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:
