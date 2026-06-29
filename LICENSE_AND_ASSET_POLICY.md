@@ -26,6 +26,24 @@ Free is not enough. A free asset is allowed only when commercial use, redistribu
 
 Official free tools and already installed tools may be used when they do not create charges, expose credentials, violate platform terms, or add unsafe dependencies.
 
+## CC0 And Free Asset Intake
+
+Allowed provider classes for public-repo art-density work:
+
+- Project-authored assets.
+- Verified CC0/public-domain-style sources such as Poly Haven, ambientCG, and Kenney, checked on the asset page at intake time.
+- Other free assets only when the specific license explicitly allows commercial use, modification, attribution compliance, and public source redistribution of raw or converted files.
+
+Before importing or committing any free/CC0 asset:
+
+- Add or update the asset ledger row.
+- Record the asset page, creator/source, license, review date, and reviewer.
+- Set public-repo redistribution to `Yes` only when raw/source redistribution is explicitly allowed.
+- Keep required attribution notes with the ledger entry.
+- Reject the asset if the license page, creator rights, or redistribution terms are unclear.
+
+Fab/Marketplace commercial-use permission is not public-repo permission. Do not commit raw Fab, Marketplace, or other commercial pack assets to the public repo unless a specific license or written permission explicitly allows public source redistribution.
+
 ## Public Repo Separation
 
 Safe for a public repo:
@@ -73,9 +91,12 @@ Allowed only when:
 
 - License permits the intended commercial use.
 - Redistribution restrictions are understood.
+- Raw/source redistribution is explicitly permitted before any asset file is committed to a public repo.
 - Asset is adapted to the art direction.
 - It is not used as an unmodified style anchor.
 - It is recorded in the ledger.
+
+If redistribution is not permitted, use a private local dependency, a documented placeholder record, or a project-authored/verified CC0 replacement instead.
 
 Do not mix random asset packs. A coherent art direction matters more than asset volume.
 

@@ -51,6 +51,20 @@ Every player-facing action must define:
 
 If the action only changes numbers or collision state, it is unfinished.
 
+## Front Desk Art Density Animation Bar
+
+Front-desk art density is not complete because the desk has more objects. Props that imply use must either read as deliberate still dressing or have product-intent motion.
+
+For phone, log, bell, drawers, keys, monitor controls, lamps, papers, and guest-service props:
+
+- Pivots, scale, contact points, and collision must support believable motion.
+- Motion must include readable start state, action, settle, and no sliding, clipping, or popping.
+- Animation timing must be checked from the first-person front-desk camera.
+- SFX, light, UI, or material response must be planned or implemented for player-facing motion.
+- Default, test, unretargeted, or linear placeholder motion does not clear the bar.
+
+If a front-desk prop is visible in store/trailer/demo evidence, unresolved motion quality is `animation-missing` or placeholder debt, not final art density.
+
 ## Audio Bar
 
 Every repeated or important event must have an audio decision:
