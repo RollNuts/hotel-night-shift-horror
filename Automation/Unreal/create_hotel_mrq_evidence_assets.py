@@ -28,6 +28,7 @@ CAPTURE_CAMERAS = [
     "CAPTURE_ReturnRoute_BackKnockCandidate",
     "CAPTURE_PostReportMonitorMismatchCandidate",
     "CAPTURE_PostReportDeskWait_DoNotAnswerCandidate",
+    "CAPTURE_PostReportLogSelfCorrectionCandidate",
 ]
 
 

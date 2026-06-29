@@ -61,6 +61,11 @@ public:
 	bool AutomationIsPostReportDeskWaitActive() const;
 	bool AutomationIsPostReportDeskWaitResolved() const;
 	void AutomationAdvancePostReportDeskWait(float DeltaSeconds);
+	bool AutomationIsPostReportLogSelfCorrectionActive() const;
+	bool AutomationHasPostReportLogSelfCorrection() const;
+	void AutomationAdvancePostReportLogSelfCorrection(float DeltaSeconds);
+	float AutomationGetPostReportLogSelfCorrectionAlpha() const;
+	FVector AutomationGetPostReportLogSelfCorrectionLocation() const;
 	void AutomationAdvancePhoneReceiver(float DeltaSeconds);
 	float AutomationGetPhoneReceiverLiftAlpha() const;
 	FVector AutomationGetPhoneReceiverLocation() const;
@@ -101,6 +106,8 @@ private:
 	void UpdatePostReportMonitorMismatch(float DeltaSeconds);
 	void TriggerPostReportDeskWaitAnomaly();
 	void UpdatePostReportDeskWaitAnomaly(float DeltaSeconds);
+	void TriggerPostReportLogSelfCorrection();
+	void UpdatePostReportLogSelfCorrection(float DeltaSeconds);
 	void UpdatePhoneRingVisual(float DeltaSeconds);
 	void LiftPhoneReceiver();
 	void UpdatePhoneReceiverAnimation(float DeltaSeconds);
@@ -113,6 +120,7 @@ private:
 	void SetReturnRouteLightIntensity(float NewIntensity);
 	void SetPostReportMonitorMismatchLightIntensity(float NewIntensity);
 	void SetPostReportDeskWaitLightIntensity(float NewIntensity);
+	void SetPostReportLogSelfCorrectionLightIntensity(float NewIntensity);
 	void PulseHallLight(float NewIntensity);
 	void SetWorkState(
 		EHotelLoopStage NewStage,
@@ -185,6 +193,18 @@ private:
 	TObjectPtr<AActor> PostReportDeskWaitLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> PostReportLogSelfCorrectionSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PostReportLogSelfCorrectionFeedbackActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PostReportLogSelfCorrectionFeedbackActors;
+
+	UPROPERTY()
+	TObjectPtr<AActor> PostReportLogSelfCorrectionLightActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> HallTargetLightActor;
 
 	UPROPERTY()
@@ -213,6 +233,8 @@ private:
 	TArray<FRotator> DoorRefusalFeedbackRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;
 	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
+	TArray<FVector> PostReportLogSelfCorrectionFeedbackRestLocations;
+	TArray<FRotator> PostReportLogSelfCorrectionFeedbackRestRotations;
 	int32 PhoneRingCount = 0;
 	bool bMonitorChecked = false;
 	bool bPhoneReceiverLiftActive = false;
@@ -234,6 +256,10 @@ private:
 	float PostReportDeskWaitPulseClock = 0.0f;
 	bool bPostReportDeskWaitActive = false;
 	bool bPostReportDeskWaitResolved = false;
+	float PostReportLogSelfCorrectionAlpha = 0.0f;
+	float PostReportLogSelfCorrectionPulseClock = 0.0f;
+	bool bPostReportLogSelfCorrectionActive = false;
+	bool bPostReportLogSelfCorrectionObserved = false;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;

@@ -34,6 +34,9 @@ const FVector PostReportMonitorMismatchLightAnchor(-575.0f, -555.0f, 188.0f);
 const FVector PostReportDeskWaitAnchor(-260.0f, -635.0f, 92.0f);
 const FVector PostReportDeskWaitSoundAnchor(1080.0f, -250.0f, 150.0f);
 const FVector PostReportDeskWaitLightAnchor(1035.0f, -250.0f, 170.0f);
+const FVector PostReportLogSelfCorrectionSoundAnchor(-214.0f, -494.0f, 154.0f);
+const FVector PostReportLogSelfCorrectionFeedbackAnchor(-202.0f, -510.0f, 146.0f);
+const FVector PostReportLogSelfCorrectionLightAnchor(-190.0f, -520.0f, 166.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
@@ -52,6 +55,9 @@ const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonito
 const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 const FName PostReportDeskWaitLightTag(TEXT("Hotel.Feedback.PostReportDeskWaitLight"));
+const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
+const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrection"));
+const FName PostReportLogSelfCorrectionLightTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrectionLight"));
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -92,6 +98,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	UpdateReturnRouteAnomaly(DeltaSeconds);
 	UpdatePostReportMonitorMismatch(DeltaSeconds);
 	UpdatePostReportDeskWaitAnomaly(DeltaSeconds);
+	UpdatePostReportLogSelfCorrection(DeltaSeconds);
 	UpdatePhoneRingVisual(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
@@ -215,6 +222,31 @@ bool AHotelNightShiftPawn::AutomationIsPostReportDeskWaitResolved() const
 void AHotelNightShiftPawn::AutomationAdvancePostReportDeskWait(float DeltaSeconds)
 {
 	UpdatePostReportDeskWaitAnomaly(DeltaSeconds);
+}
+
+bool AHotelNightShiftPawn::AutomationIsPostReportLogSelfCorrectionActive() const
+{
+	return bPostReportLogSelfCorrectionActive;
+}
+
+bool AHotelNightShiftPawn::AutomationHasPostReportLogSelfCorrection() const
+{
+	return bPostReportLogSelfCorrectionObserved;
+}
+
+void AHotelNightShiftPawn::AutomationAdvancePostReportLogSelfCorrection(float DeltaSeconds)
+{
+	UpdatePostReportLogSelfCorrection(DeltaSeconds);
+}
+
+float AHotelNightShiftPawn::AutomationGetPostReportLogSelfCorrectionAlpha() const
+{
+	return PostReportLogSelfCorrectionAlpha;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetPostReportLogSelfCorrectionLocation() const
+{
+	return PostReportLogSelfCorrectionFeedbackActor ? PostReportLogSelfCorrectionFeedbackActor->GetActorLocation() : FVector::ZeroVector;
 }
 
 void AHotelNightShiftPawn::AutomationAdvancePhoneReceiver(float DeltaSeconds)
@@ -394,6 +426,62 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 		return true;
 	}
 
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportMonitorMismatchObserved)
+	{
+		SetWorkState(
+			EHotelLoopStage::ReportFiled,
+			TEXT("Check the monitor once before touching the filed entry again."),
+			TEXT("The log is filed. The camera is the part that has not answered yet."),
+			TEXT("NIGHT LOG: FILED / CAMERA CHECK REQUIRED"),
+			0.70f);
+		return false;
+	}
+
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportDeskWaitResolved)
+	{
+		SetWorkState(
+			EHotelLoopStage::ReportFiled,
+			TEXT("Stay at the desk. Recheck the log only after the lobby quiets."),
+			TEXT("The filed page will not lie still while the glass is still moving."),
+			TEXT("NIGHT LOG: HOLD / LOBBY UNRESOLVED"),
+			0.90f);
+		return false;
+	}
+
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && bPostReportDeskWaitActive)
+	{
+		SetWorkState(
+			EHotelLoopStage::ReportFiled,
+			TEXT("Keep your hands off the log until the glass is still."),
+			TEXT("The page edge lifts as if the lobby rattle moved through the counter."),
+			TEXT("NIGHT LOG: WAIT / DOOR STILL ACTIVE"),
+			0.92f);
+		return false;
+	}
+
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && bPostReportDeskWaitResolved && !bPostReportLogSelfCorrectionObserved)
+	{
+		TriggerPostReportLogSelfCorrection();
+		SetWorkState(
+			EHotelLoopStage::ReportFiled,
+			TEXT("Do not correct the new line. Wait for the next call."),
+			TEXT("The filed entry adds a line you did not write: ROOM 203 OPEN / NO GUEST AT LOBBY."),
+			TEXT("NIGHT LOG: SELF-CORRECTED / DO NOT ALTER"),
+			0.96f);
+		return true;
+	}
+
+	if (ActorMatches(TargetActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && bPostReportLogSelfCorrectionObserved)
+	{
+		SetWorkState(
+			EHotelLoopStage::ReportFiled,
+			TEXT("Keep the desk. Wait for the next call."),
+			TEXT("The added line stays in the log no matter how long you look at it."),
+			TEXT("NIGHT LOG: LOCKED / NEXT CALL PENDING"),
+			0.82f);
+		return false;
+	}
+
 	if (ActorMatches(TargetActor, MonitorAnchor, 130.0f, MonitorInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportMonitorMismatchObserved)
 	{
 		TriggerPostReportMonitorMismatch();
@@ -442,6 +530,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PostReportMonitorMismatchLightActor = FindActorWithTagNear(PostReportMonitorMismatchLightTag, PostReportMonitorMismatchLightAnchor, 160.0f);
 	PostReportDeskWaitSoundActor = FindActorWithTagNear(PostReportDeskWaitAudioTag, PostReportDeskWaitSoundAnchor, 180.0f);
 	PostReportDeskWaitLightActor = FindActorWithTagNear(PostReportDeskWaitLightTag, PostReportDeskWaitLightAnchor, 220.0f);
+	PostReportLogSelfCorrectionSoundActor = FindActorWithTagNear(PostReportLogSelfCorrectionAudioTag, PostReportLogSelfCorrectionSoundAnchor, 140.0f);
+	PostReportLogSelfCorrectionFeedbackActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(PostReportLogSelfCorrectionFeedbackTag, PostReportLogSelfCorrectionFeedbackAnchor, 160.0f))
+	{
+		PostReportLogSelfCorrectionFeedbackActors.Add(FeedbackPart);
+	}
+	PostReportLogSelfCorrectionFeedbackActor = FindActorWithTagNear(PostReportLogSelfCorrectionFeedbackTag, PostReportLogSelfCorrectionFeedbackAnchor, 160.0f);
+	PostReportLogSelfCorrectionLightActor = FindActorWithTagNear(PostReportLogSelfCorrectionLightTag, PostReportLogSelfCorrectionLightAnchor, 170.0f);
 	HallTargetLightActor = FindLightActorNear(HallTargetLightAnchor, 260.0f);
 	PhoneIndicatorLightActor = FindLightActorNear(PhoneIndicatorLightAnchor, 90.0f);
 
@@ -475,6 +571,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		ReportLogFiledFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
 		ReportLogFiledFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	PostReportLogSelfCorrectionFeedbackRestLocations.Reset();
+	PostReportLogSelfCorrectionFeedbackRestRotations.Reset();
+	for (AActor* FeedbackPart : PostReportLogSelfCorrectionFeedbackActors)
+	{
+		PostReportLogSelfCorrectionFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
+		PostReportLogSelfCorrectionFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 }
 
@@ -530,6 +634,26 @@ void AHotelNightShiftPawn::UpdateLookTarget()
 	{
 		CurrentLookActor = HitActor;
 		InteractionPromptText = TEXT("E  Record incident");
+	}
+	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportMonitorMismatchObserved)
+	{
+		CurrentLookActor = HitActor;
+		InteractionPromptText = TEXT("E  Check monitor first");
+	}
+	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportDeskWaitResolved)
+	{
+		CurrentLookActor = HitActor;
+		InteractionPromptText = TEXT("E  Wait before reviewing log");
+	}
+	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && !bPostReportLogSelfCorrectionObserved)
+	{
+		CurrentLookActor = HitActor;
+		InteractionPromptText = TEXT("E  Recheck filed entry");
+	}
+	else if (ActorMatches(HitActor, ReportLogAnchor, 120.0f, ReportLogInteractTag) && LoopStage == EHotelLoopStage::ReportFiled && bPostReportLogSelfCorrectionObserved)
+	{
+		CurrentLookActor = HitActor;
+		InteractionPromptText = TEXT("E  Review corrected entry");
 	}
 }
 
@@ -840,6 +964,52 @@ void AHotelNightShiftPawn::UpdatePostReportDeskWaitAnomaly(float DeltaSeconds)
 	}
 }
 
+void AHotelNightShiftPawn::TriggerPostReportLogSelfCorrection()
+{
+	bPostReportLogSelfCorrectionActive = true;
+	bPostReportLogSelfCorrectionObserved = true;
+	PostReportLogSelfCorrectionAlpha = 0.0f;
+	PostReportLogSelfCorrectionPulseClock = 0.0f;
+	PlayActorSound(PostReportLogSelfCorrectionSoundActor);
+	SetPostReportLogSelfCorrectionLightIntensity(1450.0f);
+}
+
+void AHotelNightShiftPawn::UpdatePostReportLogSelfCorrection(float DeltaSeconds)
+{
+	if (!bPostReportLogSelfCorrectionActive)
+	{
+		return;
+	}
+
+	PostReportLogSelfCorrectionAlpha = FMath::Clamp(PostReportLogSelfCorrectionAlpha + DeltaSeconds / 0.44f, 0.0f, 1.0f);
+	PostReportLogSelfCorrectionPulseClock += DeltaSeconds;
+	const float Ease = FMath::InterpEaseOut(0.0f, 1.0f, PostReportLogSelfCorrectionAlpha, 3.0f);
+	const float Impact = FMath::Sin(PostReportLogSelfCorrectionAlpha * UE_PI) * (1.0f - PostReportLogSelfCorrectionAlpha);
+	const FVector CorrectionOffset(0.0f, -7.0f * Ease, 5.0f * Impact);
+	const FRotator CorrectionRotation(-5.0f * Impact, 0.0f, 7.0f * Impact);
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(PostReportLogSelfCorrectionPulseClock * 10.0f);
+	SetPostReportLogSelfCorrectionLightIntensity(520.0f + Pulse * 920.0f);
+
+	for (int32 Index = 0; Index < PostReportLogSelfCorrectionFeedbackActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = PostReportLogSelfCorrectionFeedbackActors[Index];
+		if (!FeedbackPart || !PostReportLogSelfCorrectionFeedbackRestLocations.IsValidIndex(Index) || !PostReportLogSelfCorrectionFeedbackRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		FeedbackPart->SetActorLocationAndRotation(
+			PostReportLogSelfCorrectionFeedbackRestLocations[Index] + CorrectionOffset,
+			PostReportLogSelfCorrectionFeedbackRestRotations[Index] + CorrectionRotation);
+	}
+
+	if (PostReportLogSelfCorrectionAlpha >= 1.0f)
+	{
+		bPostReportLogSelfCorrectionActive = false;
+		SetPostReportLogSelfCorrectionLightIntensity(520.0f);
+	}
+}
+
 void AHotelNightShiftPawn::UpdatePhoneRingVisual(float DeltaSeconds)
 {
 	if (LoopStage != EHotelLoopStage::PhoneRinging)
@@ -1052,6 +1222,19 @@ void AHotelNightShiftPawn::SetPostReportDeskWaitLightIntensity(float NewIntensit
 	}
 
 	if (ULightComponent* LightComponent = PostReportDeskWaitLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
+void AHotelNightShiftPawn::SetPostReportLogSelfCorrectionLightIntensity(float NewIntensity)
+{
+	if (!PostReportLogSelfCorrectionLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = PostReportLogSelfCorrectionLightActor->FindComponentByClass<ULightComponent>())
 	{
 		LightComponent->SetIntensity(NewIntensity);
 	}
