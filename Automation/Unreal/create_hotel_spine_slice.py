@@ -1015,36 +1015,38 @@ def create_guesthall_return_route_torn_slip_mesh() -> tuple[list[tuple[float, fl
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, ...]] = []
     main = [
-        (-52.0, -0.2, 34.0),
-        (-14.0, -0.5, 41.0),
-        (18.0, -1.2, 36.0),
-        (51.0, -0.7, 28.0),
-        (44.0, -2.4, 8.0),
-        (55.0, -1.1, -8.0),
-        (32.0, -2.8, -35.0),
-        (4.0, -4.0, -28.0),
-        (-22.0, -2.2, -42.0),
-        (-54.0, -1.5, -24.0),
-        (-44.0, -0.8, -2.0),
+        (-50.0, -0.2, 31.0),
+        (-19.0, -0.3, 38.0),
+        (13.0, -0.5, 34.0),
+        (48.0, -0.4, 24.0),
+        (43.0, -0.9, 8.0),
+        (52.0, -0.6, -10.0),
+        (28.0, -1.0, -31.0),
+        (2.0, -1.2, -26.0),
+        (-24.0, -0.9, -38.0),
+        (-52.0, -0.6, -22.0),
+        (-43.0, -0.4, -2.0),
     ]
     append_flat_polygon(vertices, faces, main, double_sided=True)
     folded_corner = [
-        (32.0, -3.0, -35.0),
-        (55.0, -8.0, -8.0),
-        (45.0, -2.0, -2.0),
+        (28.0, -1.2, -31.0),
+        (46.0, -2.2, -12.0),
+        (39.0, -0.8, -7.0),
     ]
     append_flat_polygon(vertices, faces, folded_corner, double_sided=True)
     torn_upper = [
-        (-50.0, -0.9, 37.0),
-        (-28.0, -1.2, 45.0),
-        (-7.0, -1.0, 39.0),
-        (16.0, -1.4, 43.0),
-        (49.0, -0.9, 31.0),
-        (48.0, -2.0, 23.0),
-        (10.0, -1.7, 30.0),
-        (-30.0, -1.9, 28.0),
+        (-49.0, -0.5, 33.0),
+        (-31.0, -0.8, 41.0),
+        (-9.0, -0.6, 36.0),
+        (14.0, -0.7, 39.0),
+        (47.0, -0.5, 27.0),
+        (45.0, -0.9, 21.0),
+        (9.0, -0.8, 27.0),
+        (-31.0, -0.8, 26.0),
     ]
     append_flat_polygon(vertices, faces, torn_upper, double_sided=True)
+    append_flat_polygon(vertices, faces, [(-57.0, -0.9, -7.0), (-43.0, -0.8, -3.0), (-48.0, -0.8, 8.0), (-61.0, -1.0, 2.0)], double_sided=True)
+    append_flat_polygon(vertices, faces, [(20.0, -1.0, -38.0), (33.0, -1.1, -30.0), (24.0, -0.9, -22.0), (10.0, -1.0, -30.0)], double_sided=True)
     return vertices, faces
 
 
@@ -1093,13 +1095,13 @@ def create_guesthall_return_route_slip_writing_mesh() -> tuple[list[tuple[float,
 
     # Ragged, mostly unreadable "203 / BACK" warning strokes. It should read
     # as frantic handwriting in the evidence shot, not UI text.
-    append_stroke([(-34.0, 20.0), (-24.0, 27.0), (-10.0, 25.0), (-20.0, 13.0), (-6.0, 8.0)], 3.5, 0.1)
-    append_stroke([(4.0, 24.0), (18.0, 26.0), (26.0, 18.0), (18.0, 8.0), (4.0, 10.0), (0.0, 18.0)], 3.3, 0.8)
-    append_stroke([(36.0, 25.0), (22.0, 18.0), (36.0, 12.0), (24.0, 4.0), (42.0, 2.0)], 3.2, 1.5)
-    append_stroke([(-40.0, -5.0), (-24.0, -10.0), (-4.0, -6.0), (16.0, -12.0), (36.0, -8.0)], 3.0, 2.1)
-    append_stroke([(-34.0, -23.0), (-16.0, -18.0), (0.0, -25.0), (18.0, -20.0), (34.0, -26.0)], 2.4, 2.9)
-    append_stroke([(43.0, -7.0), (55.0, -1.0), (43.0, 7.0), (48.0, -1.0), (42.0, -7.0)], 2.6, 3.7)
-    append_stroke([(-48.0, 0.0), (-39.0, -4.0), (-48.0, -9.0), (-38.0, -13.0)], 2.2, 4.4)
+    append_stroke([(-34.0, 20.0), (-24.0, 27.0), (-10.0, 25.0), (-20.0, 13.0), (-6.0, 8.0)], 2.1, 0.1)
+    append_stroke([(4.0, 24.0), (18.0, 26.0), (26.0, 18.0), (18.0, 8.0), (4.0, 10.0), (0.0, 18.0)], 2.0, 0.8)
+    append_stroke([(36.0, 25.0), (22.0, 18.0), (36.0, 12.0), (24.0, 4.0), (42.0, 2.0)], 1.9, 1.5)
+    append_stroke([(-40.0, -5.0), (-24.0, -10.0), (-4.0, -6.0), (16.0, -12.0), (36.0, -8.0)], 1.9, 2.1)
+    append_stroke([(-34.0, -23.0), (-16.0, -18.0), (0.0, -25.0), (18.0, -20.0), (34.0, -26.0)], 1.6, 2.9)
+    append_stroke([(43.0, -7.0), (55.0, -1.0), (43.0, 7.0), (48.0, -1.0), (42.0, -7.0)], 1.7, 3.7)
+    append_stroke([(-48.0, 0.0), (-39.0, -4.0), (-48.0, -9.0), (-38.0, -13.0)], 1.4, 4.4)
     return vertices, faces
 
 
@@ -1131,6 +1133,108 @@ def create_guesthall_return_route_footprint_mesh() -> tuple[list[tuple[float, fl
         [(8.0, -12.0, 0.0), (30.0, -16.0, 0.0), (43.0, -7.0, 0.0), (21.0, 1.0, 0.0)],
         double_sided=True,
     )
+    return vertices, faces
+
+
+def create_guesthall_return_route_cold_vein_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_vein(points: list[tuple[float, float]], thickness: float, phase: float) -> None:
+        base = len(vertices)
+        for index, (x, y) in enumerate(points):
+            if index == 0:
+                dx, dy = points[1][0] - x, points[1][1] - y
+            elif index == len(points) - 1:
+                dx, dy = x - points[index - 1][0], y - points[index - 1][1]
+            else:
+                dx, dy = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+            length = math.sqrt(dx * dx + dy * dy) or 1.0
+            px, py = -dy / length, dx / length
+            wobble = math.sin(index * 1.47 + phase) * thickness * 0.18
+            half = thickness * (0.46 + 0.20 * math.cos(index * 1.31 + phase))
+            vertices.append((x + px * (half + wobble), y + py * (half + wobble), 0.0))
+            vertices.append((x - px * (half - wobble * 0.35), y - py * (half - wobble * 0.35), 0.0))
+
+        for index in range(len(points) - 1):
+            a = base + index * 2
+            b = a + 1
+            c = a + 3
+            d = a + 2
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    append_flat_polygon(
+        vertices,
+        faces,
+        [
+            (-156.0, -112.0, 0.0),
+            (-96.0, -142.0, 0.0),
+            (-18.0, -128.0, 0.0),
+            (58.0, -146.0, 0.0),
+            (142.0, -98.0, 0.0),
+            (172.0, -16.0, 0.0),
+            (128.0, 68.0, 0.0),
+            (36.0, 128.0, 0.0),
+            (-72.0, 118.0, 0.0),
+            (-164.0, 50.0, 0.0),
+            (-188.0, -38.0, 0.0),
+        ],
+        double_sided=True,
+    )
+    append_flat_polygon(
+        vertices,
+        faces,
+        [(-84.0, -44.0, 0.0), (-18.0, -62.0, 0.0), (48.0, -38.0, 0.0), (82.0, 16.0, 0.0), (18.0, 44.0, 0.0), (-58.0, 24.0, 0.0)],
+        double_sided=True,
+    )
+    append_vein([(-182.0, -30.0), (-104.0, -18.0), (-18.0, -38.0), (72.0, -18.0), (152.0, 28.0)], 9.0, 0.2)
+    append_vein([(-116.0, 98.0), (-72.0, 48.0), (-26.0, -2.0), (20.0, -58.0), (82.0, -124.0)], 6.2, 1.1)
+    append_vein([(120.0, 78.0), (62.0, 48.0), (8.0, 6.0), (-52.0, -56.0), (-120.0, -108.0)], 5.4, 2.0)
+    return vertices, faces
+
+
+def create_guesthall_return_route_direction_scratch_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_scratch(points: list[tuple[float, float]], thickness: float, phase: float) -> None:
+        base = len(vertices)
+        for index, (x, y) in enumerate(points):
+            if index == 0:
+                dx, dy = points[1][0] - x, points[1][1] - y
+            elif index == len(points) - 1:
+                dx, dy = x - points[index - 1][0], y - points[index - 1][1]
+            else:
+                dx, dy = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+            length = math.sqrt(dx * dx + dy * dy) or 1.0
+            px, py = -dy / length, dx / length
+            taper = 1.0 - abs((index / max(1, len(points) - 1)) - 0.5) * 0.58
+            nick = math.sin(index * 2.13 + phase) * thickness * 0.20
+            half = thickness * taper * (0.58 + 0.18 * math.cos(index * 1.37 + phase))
+            vertices.append((x + px * (half + nick), y + py * (half + nick), 0.0))
+            vertices.append((x - px * (half - nick * 0.42), y - py * (half - nick * 0.42), 0.0))
+
+        for index in range(len(points) - 1):
+            a = base + index * 2
+            b = a + 1
+            c = a + 3
+            d = a + 2
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    append_scratch([(-104.0, -7.0), (-56.0, -9.0), (-8.0, -4.0), (42.0, 2.0), (94.0, 8.0)], 8.6, 0.2)
+    append_scratch([(32.0, 30.0), (62.0, 14.0), (100.0, 8.0), (62.0, -8.0), (28.0, -28.0)], 7.4, 1.2)
+    append_scratch([(-76.0, 17.0), (-38.0, 11.0), (8.0, 14.0), (56.0, 21.0)], 4.6, 2.0)
+    append_scratch([(-68.0, -30.0), (-18.0, -24.0), (36.0, -21.0), (82.0, -18.0)], 3.8, 2.8)
+
+    chips = [
+        [(-112.0, 8.0, 0.0), (-92.0, 14.0, 0.0), (-82.0, 4.0, 0.0), (-104.0, -2.0, 0.0)],
+        [(-12.0, 24.0, 0.0), (8.0, 28.0, 0.0), (2.0, 38.0, 0.0), (-18.0, 34.0, 0.0)],
+        [(92.0, -28.0, 0.0), (112.0, -22.0, 0.0), (102.0, -10.0, 0.0), (82.0, -15.0, 0.0)],
+    ]
+    for chip in chips:
+        append_flat_polygon(vertices, faces, chip, double_sided=True)
     return vertices, faces
 
 
@@ -1170,6 +1274,8 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_GuestHall_ReturnRouteWarningUnderline_v0": create_guesthall_return_route_warning_underline_mesh,
         "SM_GuestHall_ReturnRouteSlipWriting_v0": create_guesthall_return_route_slip_writing_mesh,
         "SM_GuestHall_ReturnRouteFootprint_v0": create_guesthall_return_route_footprint_mesh,
+        "SM_GuestHall_ReturnRouteColdVein_v0": create_guesthall_return_route_cold_vein_mesh,
+        "SM_GuestHall_ReturnRouteDirectionScratch_v0": create_guesthall_return_route_direction_scratch_mesh,
         "SM_GuestHall_CeilingWaterStain_v0": create_guesthall_ceiling_water_stain_mesh,
     }
 
@@ -2138,8 +2244,8 @@ def build_level(
         add_authored_mesh(
             "RETURN_Route_RightWall_BackKnockShadow_Echo",
             meshes["SM_GuestHall_ReturnRouteWallEcho_v0"],
-            (3285, 276, 142),
-            (1.12, 1.0, 0.82),
+            (3285, 276, 136),
+            (0.92, 1.0, 0.66),
             materials["wall_damp"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2148,8 +2254,8 @@ def build_level(
         add_authored_mesh(
             "RETURN_Route_RightWall_ColdPressureRipple",
             meshes["SM_GuestHall_ReturnRouteWallEcho_v0"],
-            (3195, 274, 122),
-            (0.48, 1.0, 0.46),
+            (3204, 274, 116),
+            (0.34, 1.0, 0.34),
             materials["return_cold_glow"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2166,15 +2272,49 @@ def build_level(
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
-    add_cube("RETURN_Route_FloorColdPatch_AfterRefusal", (2860, 0, 4), (270, 360, 3), materials["return_cold_glow"], return_route_tags, no_collision=True)
-    add_cube("RETURN_Route_BackKnockDirectionStripe", (2860, -84, 9), (196, 7, 3), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("RETURN_Route_BackKnockDirectionStripe_Return", (2860, 84, 9), (196, 7, 3), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    if "SM_GuestHall_ReturnRouteColdVein_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_FloorColdPatch_AfterRefusal",
+            meshes["SM_GuestHall_ReturnRouteColdVein_v0"],
+            (2860, 0, 4),
+            (1.0, 1.0, 1.0),
+            materials["return_cold_glow"],
+            return_route_tags + ("Hotel.ArtSource.AuthoredMesh",),
+            no_collision=True,
+        )
+    else:
+        add_cube("RETURN_Route_FloorColdPatch_AfterRefusal", (2860, 0, 4), (270, 360, 3), materials["return_cold_glow"], return_route_tags, no_collision=True)
+    if "SM_GuestHall_ReturnRouteDirectionScratch_v0" in meshes:
+        add_authored_mesh(
+            "RETURN_Route_BackKnockDirectionStripe",
+            meshes["SM_GuestHall_ReturnRouteDirectionScratch_v0"],
+            (2860, -84, 9),
+            (1.0, 1.0, 1.0),
+            materials["warn"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "RETURN_Route_BackKnockDirectionStripe_Return",
+            meshes["SM_GuestHall_ReturnRouteDirectionScratch_v0"],
+            (2860, 84, 9),
+            (1.0, 1.0, 1.0),
+            materials["warn"],
+            return_route_authored_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, 180.0, 0.0),
+        )
+    else:
+        add_cube("RETURN_Route_BackKnockDirectionStripe", (2860, -84, 9), (196, 7, 3), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+        add_cube("RETURN_Route_BackKnockDirectionStripe_Return", (2860, 84, 9), (196, 7, 3), materials["warn"], return_route_backknock_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     if "SM_GuestHall_ReturnRouteTornSlip_v0" in meshes:
         add_authored_mesh(
             "RETURN_Route_WallStatusSlip_ReportAfterHall",
             meshes["SM_GuestHall_ReturnRouteTornSlip_v0"],
             (3135, 268, 126),
-            (1.08, 1.0, 1.08),
+            (0.86, 1.0, 0.86),
             materials["return_slip_paper"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2187,7 +2327,7 @@ def build_level(
             "RETURN_Route_WallStatusSlip_Underline",
             meshes["SM_GuestHall_ReturnRouteWarningUnderline_v0"],
             (3135, 264, 101),
-            (0.68, 1.0, 0.70),
+            (0.54, 1.0, 0.56),
             materials["warn"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2200,7 +2340,7 @@ def build_level(
             "RETURN_Route_WallStatusSlip_FranticWriting",
             meshes["SM_GuestHall_ReturnRouteSlipWriting_v0"],
             (3135, 263, 126),
-            (1.18, 1.0, 1.14),
+            (0.82, 1.0, 0.82),
             materials["deep_red"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
