@@ -1717,8 +1717,8 @@ def build_level(
         add_authored_mesh(
             "PROP_GuestHall_RightWall_AuthoredDampUnderPeel_Room203Approach",
             meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
-            (3515, 275, 162),
-            (1.85, 1.0, 1.22),
+            (3536, 275, 158),
+            (1.08, 1.0, 0.98),
             materials["wall_damp"],
             guesthall_authored_decay_tags,
             no_collision=True,
@@ -1726,8 +1726,8 @@ def build_level(
         add_authored_mesh(
             "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_CameraReadable",
             meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
-            (3405, 276, 142),
-            (1.45, 1.0, 1.15),
+            (3445, 276, 135),
+            (0.82, 1.0, 0.78),
             materials["wall_peel"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -1736,8 +1736,8 @@ def build_level(
         add_authored_mesh(
             "PROP_GuestHall_RightWall_AuthoredPeelingWallpaper_Room203",
             meshes["SM_GuestHall_PeelingWallpaperPatch_v0"],
-            (3635, 276, 166),
-            (1.2, 1.0, 1.1),
+            (3624, 276, 158),
+            (0.54, 1.0, 0.72),
             materials["wall_peel"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -1749,7 +1749,16 @@ def build_level(
             meshes["SM_GuestHall_Room203AftershockTearShadow_v0"],
             (3702, 274, 165),
             (1.02, 1.0, 1.03),
-            materials["paper_backing"],
+            materials["paper_tear_shadow"],
+            guesthall_authored_decay_tags + ("Hotel.Capture.Room203Aftershock",),
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_Room203AftershockInteriorCuts",
+            meshes["SM_GuestHall_Room203AftershockTearShadow_v0"],
+            (3616, 273, 154),
+            (0.46, 1.0, 0.54),
+            materials["paper_tear_shadow"],
             guesthall_authored_decay_tags + ("Hotel.Capture.Room203Aftershock",),
             no_collision=True,
         )
@@ -1757,8 +1766,8 @@ def build_level(
         add_authored_mesh(
             "PROP_GuestHall_RightWall_Room203AftershockLoosePaper",
             meshes["SM_GuestHall_Room203AftershockPaper_v0"],
-            (3705, 277, 166),
-            (1.0, 1.0, 1.0),
+            (3700, 277, 166),
+            (0.82, 1.0, 0.82),
             materials["wall_peel"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -1768,7 +1777,7 @@ def build_level(
             "PROP_GuestHall_RightWall_Room203AftershockHighCurl",
             meshes["SM_GuestHall_Room203AftershockPaper_v0"],
             (3568, 277, 192),
-            (0.72, 1.0, 0.68),
+            (0.46, 1.0, 0.46),
             materials["wall_peel"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -1778,7 +1787,7 @@ def build_level(
             "PROP_GuestHall_RightWall_Room203AftershockLowCurl",
             meshes["SM_GuestHall_Room203AftershockPaper_v0"],
             (3810, 278, 124),
-            (0.58, 1.0, 0.54),
+            (0.42, 1.0, 0.40),
             materials["wall_peel"],
             room203_wallpaper_flutter_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -1946,7 +1955,8 @@ def build_level(
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 5200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=1050.0)
-    add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 2300.0, unreal.Color(255, 210, 150, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=680.0)
+    add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 3100.0, unreal.Color(255, 214, 158, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=760.0)
+    add_light("LIGHT_GuestHall_Room203TornPaperEdgeRim", unreal.PointLight, (3435, 72, 138), (0, 0, 0), 1450.0, unreal.Color(255, 225, 176, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=520.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
     add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 1350.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=920.0)
     add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
@@ -1972,7 +1982,7 @@ def build_level(
     add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
-    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2940, -230, 168), (2, 25, 0), 64.0, ("Hotel.Capture.Room203Surface",))
+    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (3185, -205, 164), (1.5, 30, 0), 52.0, ("Hotel.Capture.Room203Surface", "Hotel.Capture.Room203Aftershock"))
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)

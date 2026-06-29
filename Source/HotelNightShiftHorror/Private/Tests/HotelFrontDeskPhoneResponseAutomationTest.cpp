@@ -274,7 +274,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Room 203 chain catches after the latch"), FVector::DistSquared(DoorChainRestLocation, Pawn->AutomationGetDoorRefusalChainLocation()) > FMath::Square(5.0f));
 		TestTrue(TEXT("Room 203 door-surface cue reacts without opening the door"), FVector::DistSquared(DoorSurfaceRestLocation, Pawn->AutomationGetDoorRefusalSurfaceLocation()) > FMath::Square(2.0f));
 		Pawn->AutomationAdvanceDoorRefusalFeedback(0.28f);
-		TestTrue(TEXT("Room 203 loose wallpaper reacts after the door impact"), FVector::DistSquared(DoorWallpaperRestLocation, Pawn->AutomationGetDoorRefusalWallpaperFlutterLocation()) > FMath::Square(2.0f));
+		TestTrue(TEXT("Room 203 loose wallpaper reacts after the door impact with video-readable travel"), FVector::DistSquared(DoorWallpaperRestLocation, Pawn->AutomationGetDoorRefusalWallpaperFlutterLocation()) > FMath::Square(4.0f));
 		TestTrue(TEXT("Room 203 refusal remains active through the wallpaper aftershock"), Pawn->AutomationIsDoorRefusalFeedbackActive());
 		Pawn->AutomationAdvanceDoorRefusalFeedback(0.96f);
 		TestTrue(TEXT("Room 203 refusal feedback reaches completion"), Pawn->AutomationGetDoorRefusalFeedbackAlpha() >= 1.0f);
