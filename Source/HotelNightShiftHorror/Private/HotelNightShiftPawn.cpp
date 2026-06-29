@@ -34,6 +34,7 @@ const FVector PostReportMonitorMismatchLightAnchor(-575.0f, -555.0f, 188.0f);
 const FVector PostReportDeskWaitAnchor(-260.0f, -635.0f, 92.0f);
 const FVector PostReportDeskWaitSoundAnchor(1080.0f, -250.0f, 150.0f);
 const FVector PostReportDeskWaitLightAnchor(1035.0f, -250.0f, 170.0f);
+const FVector PostReportDeskWaitRattleAnchor(1055.0f, -250.0f, 150.0f);
 const FVector PostReportLogSelfCorrectionSoundAnchor(-214.0f, -494.0f, 154.0f);
 const FVector PostReportLogSelfCorrectionFeedbackAnchor(-202.0f, -510.0f, 146.0f);
 const FVector PostReportLogSelfCorrectionLightAnchor(-190.0f, -520.0f, 166.0f);
@@ -55,6 +56,7 @@ const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonito
 const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 const FName PostReportDeskWaitLightTag(TEXT("Hotel.Feedback.PostReportDeskWaitLight"));
+const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitRattle"));
 const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionLightTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrectionLight"));
@@ -222,6 +224,11 @@ bool AHotelNightShiftPawn::AutomationIsPostReportDeskWaitResolved() const
 void AHotelNightShiftPawn::AutomationAdvancePostReportDeskWait(float DeltaSeconds)
 {
 	UpdatePostReportDeskWaitAnomaly(DeltaSeconds);
+}
+
+FVector AHotelNightShiftPawn::AutomationGetPostReportDeskWaitRattleLocation() const
+{
+	return PostReportDeskWaitRattleActor ? PostReportDeskWaitRattleActor->GetActorLocation() : FVector::ZeroVector;
 }
 
 bool AHotelNightShiftPawn::AutomationIsPostReportLogSelfCorrectionActive() const
@@ -530,6 +537,12 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PostReportMonitorMismatchLightActor = FindActorWithTagNear(PostReportMonitorMismatchLightTag, PostReportMonitorMismatchLightAnchor, 160.0f);
 	PostReportDeskWaitSoundActor = FindActorWithTagNear(PostReportDeskWaitAudioTag, PostReportDeskWaitSoundAnchor, 180.0f);
 	PostReportDeskWaitLightActor = FindActorWithTagNear(PostReportDeskWaitLightTag, PostReportDeskWaitLightAnchor, 220.0f);
+	PostReportDeskWaitRattleActors.Reset();
+	for (AActor* RattlePart : FindActorsWithTagNear(PostReportDeskWaitRattleTag, PostReportDeskWaitRattleAnchor, 240.0f))
+	{
+		PostReportDeskWaitRattleActors.Add(RattlePart);
+	}
+	PostReportDeskWaitRattleActor = FindActorWithTagNear(PostReportDeskWaitRattleTag, PostReportDeskWaitRattleAnchor, 240.0f);
 	PostReportLogSelfCorrectionSoundActor = FindActorWithTagNear(PostReportLogSelfCorrectionAudioTag, PostReportLogSelfCorrectionSoundAnchor, 140.0f);
 	PostReportLogSelfCorrectionFeedbackActors.Reset();
 	for (AActor* FeedbackPart : FindActorsWithTagNear(PostReportLogSelfCorrectionFeedbackTag, PostReportLogSelfCorrectionFeedbackAnchor, 160.0f))
@@ -571,6 +584,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		ReportLogFiledFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
 		ReportLogFiledFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	PostReportDeskWaitRattleRestLocations.Reset();
+	PostReportDeskWaitRattleRestRotations.Reset();
+	for (AActor* RattlePart : PostReportDeskWaitRattleActors)
+	{
+		PostReportDeskWaitRattleRestLocations.Add(RattlePart->GetActorLocation());
+		PostReportDeskWaitRattleRestRotations.Add(RattlePart->GetActorRotation());
 	}
 
 	PostReportLogSelfCorrectionFeedbackRestLocations.Reset();
@@ -933,12 +954,41 @@ void AHotelNightShiftPawn::UpdatePostReportDeskWaitAnomaly(float DeltaSeconds)
 		PostReportDeskWaitPulseClock += DeltaSeconds;
 		const float Pulse = 0.5f + 0.5f * FMath::Sin(PostReportDeskWaitPulseClock * 11.5f);
 		SetPostReportDeskWaitLightIntensity(220.0f + Pulse * 1880.0f);
+		const float RattleAlpha = FMath::Clamp(PostReportDeskWaitSeconds / 1.25f, 0.0f, 1.0f);
+		const float RattleKick = FMath::Sin(RattleAlpha * UE_PI * 8.0f) * (1.0f - RattleAlpha);
+		const FVector RattleOffset(0.0f, RattleKick * 14.0f, FMath::Abs(RattleKick) * 3.0f);
+		const FRotator RattleRotation(RattleKick * 8.0f, 0.0f, RattleKick * 5.0f);
+
+		for (int32 Index = 0; Index < PostReportDeskWaitRattleActors.Num(); ++Index)
+		{
+			AActor* RattlePart = PostReportDeskWaitRattleActors[Index];
+			if (!RattlePart || !PostReportDeskWaitRattleRestLocations.IsValidIndex(Index) || !PostReportDeskWaitRattleRestRotations.IsValidIndex(Index))
+			{
+				continue;
+			}
+
+			RattlePart->SetActorLocationAndRotation(
+				PostReportDeskWaitRattleRestLocations[Index] + RattleOffset,
+				PostReportDeskWaitRattleRestRotations[Index] + RattleRotation);
+		}
 
 		if (PostReportDeskWaitSeconds >= 1.25f)
 		{
 			bPostReportDeskWaitActive = false;
 			PostReportDeskWaitSeconds = 0.0f;
 			SetPostReportDeskWaitLightIntensity(360.0f);
+			for (int32 Index = 0; Index < PostReportDeskWaitRattleActors.Num(); ++Index)
+			{
+				AActor* RattlePart = PostReportDeskWaitRattleActors[Index];
+				if (!RattlePart || !PostReportDeskWaitRattleRestLocations.IsValidIndex(Index) || !PostReportDeskWaitRattleRestRotations.IsValidIndex(Index))
+				{
+					continue;
+				}
+
+				RattlePart->SetActorLocationAndRotation(
+					PostReportDeskWaitRattleRestLocations[Index],
+					PostReportDeskWaitRattleRestRotations[Index]);
+			}
 		}
 		return;
 	}

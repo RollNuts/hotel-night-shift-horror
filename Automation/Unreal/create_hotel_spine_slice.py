@@ -349,6 +349,83 @@ def add_cube(
     return actor
 
 
+def add_mesh(
+    label: str,
+    mesh_path: str,
+    location,
+    size,
+    material: unreal.MaterialInterface,
+    tags=(),
+    mobility=unreal.ComponentMobility.STATIC,
+    no_collision=False,
+    rotation=(0.0, 0.0, 0.0),
+) -> unreal.Actor:
+    mesh = unreal.EditorAssetLibrary.load_asset(mesh_path)
+    actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
+        unreal.StaticMeshActor,
+        unreal.Vector(*location),
+        make_rotator(*rotation),
+    )
+    actor.set_actor_label(label)
+    actor.set_actor_scale3d(unreal.Vector(size[0] / 100.0, size[1] / 100.0, size[2] / 100.0))
+    component = actor.static_mesh_component
+    component.set_static_mesh(mesh)
+    component.set_material(0, material)
+    component.set_editor_property("mobility", mobility)
+    if no_collision:
+        try:
+            component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        except Exception:
+            pass
+    tag_actor(actor, *tags)
+    return actor
+
+
+def add_cylinder(
+    label: str,
+    location,
+    diameter: float,
+    height: float,
+    material: unreal.MaterialInterface,
+    tags=(),
+    mobility=unreal.ComponentMobility.STATIC,
+    no_collision=False,
+    rotation=(0.0, 0.0, 0.0),
+) -> unreal.Actor:
+    return add_mesh(
+        label,
+        "/Engine/BasicShapes/Cylinder.Cylinder",
+        location,
+        (diameter, diameter, height),
+        material,
+        tags,
+        mobility,
+        no_collision,
+        rotation,
+    )
+
+
+def add_sphere(
+    label: str,
+    location,
+    size,
+    material: unreal.MaterialInterface,
+    tags=(),
+    mobility=unreal.ComponentMobility.STATIC,
+    no_collision=False,
+) -> unreal.Actor:
+    return add_mesh(
+        label,
+        "/Engine/BasicShapes/Sphere.Sphere",
+        location,
+        size,
+        material,
+        tags,
+        mobility,
+        no_collision,
+    )
+
+
 def add_light(
     label: str,
     cls,
@@ -476,6 +553,9 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
         "trim": ensure_material("M_Hotel_DarkTrim_v0", unreal.LinearColor(0.09, 0.08, 0.075, 1.0), 0.74),
         "desk": ensure_material("M_Hotel_FrontDeskWood_v0", unreal.LinearColor(0.19, 0.11, 0.065, 1.0), 0.68),
         "black": ensure_material("M_Hotel_BlackPlastic_v0", unreal.LinearColor(0.01, 0.012, 0.014, 1.0), 0.55),
+        "brass": ensure_material("M_Hotel_TarnishedBrass_v0", unreal.LinearColor(0.62, 0.43, 0.20, 1.0), 0.58),
+        "dull_metal": ensure_material("M_Hotel_DullDeskMetal_v0", unreal.LinearColor(0.30, 0.29, 0.27, 1.0), 0.72),
+        "deep_red": ensure_material("M_Hotel_AgedLedgerRed_v0", unreal.LinearColor(0.46, 0.045, 0.032, 1.0), 0.82),
         "paper": ensure_material("M_Hotel_AgedCallSlipPaper_v0", unreal.LinearColor(0.72, 0.64, 0.48, 1.0), 0.81),
         "button": ensure_material("M_Hotel_PhoneBoneButton_v0", unreal.LinearColor(0.58, 0.54, 0.46, 1.0), 0.62),
         "route_mark": ensure_material("M_Hotel_WornRouteTape_v0", unreal.LinearColor(0.46, 0.42, 0.32, 1.0), 0.88),
@@ -556,6 +636,23 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopA", (-354, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopB", (-336, -560, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopC", (-318, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
+    front_desk_art_tags = ("Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk")
+    receiver_art_tags = ("Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk")
+    add_cylinder("PROP_FrontDesk_Phone_RoundedDialPlate", (-430, -523, 162), 54, 7, materials["button"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_Phone_DialFingerHoleTop", (-430, -542, 167), 9, 4, materials["black"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_Phone_DialFingerHoleLeft", (-448, -523, 167), 9, 4, materials["black"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_Phone_DialFingerHoleRight", (-412, -523, 167), 9, 4, materials["black"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_Phone_DialFingerStop", (-400, -542, 168), 6, 18, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_Phone_ReceiverLeftRoundCup", (-466, -558, 159), 26, 10, materials["black"], receiver_art_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cylinder("PROP_FrontDesk_Phone_ReceiverRightRoundCup", (-394, -558, 159), 26, 10, materials["black"], receiver_art_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_sphere("PROP_FrontDesk_Phone_CordRoundLoopA", (-354, -553, 140), (15, 9, 7), materials["black"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_Phone_CordRoundLoopB", (-336, -560, 140), (15, 9, 7), materials["black"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_Phone_CordRoundLoopC", (-318, -553, 140), (15, 9, 7), materials["black"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_ServiceBell_Dome", (-525, -505, 133), 40, 18, materials["dull_metal"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_ServiceBell_Button", (-525, -505, 149), (14, 14, 10), materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_DeskLamp_RoundFoot", (-332, -552, 132), 44, 8, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_DeskLamp_ThinStem", (-332, -552, 158), 8, 48, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_DeskLamp_ShadeCurvedSilhouette", (-320, -548, 176), (74, 34, 22), materials["desk_lamp"], front_desk_art_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
     add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen_glow"], ("Hotel.Interact.Monitor",))
     monitor_mismatch_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchVisual")
@@ -579,6 +676,9 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_ReportLog_FiledStampCue", (-236, -504, 143), (38, 16, 3), materials["warn"], report_log_filed_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PenRest", (-207, -536, 144), (42, 5, 6), materials["black"], report_log_tags, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PenTip", (-184, -536, 144), (8, 5, 5), materials["warn"], report_log_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_ReportLog_BinderRingTop", (-296, -548, 146), 9, 12, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_ReportLog_BinderRingBottom", (-296, -509, 146), 9, 12, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_ReportLog_RedInkSmear", (-238, -517, 145), (30, 8, 3), materials["deep_red"], front_desk_art_tags, no_collision=True)
     log_self_correction_tags = (
         "Hotel.Capture.Readability",
         "Hotel.Capture.PostReportLogSelfCorrection",
@@ -596,6 +696,10 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue", (-315, -565, 131), (76, 38, 4), materials["paper"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Underline203", (-315, -565, 135), (42, 4, 3), materials["warn"], phone_visual_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-320, -548, 176), (72, 18, 18), materials["desk_lamp"], ("Hotel.Capture.Readability",))
+    add_cylinder("PROP_FrontDesk_BackShelf_KeyHookA", (-858, -560, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_BackShelf_KeyHookB", (-858, -495, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_BackShelf_KeyHookC", (-858, -430, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_BackShelf_KeyTag203", (-858, -495, 148), (22, 10, 26), materials["paper"], front_desk_art_tags, no_collision=True)
     add_cube("AREA_Lobby_GuestAdmissionThreshold", (780, 0, -8), (620, 1280, 16), materials["floor"])
     add_cube("PROP_Lobby_MainGlassDoor_Silhouette", (1080, -250, 110), (28, 270, 220), materials["screen_glow"])
     add_cube("PROP_Lobby_MainGlassDoor_RefuseLine", (1080, 250, 110), (28, 270, 220), materials["screen_glow"])
@@ -606,6 +710,15 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_cube("PROP_Lobby_GlassDoor_PostReportOutsidePalmSmear", (1060, -312, 132), (7, 46, 54), materials["paper"], post_report_desk_wait_tags, no_collision=True)
     add_cube("PROP_Lobby_GlassDoor_PostReportNoGuestReflection", (1058, -188, 112), (7, 54, 82), materials["black"], post_report_desk_wait_tags, no_collision=True)
     add_cube("LIGHTMESH_LobbyDoor_PostReportRattleCue", (1035, -250, 170), (10, 170, 18), materials["screen_glow"], post_report_desk_wait_tags, no_collision=True)
+    desk_wait_rattle_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.PostReportDeskWait",
+        "Hotel.Feedback.PostReportDeskWaitRattle",
+        "Hotel.ArtDensity.FrontDesk",
+    )
+    add_cylinder("PROP_Lobby_GlassDoor_PostReportHandleRattleBar", (1055, -250, 134), 12, 132, materials["dull_metal"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cylinder("PROP_Lobby_GlassDoor_PostReportLatchRattlePin", (1048, -250, 158), 10, 28, materials["brass"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportTapeLooseEnd", (1053, -355, 178), (7, 36, 12), materials["warn"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
 
     # Controlled transition from work hub to guest-floor response.
     add_cube("AREA_Transition_CarpetRun_ToGuestHall_NoVoid", (1625, 0, -9), (750, 560, 18), materials["floor"])

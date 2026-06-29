@@ -23,6 +23,7 @@ const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
+const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitRattle"));
 const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrection"));
 
@@ -120,6 +121,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* ReturnRouteSound = FindActorByTag(World, ReturnRouteAudioTag);
 		AActor* PostReportMonitorMismatchSound = FindActorByTag(World, PostReportMonitorMismatchAudioTag);
 		AActor* PostReportDeskWaitSound = FindActorByTag(World, PostReportDeskWaitAudioTag);
+		AActor* PostReportDeskWaitRattle = FindActorByTag(World, PostReportDeskWaitRattleTag);
 		AActor* PostReportLogSelfCorrectionSound = FindActorByTag(World, PostReportLogSelfCorrectionAudioTag);
 		AActor* PostReportLogSelfCorrectionFeedback = FindActorByTag(World, PostReportLogSelfCorrectionFeedbackTag);
 
@@ -133,9 +135,10 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Return route anomaly sound actor exists"), ReturnRouteSound);
 		TestNotNull(TEXT("Post-report monitor mismatch sound actor exists"), PostReportMonitorMismatchSound);
 		TestNotNull(TEXT("Post-report desk wait sound actor exists"), PostReportDeskWaitSound);
+		TestNotNull(TEXT("Post-report desk wait rattle actor exists"), PostReportDeskWaitRattle);
 		TestNotNull(TEXT("Post-report log self-correction sound actor exists"), PostReportLogSelfCorrectionSound);
 		TestNotNull(TEXT("Post-report log self-correction feedback actor exists"), PostReportLogSelfCorrectionFeedback);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback)
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback)
 		{
 			return true;
 		}
@@ -229,8 +232,12 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Post-report desk wait anomaly is one-shot resolved"), Pawn->AutomationIsPostReportDeskWaitResolved());
 		TestEqual(TEXT("Desk wait anomaly keeps ReportFiled as the terminal loop stage"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
 		TestFalse(TEXT("Post-report log self-correction waits while lobby glass feedback is active"), Pawn->AutomationInteractWithActor(ReportLog));
-		Pawn->AutomationAdvancePostReportDeskWait(1.30f);
+		const FVector PostReportDeskWaitRattleRestLocation = Pawn->AutomationGetPostReportDeskWaitRattleLocation();
+		Pawn->AutomationAdvancePostReportDeskWait(0.10f);
+		TestTrue(TEXT("Post-report lobby door rattle moves visibly"), FVector::DistSquared(PostReportDeskWaitRattleRestLocation, Pawn->AutomationGetPostReportDeskWaitRattleLocation()) > FMath::Square(2.0f));
+		Pawn->AutomationAdvancePostReportDeskWait(1.20f);
 		TestFalse(TEXT("Post-report desk wait feedback settles"), Pawn->AutomationIsPostReportDeskWaitActive());
+		TestTrue(TEXT("Post-report lobby door rattle returns to rest"), FVector::DistSquared(PostReportDeskWaitRattleRestLocation, Pawn->AutomationGetPostReportDeskWaitRattleLocation()) < FMath::Square(0.5f));
 		const FVector PostReportLogCorrectionRestLocation = Pawn->AutomationGetPostReportLogSelfCorrectionLocation();
 		TestTrue(TEXT("Post-report log self-correction succeeds after the lobby wait settles"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestTrue(TEXT("Post-report log self-correction feedback starts"), Pawn->AutomationIsPostReportLogSelfCorrectionActive());

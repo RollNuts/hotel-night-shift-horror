@@ -61,6 +61,7 @@ public:
 	bool AutomationIsPostReportDeskWaitActive() const;
 	bool AutomationIsPostReportDeskWaitResolved() const;
 	void AutomationAdvancePostReportDeskWait(float DeltaSeconds);
+	FVector AutomationGetPostReportDeskWaitRattleLocation() const;
 	bool AutomationIsPostReportLogSelfCorrectionActive() const;
 	bool AutomationHasPostReportLogSelfCorrection() const;
 	void AutomationAdvancePostReportLogSelfCorrection(float DeltaSeconds);
@@ -193,6 +194,12 @@ private:
 	TObjectPtr<AActor> PostReportDeskWaitLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> PostReportDeskWaitRattleActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PostReportDeskWaitRattleActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> PostReportLogSelfCorrectionSoundActor;
 
 	UPROPERTY()
@@ -233,6 +240,8 @@ private:
 	TArray<FRotator> DoorRefusalFeedbackRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;
 	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
+	TArray<FVector> PostReportDeskWaitRattleRestLocations;
+	TArray<FRotator> PostReportDeskWaitRattleRestRotations;
 	TArray<FVector> PostReportLogSelfCorrectionFeedbackRestLocations;
 	TArray<FRotator> PostReportLogSelfCorrectionFeedbackRestRotations;
 	int32 PhoneRingCount = 0;
