@@ -34,6 +34,10 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Materials/M_Hotel_AgedCallSlipPaper_v0",
     "/Game/Hotel/Materials/M_Hotel_PhoneBoneButton_v0",
     "/Game/Hotel/Materials/M_Hotel_WornRouteTape_v0",
+    "/Game/Hotel/Meshes/SM_FrontDesk_OldPhoneBody_v0",
+    "/Game/Hotel/Meshes/SM_FrontDesk_CurvedReceiver_v0",
+    "/Game/Hotel/Meshes/SM_FrontDesk_CoiledPhoneCord_v0",
+    "/Game/Hotel/Meshes/SM_FrontDesk_CurledLedgerPages_v0",
     "/Game/Hotel/Cinematics/LS_HotelSpine_Stills",
     "/Game/Hotel/Cinematics/MRQ_HotelEvidencePng",
 ]
@@ -49,14 +53,17 @@ REQUIRED_ACTOR_LABELS = [
     "PROP_FrontDesk_Phone_CradleLeftHook",
     "PROP_FrontDesk_Phone_CradleRightHook",
     "PROP_FrontDesk_Phone_HookSwitch_DepressedCue",
+    "PROP_FrontDesk_Phone_AuthoredCurvedBody",
     "PROP_FrontDesk_Phone_ReceiverCue",
     "PROP_FrontDesk_Phone_ReceiverLeftCap",
     "PROP_FrontDesk_Phone_ReceiverRightCap",
+    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette",
     "PROP_FrontDesk_Phone_CradleShadow",
     "PROP_FrontDesk_Phone_CoiledCordCue",
     "PROP_FrontDesk_Phone_CoiledCordLoopA",
     "PROP_FrontDesk_Phone_CoiledCordLoopB",
     "PROP_FrontDesk_Phone_CoiledCordLoopC",
+    "PROP_FrontDesk_Phone_AuthoredCoiledCord",
     "PROP_FrontDesk_Phone_RoundedDialPlate",
     "PROP_FrontDesk_Phone_DialFingerHoleTop",
     "PROP_FrontDesk_Phone_DialFingerHoleLeft",
@@ -76,6 +83,7 @@ REQUIRED_ACTOR_LABELS = [
     "PROP_Surveillance_Monitor_PlayerChecksHall",
     "PROP_ReportLog_ReturnAndRecordPoint",
     "PROP_FrontDesk_NightLog_OpenPage_Readable",
+    "PROP_FrontDesk_ReportLog_AuthoredCurledPages",
     "PROP_FrontDesk_ReportLog_ClipboardClip_Readable",
     "PROP_FrontDesk_ReportLog_IncidentHeaderCue",
     "PROP_FrontDesk_ReportLog_Room203EntryLine",
@@ -218,12 +226,15 @@ REQUIRED_ACTOR_TAGS = {
     "PROP_FrontDesk_Phone_CradleLeftHook": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
     "PROP_FrontDesk_Phone_CradleRightHook": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
     "PROP_FrontDesk_Phone_HookSwitch_DepressedCue": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_AuthoredCurvedBody": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk", "Hotel.ArtSource.AuthoredMesh"],
     "PROP_FrontDesk_Phone_ReceiverCue": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"],
     "PROP_FrontDesk_Phone_ReceiverLeftCap": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"],
     "PROP_FrontDesk_Phone_ReceiverRightCap": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability"],
+    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette": ["Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk", "Hotel.ArtSource.AuthoredMesh"],
     "PROP_FrontDesk_Phone_CoiledCordLoopA": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
     "PROP_FrontDesk_Phone_CoiledCordLoopB": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
     "PROP_FrontDesk_Phone_CoiledCordLoopC": ["Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual"],
+    "PROP_FrontDesk_Phone_AuthoredCoiledCord": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk", "Hotel.ArtSource.AuthoredMesh"],
     "PROP_FrontDesk_Phone_RoundedDialPlate": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk"],
     "PROP_FrontDesk_Phone_DialFingerHoleTop": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk"],
     "PROP_FrontDesk_Phone_DialFingerHoleLeft": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk"],
@@ -264,6 +275,7 @@ REQUIRED_ACTOR_TAGS = {
     "PROP_GuestHall_Room203_NoticeUnderline": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
     "PROP_GuestHall_Room203_ThresholdShadow": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
     "PROP_ReportLog_ReturnAndRecordPoint": ["Hotel.Interact.ReportLog"],
+    "PROP_FrontDesk_ReportLog_AuthoredCurledPages": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk", "Hotel.ArtSource.AuthoredMesh"],
     "PROP_FrontDesk_ReportLog_ClipboardClip_Readable": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "PROP_FrontDesk_ReportLog_IncidentHeaderCue": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
     "PROP_FrontDesk_ReportLog_Room203EntryLine": ["Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual"],
@@ -370,6 +382,7 @@ MOVABLE_STATIC_MESH_LABELS = [
     "PROP_FrontDesk_Phone_ReceiverRightCap",
     "PROP_FrontDesk_Phone_ReceiverLeftRoundCup",
     "PROP_FrontDesk_Phone_ReceiverRightRoundCup",
+    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
     "PROP_FrontDesk_ReportLog_FiledStampCue",
@@ -389,9 +402,12 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PROP_FrontDesk_Phone_CradleLeftHook",
     "PROP_FrontDesk_Phone_CradleRightHook",
     "PROP_FrontDesk_Phone_HookSwitch_DepressedCue",
+    "PROP_FrontDesk_Phone_AuthoredCurvedBody",
+    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette",
     "PROP_FrontDesk_Phone_CoiledCordLoopA",
     "PROP_FrontDesk_Phone_CoiledCordLoopB",
     "PROP_FrontDesk_Phone_CoiledCordLoopC",
+    "PROP_FrontDesk_Phone_AuthoredCoiledCord",
     "PROP_FrontDesk_Phone_RoundedDialPlate",
     "PROP_FrontDesk_Phone_DialFingerHoleTop",
     "PROP_FrontDesk_Phone_DialFingerHoleLeft",
@@ -431,6 +447,7 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PROP_FrontDesk_ReportLog_FiledStampCue",
     "PROP_FrontDesk_ReportLog_PenRest",
     "PROP_FrontDesk_ReportLog_PenTip",
+    "PROP_FrontDesk_ReportLog_AuthoredCurledPages",
     "PROP_FrontDesk_ReportLog_BinderRingTop",
     "PROP_FrontDesk_ReportLog_BinderRingBottom",
     "PROP_FrontDesk_ReportLog_RedInkSmear",
@@ -474,6 +491,13 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PATROL_Route_WallArrow_StairAirCue",
     "PATROL_Route_StairDoor_ColdLightLeak",
 ]
+
+REQUIRED_STATIC_MESH_REFERENCES = {
+    "PROP_FrontDesk_Phone_AuthoredCurvedBody": "/Game/Hotel/Meshes/SM_FrontDesk_OldPhoneBody_v0.SM_FrontDesk_OldPhoneBody_v0",
+    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette": "/Game/Hotel/Meshes/SM_FrontDesk_CurvedReceiver_v0.SM_FrontDesk_CurvedReceiver_v0",
+    "PROP_FrontDesk_Phone_AuthoredCoiledCord": "/Game/Hotel/Meshes/SM_FrontDesk_CoiledPhoneCord_v0.SM_FrontDesk_CoiledPhoneCord_v0",
+    "PROP_FrontDesk_ReportLog_AuthoredCurledPages": "/Game/Hotel/Meshes/SM_FrontDesk_CurledLedgerPages_v0.SM_FrontDesk_CurledLedgerPages_v0",
+}
 
 
 def fail(message: str) -> None:
@@ -531,9 +555,22 @@ for label in NON_INTERACTIVE_POLISH_LABELS:
     if interact_tags:
         fail(f"Polish actor {label} must not carry interaction tags: {', '.join(interact_tags)}")
 
+for label, expected_mesh_path in REQUIRED_STATIC_MESH_REFERENCES.items():
+    actor = actors_by_label.get(label)
+    component = actor.static_mesh_component if actor is not None and hasattr(actor, "static_mesh_component") else None
+    if component is None:
+        fail(f"Actor {label} must have a static mesh component")
+    mesh = component.get_editor_property("static_mesh")
+    if mesh is None:
+        fail(f"Actor {label} has no static mesh assigned")
+    actual_mesh_path = mesh.get_path_name()
+    if actual_mesh_path != expected_mesh_path:
+        fail(f"Actor {label} uses {actual_mesh_path}, expected {expected_mesh_path}")
+
 unreal.log(
     f"[HotelSpineVerify] Verified {len(REQUIRED_ASSETS)} assets, "
     f"{len(REQUIRED_ACTOR_LABELS)} required actors, {len(REQUIRED_ACTOR_TAGS)} tagged actors, "
     f"{len(REQUIRED_AUDIO_LABELS)} audio actors, {len(MOVABLE_STATIC_MESH_LABELS)} movable feedback meshes, "
-    f"and {len(NON_INTERACTIVE_POLISH_LABELS)} non-interactive polish actors."
+    f"{len(NON_INTERACTIVE_POLISH_LABELS)} non-interactive polish actors, "
+    f"and {len(REQUIRED_STATIC_MESH_REFERENCES)} authored mesh references."
 )
