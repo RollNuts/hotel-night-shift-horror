@@ -72,6 +72,8 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Textures/TX_Hotel_Room203WallpaperPanel_v0",
     "/Game/Hotel/Cinematics/LS_HotelSpine_Stills",
     "/Game/Hotel/Cinematics/MRQ_HotelEvidencePng",
+    "/Game/Hotel/Cinematics/LS_ReturnRoute_TrailerBeat_15s",
+    "/Game/Hotel/Cinematics/MRQ_ReturnRouteTrailerProofPng",
 ]
 
 REQUIRED_ACTOR_LABELS = [
