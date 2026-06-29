@@ -11,6 +11,7 @@ import math
 import pathlib
 import struct
 import wave
+import zlib
 
 import unreal
 
@@ -18,8 +19,10 @@ import unreal
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 SOURCE_AUDIO_DIR = PROJECT_ROOT / "SourceAssets" / "AudioGenerated"
 SOURCE_MESH_DIR = PROJECT_ROOT / "SourceAssets" / "GeometryGenerated"
+SOURCE_TEXTURE_DIR = PROJECT_ROOT / "SourceAssets" / "TextureGenerated"
 MAP_PATH = "/Game/Hotel/Maps/L_HotelNightShift_Slice"
 UPDATED_SOURCE_MESHES: set[str] = set()
+UPDATED_SOURCE_TEXTURES: set[str] = set()
 
 
 def log(message: str) -> None:
@@ -33,6 +36,7 @@ def ensure_dirs() -> None:
         "/Game/Hotel/Materials",
         "/Game/Hotel/Meshes",
         "/Game/Hotel/Audio",
+        "/Game/Hotel/Textures",
         "/Game/Hotel/Blueprints",
         "/Game/Hotel/Data",
         "/Game/Hotel/UI",
@@ -41,6 +45,7 @@ def ensure_dirs() -> None:
         unreal.EditorAssetLibrary.make_directory(path)
     SOURCE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     SOURCE_MESH_DIR.mkdir(parents=True, exist_ok=True)
+    SOURCE_TEXTURE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def write_wav(path: pathlib.Path, seconds: float, sample_func, sample_rate: int = 44100) -> None:
@@ -53,6 +58,76 @@ def write_wav(path: pathlib.Path, seconds: float, sample_func, sample_rate: int 
             t = index / sample_rate
             value = max(-1.0, min(1.0, sample_func(t)))
             wav.writeframesraw(struct.pack("<h", int(value * 32767)))
+
+
+def write_png_rgb(path: pathlib.Path, width: int, height: int, pixels: list[tuple[int, int, int]]) -> None:
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    raw = bytearray()
+    for row in range(height):
+        raw.append(0)
+        start = row * width
+        for red, green, blue in pixels[start : start + width]:
+            raw.extend((red, green, blue))
+
+    payload = b"".join(
+        [
+            b"\x89PNG\r\n\x1a\n",
+            chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)),
+            chunk(b"IDAT", zlib.compress(bytes(raw), 9)),
+            chunk(b"IEND", b""),
+        ]
+    )
+    path.write_bytes(payload)
+
+
+def generate_source_textures() -> dict[str, pathlib.Path]:
+    UPDATED_SOURCE_TEXTURES.clear()
+
+    def texture_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        noise = (
+            math.sin(x * 0.113 + y * 0.071)
+            + math.sin(x * 0.037 + y * 0.191 + 1.7)
+            + math.sin(x * 0.251 - y * 0.043 + 4.1)
+        ) / 3.0
+        stripe = 0.5 + 0.5 * math.sin((u * 8.0 + 0.035 * math.sin(v * 18.0)) * 2.0 * math.pi)
+        seam = 0.0
+        for seam_u in (0.18, 0.39, 0.61, 0.83):
+            seam += max(0.0, 1.0 - abs(u - seam_u) / 0.006)
+        stain_a = max(0.0, 1.0 - (((u - 0.72) / 0.21) ** 2 + ((v - 0.34) / 0.27) ** 2))
+        stain_b = max(0.0, 1.0 - (((u - 0.30) / 0.17) ** 2 + ((v - 0.72) / 0.16) ** 2))
+        drip = max(0.0, 1.0 - abs(u - (0.58 + 0.018 * math.sin(v * 16.0))) / 0.008) * max(0.0, v - 0.16)
+        scratch = 0.0
+        for offset in (0.12, 0.28, 0.46, 0.67, 0.78):
+            scratch += max(0.0, 1.0 - abs((u + 0.10 * v) - offset) / 0.003) * (0.25 + 0.75 * max(0.0, math.sin(v * 21.0 + offset * 8.0)))
+
+        red = 103 + 18 * stripe + 12 * noise
+        green = 91 + 14 * stripe + 10 * noise
+        blue = 69 + 10 * stripe + 8 * noise
+        darken = 32 * stain_a + 22 * stain_b + 24 * drip + 18 * seam
+        brighten = 18 * scratch
+        return (
+            max(0, min(255, int(red - darken + brighten))),
+            max(0, min(255, int(green - darken * 0.88 + brighten * 0.78))),
+            max(0, min(255, int(blue - darken * 0.70 + brighten * 0.45))),
+        )
+
+    textures = {
+        "TX_Hotel_Room203WallpaperPanel_v0": (512, 512),
+    }
+    output: dict[str, pathlib.Path] = {}
+    for name, (width, height) in textures.items():
+        path = SOURCE_TEXTURE_DIR / f"{name}.png"
+        pixels = [texture_pixel(x, y, width, height) for y in range(height) for x in range(width)]
+        previous = path.read_bytes() if path.exists() else None
+        write_png_rgb(path, width, height, pixels)
+        if previous != path.read_bytes():
+            UPDATED_SOURCE_TEXTURES.add(name)
+        output[name] = path
+    return output
 
 
 def generate_source_audio() -> dict[str, pathlib.Path]:
@@ -116,6 +191,23 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
             if 0.0 <= dt <= 0.16:
                 total += math.exp(-dt * 28.0) * (math.sin(2 * math.pi * 135 * dt) + 0.35 * math.sin(2 * math.pi * 260 * dt))
         return 0.55 * total
+
+    def room203_aftershock_rustle(t: float) -> float:
+        paper = 0.0
+        for start, pitch in ((0.04, 1280), (0.16, 1730), (0.31, 960), (0.58, 1410)):
+            dt = t - start
+            if 0.0 <= dt <= 0.20:
+                paper += math.exp(-dt * 18.0) * (
+                    0.55 * math.sin(2 * math.pi * pitch * dt)
+                    + 0.25 * math.sin(2 * math.pi * (pitch * 1.73) * dt)
+                )
+        chain_tail = 0.0
+        for start, pitch in ((0.10, 214), (0.38, 176), (0.72, 241)):
+            dt = t - start
+            if 0.0 <= dt <= 0.08:
+                chain_tail += math.exp(-dt * 42.0) * math.sin(2 * math.pi * pitch * dt)
+        hall_body = 0.05 * math.sin(2 * math.pi * 58 * t) * math.exp(-t * 1.4)
+        return 0.18 * paper + 0.34 * chain_tail + hall_body
 
     def report_log_filed(t: float) -> float:
         stamp = 0.0
@@ -207,6 +299,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "AMB_ElevatorShaftGroan_v0": (6.0, elevator_shaft_groan),
         "AMB_StairwellAir_v0": (6.0, stairwell_air),
         "SFX_DoorKnock203_v0": (1.4, door_knock),
+        "SFX_Room203AftershockRustle_v0": (1.1, room203_aftershock_rustle),
         "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
         "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
         "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
@@ -635,6 +728,133 @@ def create_guesthall_peeling_wallpaper_mesh() -> tuple[list[tuple[float, float, 
     return vertices, faces
 
 
+def create_guesthall_room203_aftershock_paper_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_strip(
+        center_x: float,
+        top_z: float,
+        width: float,
+        height: float,
+        curl: float,
+        phase: float,
+        columns: int = 4,
+        rows: int = 8,
+    ) -> None:
+        base = len(vertices)
+        for row in range(rows + 1):
+            v = row / rows
+            taper = 1.0 - 0.32 * v
+            for column in range(columns + 1):
+                u = column / columns
+                edge = abs(u - 0.5) * 2.0
+                ragged = math.sin(row * 1.71 + column * 0.83 + phase) * (0.8 + 2.8 * edge)
+                x = center_x + (u - 0.5) * width * taper + ragged
+                z = top_z - height * v + math.sin(u * math.pi + phase) * 2.2 * edge
+                y = -(curl * (v ** 1.65) + 2.8 * edge * v + math.sin(v * math.pi * 2.0 + phase) * 1.4)
+                vertices.append((x, y, z))
+
+        stride = columns + 1
+        for row in range(rows):
+            for column in range(columns):
+                a = base + row * stride + column
+                b = a + 1
+                c = a + stride + 1
+                d = a + stride
+                faces.append((a, b, c, d))
+                faces.append((d, c, b, a))
+
+    append_strip(-50.0, 82.0, 22.0, 132.0, 31.0, 0.1, columns=4, rows=9)
+    append_strip(-23.0, 75.0, 17.0, 96.0, 24.0, 0.9, columns=3, rows=8)
+    append_strip(5.0, 86.0, 20.0, 116.0, 28.0, 1.6, columns=4, rows=9)
+    append_strip(31.0, 70.0, 16.0, 84.0, 22.0, 2.4, columns=3, rows=7)
+    append_strip(52.0, 54.0, 13.0, 64.0, 16.0, 3.2, columns=3, rows=6)
+    return vertices, faces
+
+
+def create_guesthall_room203_aftershock_shadow_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_backing_island(
+        center_x: float,
+        center_z: float,
+        width: float,
+        height: float,
+        phase: float,
+        rows: int,
+        columns: int,
+    ) -> None:
+        base = len(vertices)
+        for row in range(rows + 1):
+            v = row / rows
+            pinch = 1.0 - 0.22 * math.sin(v * math.pi + phase)
+            left_bias = math.sin(row * 1.41 + phase) * 4.0
+            for column in range(columns + 1):
+                u = column / columns
+                edge_weight = abs(u - 0.5) * 2.0
+                ragged = math.sin(row * 1.29 + column * 2.11 + phase) * (1.0 + edge_weight * 3.2)
+                x = center_x + (u - 0.5) * width * pinch + left_bias + ragged
+                z = center_z + (0.5 - v) * height + math.cos(column * 1.37 + row * 0.67 + phase) * (1.4 + edge_weight * 2.0)
+                y = -1.2 - edge_weight * 0.9 - 0.28 * math.sin(row + column + phase)
+                vertices.append((x, y, z))
+
+        stride = columns + 1
+        for row in range(rows):
+            for column in range(columns):
+                a = base + row * stride + column
+                b = a + 1
+                c = a + stride + 1
+                d = a + stride
+                faces.append((a, b, c, d))
+                faces.append((d, c, b, a))
+
+    append_backing_island(-38.0, 22.0, 46.0, 128.0, 0.2, rows=7, columns=3)
+    append_backing_island(5.0, 2.0, 38.0, 146.0, 1.1, rows=8, columns=3)
+    append_backing_island(39.0, -12.0, 30.0, 104.0, 2.0, rows=6, columns=3)
+    append_backing_island(12.0, 66.0, 74.0, 34.0, 3.0, rows=3, columns=5)
+    return vertices, faces
+
+
+def create_guesthall_room203_aftershock_raw_edge_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_ragged_ribbon(points: list[tuple[float, float]], thickness: float, phase: float) -> None:
+        base = len(vertices)
+        for index, (x, z) in enumerate(points):
+            if index == 0:
+                nx, nz = points[1][0] - x, points[1][1] - z
+            elif index == len(points) - 1:
+                nx, nz = x - points[index - 1][0], z - points[index - 1][1]
+            else:
+                nx, nz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+            length = math.sqrt(nx * nx + nz * nz) or 1.0
+            px, pz = -nz / length, nx / length
+            wobble = math.sin(index * 1.73 + phase) * 1.4
+            half = thickness * (0.58 + 0.20 * math.sin(index * 0.91 + phase))
+            y_lift = -0.35 - 0.35 * math.cos(index * 0.77 + phase)
+            vertices.append((x + px * (half + wobble), y_lift - 0.7, z + pz * (half + wobble)))
+            vertices.append((x - px * (half - wobble * 0.4), y_lift, z - pz * (half - wobble * 0.4)))
+
+        for index in range(len(points) - 1):
+            a = base + index * 2
+            b = a + 1
+            c = a + 3
+            d = a + 2
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    append_ragged_ribbon([(-73, 77), (-53, 87), (-20, 83), (16, 92), (56, 78)], 3.2, 0.2)
+    append_ragged_ribbon([(-76, 71), (-65, 38), (-70, 4), (-56, -42), (-63, -82)], 3.6, 0.9)
+    append_ragged_ribbon([(60, 66), (46, 35), (54, 6), (41, -34), (45, -76)], 3.3, 1.7)
+    append_ragged_ribbon([(-42, -90), (-10, -80), (18, -89), (47, -73)], 3.0, 2.5)
+    append_ragged_ribbon([(-17, 72), (-8, 34), (-20, -7), (-6, -48), (-16, -86)], 1.9, 3.3)
+    append_ragged_ribbon([(18, 67), (8, 30), (24, -5), (13, -44), (24, -76)], 1.7, 4.0)
+    return vertices, faces
+
+
 def create_guesthall_floor_scuff_cluster_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, ...]] = []
@@ -673,6 +893,9 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_Room203_TornNotice_v0": create_room203_torn_notice_mesh,
         "SM_Room203_HandleLever_v0": create_room203_handle_lever_mesh,
         "SM_GuestHall_PeelingWallpaperPatch_v0": create_guesthall_peeling_wallpaper_mesh,
+        "SM_GuestHall_Room203AftershockPaper_v0": create_guesthall_room203_aftershock_paper_mesh,
+        "SM_GuestHall_Room203AftershockTearShadow_v0": create_guesthall_room203_aftershock_shadow_mesh,
+        "SM_GuestHall_Room203AftershockRawEdge_v0": create_guesthall_room203_aftershock_raw_edge_mesh,
         "SM_GuestHall_FloorScuffCluster_v0": create_guesthall_floor_scuff_cluster_mesh,
         "SM_GuestHall_CeilingWaterStain_v0": create_guesthall_ceiling_water_stain_mesh,
     }
@@ -717,6 +940,36 @@ def import_static_meshes(source_paths: dict[str, pathlib.Path]) -> dict[str, unr
     return meshes
 
 
+def import_textures(source_paths: dict[str, pathlib.Path]) -> dict[str, unreal.Texture2D]:
+    textures: dict[str, unreal.Texture2D] = {}
+    tasks = []
+    for name, path in source_paths.items():
+        asset_path = f"/Game/Hotel/Textures/{name}"
+        if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
+            asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+            if asset and name not in UPDATED_SOURCE_TEXTURES:
+                textures[name] = asset
+                continue
+
+        task = unreal.AssetImportTask()
+        task.set_editor_property("filename", str(path))
+        task.set_editor_property("destination_path", "/Game/Hotel/Textures")
+        task.set_editor_property("automated", True)
+        task.set_editor_property("replace_existing", True)
+        task.set_editor_property("save", True)
+        tasks.append(task)
+
+    unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks(tasks)
+
+    for name in source_paths:
+        if name in textures:
+            continue
+        asset = unreal.EditorAssetLibrary.load_asset(f"/Game/Hotel/Textures/{name}")
+        if asset:
+            textures[name] = asset
+    return textures
+
+
 def ensure_material(
     name: str,
     color: unreal.LinearColor,
@@ -724,16 +977,39 @@ def ensure_material(
     emissive: unreal.LinearColor | None = None,
     two_sided: bool = False,
 ) -> unreal.MaterialInterface:
+    def enable_runtime_usage(material: unreal.MaterialInterface) -> None:
+        usage_names = (
+            "MATUSAGE_STATIC_MESH",
+            "MATUSAGE_StaticMesh",
+            "MATUSAGE_NANITE",
+            "MATUSAGE_Nanite",
+        )
+        for usage_name in usage_names:
+            usage = getattr(unreal.MaterialUsage, usage_name, None)
+            if usage is None:
+                continue
+            try:
+                unreal.MaterialEditingLibrary.set_base_material_usage(material, usage, True)
+            except Exception:
+                try:
+                    material.set_material_usage(usage)
+                except Exception:
+                    pass
+
     path = f"/Game/Hotel/Materials/{name}"
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         material = unreal.EditorAssetLibrary.load_asset(path)
         if two_sided:
             try:
                 material.set_editor_property("two_sided", True)
-                unreal.MaterialEditingLibrary.recompile_material(material)
-                unreal.EditorAssetLibrary.save_asset(path)
             except Exception:
                 pass
+        enable_runtime_usage(material)
+        try:
+            unreal.MaterialEditingLibrary.recompile_material(material)
+            unreal.EditorAssetLibrary.save_asset(path)
+        except Exception:
+            pass
         return material
 
     material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
@@ -768,6 +1044,79 @@ def ensure_material(
         glow.set_editor_property("constant", emissive)
         unreal.MaterialEditingLibrary.connect_material_property(glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
+    enable_runtime_usage(material)
+    unreal.MaterialEditingLibrary.recompile_material(material)
+    unreal.EditorAssetLibrary.save_asset(path)
+    return material
+
+
+def ensure_textured_material(
+    name: str,
+    texture: unreal.Texture2D,
+    roughness: float,
+    two_sided: bool = False,
+) -> unreal.MaterialInterface:
+    def enable_runtime_usage(material: unreal.MaterialInterface) -> None:
+        usage_names = (
+            "MATUSAGE_STATIC_MESH",
+            "MATUSAGE_StaticMesh",
+            "MATUSAGE_NANITE",
+            "MATUSAGE_Nanite",
+        )
+        for usage_name in usage_names:
+            usage = getattr(unreal.MaterialUsage, usage_name, None)
+            if usage is None:
+                continue
+            try:
+                unreal.MaterialEditingLibrary.set_base_material_usage(material, usage, True)
+            except Exception:
+                try:
+                    material.set_material_usage(usage)
+                except Exception:
+                    pass
+
+    path = f"/Game/Hotel/Materials/{name}"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        material = unreal.EditorAssetLibrary.load_asset(path)
+        if two_sided:
+            try:
+                material.set_editor_property("two_sided", True)
+            except Exception:
+                pass
+        enable_runtime_usage(material)
+        try:
+            unreal.MaterialEditingLibrary.recompile_material(material)
+            unreal.EditorAssetLibrary.save_asset(path)
+        except Exception:
+            pass
+        return material
+
+    material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        name,
+        "/Game/Hotel/Materials",
+        unreal.Material,
+        unreal.MaterialFactoryNew(),
+    )
+
+    if two_sided:
+        try:
+            material.set_editor_property("two_sided", True)
+        except Exception:
+            pass
+
+    sample = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionTextureSample, -420, -120
+    )
+    sample.set_editor_property("texture", texture)
+    unreal.MaterialEditingLibrary.connect_material_property(sample, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    rough = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionConstant, -420, 90
+    )
+    rough.set_editor_property("r", roughness)
+    unreal.MaterialEditingLibrary.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
+
+    enable_runtime_usage(material)
     unreal.MaterialEditingLibrary.recompile_material(material)
     unreal.EditorAssetLibrary.save_asset(path)
     return material
@@ -1057,12 +1406,20 @@ def add_authored_mesh(
     return actor
 
 
-def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.StaticMesh]) -> None:
+def build_level(
+    sounds: dict[str, unreal.SoundWave],
+    meshes: dict[str, unreal.StaticMesh],
+    textures: dict[str, unreal.Texture2D],
+) -> None:
     prepare_level()
 
+    room203_wallpaper_texture = textures.get("TX_Hotel_Room203WallpaperPanel_v0")
     materials = {
         "floor": ensure_material("M_Hotel_WornFloor_v0", unreal.LinearColor(0.15, 0.13, 0.11, 1.0), 0.92),
         "wall": ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
+        "guesthall_wallpaper": ensure_textured_material("M_Hotel_Room203WallpaperPanel_v0", room203_wallpaper_texture, 0.95)
+        if room203_wallpaper_texture
+        else ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
         "trim": ensure_material("M_Hotel_DarkTrim_v0", unreal.LinearColor(0.09, 0.08, 0.075, 1.0), 0.74),
         "desk": ensure_material("M_Hotel_FrontDeskWood_v0", unreal.LinearColor(0.19, 0.11, 0.065, 1.0), 0.68),
         "black": ensure_material("M_Hotel_BlackPlastic_v0", unreal.LinearColor(0.01, 0.012, 0.014, 1.0), 0.55),
@@ -1074,6 +1431,10 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
         "route_mark": ensure_material("M_Hotel_WornRouteTape_v0", unreal.LinearColor(0.46, 0.42, 0.32, 1.0), 0.88),
         "wall_peel": ensure_material("M_Hotel_PeeledWallpaperPaper_v0", unreal.LinearColor(0.72, 0.63, 0.46, 1.0), 0.93, two_sided=True),
         "wall_damp": ensure_material("M_Hotel_WallDampStain_v0", unreal.LinearColor(0.052, 0.050, 0.044, 1.0), 0.97, two_sided=True),
+        "paper_tear_shadow": ensure_material("M_Hotel_PaperTearShadowBack_v0", unreal.LinearColor(0.13, 0.105, 0.078, 1.0), 0.96, two_sided=True),
+        "paper_backing": ensure_material("M_Hotel_ExposedWallpaperBacking_v0", unreal.LinearColor(0.33, 0.265, 0.18, 1.0), 0.95, two_sided=True),
+        "paper_edge": ensure_material("M_Hotel_TornPaperEdgeLight_v0", unreal.LinearColor(0.86, 0.74, 0.52, 1.0), 0.9, two_sided=True),
+        "paper_stripe": ensure_material("M_Hotel_FadedWallpaperStripe_v0", unreal.LinearColor(0.31, 0.285, 0.225, 1.0), 0.94, two_sided=True),
         "floor_scuff": ensure_material("M_Hotel_FloorScuffDark_v0", unreal.LinearColor(0.040, 0.035, 0.031, 1.0), 0.95, two_sided=True),
         "ceiling_stain": ensure_material("M_Hotel_CeilingWaterStain_v0", unreal.LinearColor(0.105, 0.089, 0.063, 1.0), 0.98, two_sided=True),
         "paint_chip": ensure_material("M_Hotel_DoorPaintChipLight_v0", unreal.LinearColor(0.55, 0.48, 0.35, 1.0), 0.9),
@@ -1321,7 +1682,7 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     # Guest hallway response line.
     add_cube("AREA_GuestHall_Floor_OneDoorSlice", (3250, 0, -10), (2500, 560, 20), materials["floor"])
     add_cube("AREA_GuestHall_LeftWall_CameraMismatchSide", (3250, -290, 140), (2500, 24, 280), materials["wall"])
-    add_cube("AREA_GuestHall_RightWall_DoorDecisionSide", (3250, 290, 140), (2500, 24, 280), materials["wall"])
+    add_cube("AREA_GuestHall_RightWall_DoorDecisionSide", (3250, 290, 140), (2500, 24, 280), materials["guesthall_wallpaper"])
     add_cube("AREA_GuestHall_Ceiling_LowPressure", (3250, 0, 286), (2500, 560, 20), materials["trim"])
     add_cube("PROP_GuestHall_Camera_MonitorMismatchAnchor", (2600, -282, 220), (36, 20, 28), materials["black"])
     guesthall_decay_tags = (
@@ -1334,6 +1695,10 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
         "Hotel.ArtSource.ProjectAuthoredMaterial",
     )
     guesthall_authored_decay_tags = guesthall_decay_tags + ("Hotel.ArtSource.AuthoredMesh",)
+    room203_wallpaper_flutter_tags = guesthall_authored_decay_tags + (
+        "Hotel.Feedback.Room203WallpaperFlutter",
+        "Hotel.Capture.Room203Aftershock",
+    )
     add_cube("PROP_GuestHall_RightWall_Baseboard_RunTo203_A", (3260, 274, 25), (940, 12, 28), materials["trim"], guesthall_decay_tags, no_collision=True)
     add_cube("PROP_GuestHall_RightWall_Baseboard_RunTo203_B", (4300, 274, 25), (330, 12, 28), materials["trim"], guesthall_decay_tags, no_collision=True)
     add_cube("PROP_GuestHall_LeftWall_Baseboard_CameraSide", (3320, -274, 24), (1460, 12, 26), materials["trim"], guesthall_decay_tags, no_collision=True)
@@ -1342,6 +1707,12 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     add_cube("PROP_GuestHall_Room203_FramePaintChip_RightMid", (4055, 255, 142), (9, 5, 53), materials["paint_chip"], guesthall_decay_tags, no_collision=True)
     add_cube("PROP_GuestHall_Room203_ThresholdDustCollect", (3920, 251, 8), (250, 20, 5), materials["floor_scuff"], guesthall_decay_tags, no_collision=True)
     add_sphere("PROP_GuestHall_LeftWall_DampPatch_CameraSide", (2980, -273, 172), (170, 7, 92), materials["wall_damp"], guesthall_decay_tags, no_collision=True)
+    stripe_tags = guesthall_decay_tags + ("Hotel.Capture.Room203Aftershock",)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_A", (3558, 278, 161), (4, 3, 214), materials["paper_stripe"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_B", (3666, 278, 156), (3, 3, 226), materials["paper_stripe"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_C", (3788, 278, 163), (4, 3, 208), materials["paper_stripe"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_D", (3912, 278, 160), (3, 3, 216), materials["paper_stripe"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperWaterline_Room203", (3760, 279, 226), (410, 3, 4), materials["wall_damp"], stripe_tags, no_collision=True)
     if "SM_GuestHall_PeelingWallpaperPatch_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_RightWall_AuthoredDampUnderPeel_Room203Approach",
@@ -1358,7 +1729,8 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
             (3405, 276, 142),
             (1.45, 1.0, 1.15),
             materials["wall_peel"],
-            guesthall_authored_decay_tags,
+            room203_wallpaper_flutter_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
         add_authored_mesh(
@@ -1367,7 +1739,59 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
             (3635, 276, 166),
             (1.2, 1.0, 1.1),
             materials["wall_peel"],
-            guesthall_authored_decay_tags,
+            room203_wallpaper_flutter_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_GuestHall_Room203AftershockTearShadow_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_Room203AftershockTearShadow",
+            meshes["SM_GuestHall_Room203AftershockTearShadow_v0"],
+            (3702, 274, 165),
+            (1.02, 1.0, 1.03),
+            materials["paper_backing"],
+            guesthall_authored_decay_tags + ("Hotel.Capture.Room203Aftershock",),
+            no_collision=True,
+        )
+    if "SM_GuestHall_Room203AftershockPaper_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_Room203AftershockLoosePaper",
+            meshes["SM_GuestHall_Room203AftershockPaper_v0"],
+            (3705, 277, 166),
+            (1.0, 1.0, 1.0),
+            materials["wall_peel"],
+            room203_wallpaper_flutter_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_Room203AftershockHighCurl",
+            meshes["SM_GuestHall_Room203AftershockPaper_v0"],
+            (3568, 277, 192),
+            (0.72, 1.0, 0.68),
+            materials["wall_peel"],
+            room203_wallpaper_flutter_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_Room203AftershockLowCurl",
+            meshes["SM_GuestHall_Room203AftershockPaper_v0"],
+            (3810, 278, 124),
+            (0.58, 1.0, 0.54),
+            materials["wall_peel"],
+            room203_wallpaper_flutter_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_GuestHall_Room203AftershockRawEdge_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_RightWall_Room203AftershockRawEdgeThreads",
+            meshes["SM_GuestHall_Room203AftershockRawEdge_v0"],
+            (3705, 279, 166),
+            (1.0, 1.0, 1.0),
+            materials["paper_edge"],
+            guesthall_authored_decay_tags + ("Hotel.Capture.Room203Aftershock",),
             no_collision=True,
         )
     if "SM_GuestHall_FloorScuffCluster_v0" in meshes:
@@ -1521,7 +1945,8 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     add_light("LIGHT_ReturnRoute_ColdPulseAfterRefusal", unreal.PointLight, (2860, -90, 188), (0, 0, 0), 620.0, unreal.Color(120, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"), attenuation_radius=680.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
-    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 3100.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=980.0)
+    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 5200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=1050.0)
+    add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 2300.0, unreal.Color(255, 210, 150, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=680.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
     add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 1350.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=920.0)
     add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
@@ -1547,7 +1972,7 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
     add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
-    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2820, -210, 168), (2, 25, 0), 70.0, ("Hotel.Capture.Room203Surface",))
+    add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (2940, -230, 168), (2, 25, 0), 64.0, ("Hotel.Capture.Room203Surface",))
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2475, -220, 168), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)
@@ -1581,6 +2006,8 @@ def build_level(sounds: dict[str, unreal.SoundWave], meshes: dict[str, unreal.St
         add_audio("SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0", sounds["SFX_PhoneLineStatic_v0"], (-438, -552, 154), False, ("Hotel.Audio.PhoneLineStatic",))
     if "SFX_DoorKnock203_v0" in sounds:
         add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False, ("Hotel.Audio.Room203Knock",))
+    if "SFX_Room203AftershockRustle_v0" in sounds:
+        add_audio("SFX_Room203AftershockRustle_ManualTrigger_v0", sounds["SFX_Room203AftershockRustle_v0"], (3725, 276, 168), False, ("Hotel.Audio.Room203Aftershock",))
     if "SFX_ReportLogFiled_v0" in sounds:
         add_audio("SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0", sounds["SFX_ReportLogFiled_v0"], (-242, -500, 152), False, ("Hotel.Audio.ReportLogFiled",))
 
@@ -1594,12 +2021,16 @@ def main() -> None:
     source_audio = generate_source_audio()
     log("Generating project-authored procedural OBJ meshes.")
     source_meshes = generate_source_meshes()
+    log("Generating project-authored procedural texture sources.")
+    source_textures = generate_source_textures()
     log("Importing audio into /Game/Hotel/Audio.")
     sounds = import_audio(source_audio)
     log("Importing authored meshes into /Game/Hotel/Meshes.")
     meshes = import_static_meshes(source_meshes)
+    log("Importing authored textures into /Game/Hotel/Textures.")
+    textures = import_textures(source_textures)
     log("Building production-intent hotel spine level.")
-    build_level(sounds, meshes)
+    build_level(sounds, meshes, textures)
     log("Done.")
 
 
