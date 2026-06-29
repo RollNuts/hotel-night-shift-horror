@@ -2,6 +2,7 @@
 
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/InputSettings.h"
 #include "InputCoreTypes.h"
 #include "Misc/AutomationTest.h"
@@ -18,6 +19,7 @@ const FName Room203DoorTag(TEXT("Hotel.Interact.Room203Door"));
 const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
+const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -109,6 +111,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* Room203DoorFeedback = FindActorByTag(World, Room203DoorRefusalFeedbackTag);
 		AActor* ReportLog = FindActorByTag(World, ReportLogTag);
 		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
+		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -116,7 +119,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Room 203 door refusal feedback actor exists"), Room203DoorFeedback);
 		TestNotNull(TEXT("Report log interaction actor exists"), ReportLog);
 		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback)
+		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
+		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound)
 		{
 			return true;
 		}
@@ -138,6 +142,31 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Checking monitor succeeds"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Monitor advances to MonitorChecked"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::MonitorChecked);
 		TestFalse(TEXT("Phone line disconnects after monitor check"), Pawn->AutomationIsPhoneLineConnected());
+		TestFalse(TEXT("Patrol listen is not already resolved"), Pawn->AutomationIsPatrolListenResolved());
+
+		TestFalse(TEXT("Room 203 refusal is blocked before listening at the patrol line"), Pawn->AutomationInteractWithActor(Room203Door));
+		TestEqual(TEXT("Early Room 203 attempt stays in MonitorChecked"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::MonitorChecked);
+
+		Pawn->SetActorLocation(FVector(930.0f, 0.0f, 92.0f));
+		Pawn->GetCharacterMovement()->Velocity = FVector(80.0f, 0.0f, 0.0f);
+		Pawn->AutomationAdvancePatrolListen(1.30f);
+		TestTrue(TEXT("Patrol listen anomaly starts even while moving through the taped line"), Pawn->AutomationIsPatrolListenActive());
+		TestFalse(TEXT("Moving through the taped line does not resolve patrol listen"), Pawn->AutomationIsPatrolListenResolved());
+
+		Pawn->SetActorLocation(FVector(1250.0f, 0.0f, 92.0f));
+		Pawn->GetCharacterMovement()->Velocity = FVector::ZeroVector;
+		Pawn->AutomationAdvancePatrolListen(1.30f);
+		TestTrue(TEXT("Patrol listen anomaly remains active after leaving the taped line"), Pawn->AutomationIsPatrolListenActive());
+		TestFalse(TEXT("Leaving the taped line prevents patrol listen resolution"), Pawn->AutomationIsPatrolListenResolved());
+
+		Pawn->SetActorLocation(FVector(930.0f, 0.0f, 92.0f));
+		Pawn->GetCharacterMovement()->Velocity = FVector::ZeroVector;
+		Pawn->AutomationAdvancePatrolListen(0.05f);
+		TestTrue(TEXT("Patrol listen anomaly continues at the taped line"), Pawn->AutomationIsPatrolListenActive());
+		TestFalse(TEXT("Patrol listen does not resolve instantly"), Pawn->AutomationIsPatrolListenResolved());
+		Pawn->AutomationAdvancePatrolListen(1.30f);
+		TestTrue(TEXT("Holding still at the taped line resolves patrol listen"), Pawn->AutomationIsPatrolListenResolved());
+		TestFalse(TEXT("Patrol listen anomaly stops after resolution"), Pawn->AutomationIsPatrolListenActive());
 
 		const FVector DoorFeedbackRestLocation = Pawn->AutomationGetDoorRefusalFeedbackLocation();
 		TestTrue(TEXT("Refusing Room 203 succeeds"), Pawn->AutomationInteractWithActor(Room203Door));

@@ -14,6 +14,7 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Audio/SFX_PhoneLineStatic_v0",
     "/Game/Hotel/Audio/SFX_DoorKnock203_v0",
     "/Game/Hotel/Audio/SFX_ReportLogFiled_v0",
+    "/Game/Hotel/Audio/SFX_PatrolListenDrop_v0",
     "/Game/Hotel/Audio/AMB_LobbyFluorescentHum_v0",
     "/Game/Hotel/Audio/AMB_GuestHallDrone_v0",
     "/Game/Hotel/Audio/AMB_ElevatorShaftGroan_v0",
@@ -117,6 +118,7 @@ REQUIRED_ACTOR_LABELS = [
     "AMB_Stairwell_Air_Source_v0",
     "AMB_PatrolRoute_ElevatorGroanBleed_Source_v0",
     "AMB_PatrolRoute_StairAirBleed_Source_v0",
+    "SFX_PatrolListen_StopLine_ManualTrigger_v0",
     "CAPTURE_FrontDesk_FirstSteamShotCandidate",
     "CAPTURE_ReportLog_ReadabilityCandidate",
     "CAPTURE_PhoneResponse_LiftReceiverCandidate",
@@ -206,7 +208,7 @@ REQUIRED_ACTOR_TAGS = {
     "LIGHT_Transition_ElevatorCallPanelDread": ["Hotel.Capture.TransitionFear"],
     "LIGHT_Transition_StairExitCold": ["Hotel.Capture.TransitionFear"],
     "LIGHT_Transition_CaptureEvidenceSoftFill": ["Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"],
-    "LIGHT_PatrolRoute_DecisionCueFloorFill": ["Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision"],
+    "LIGHT_PatrolRoute_DecisionCueFloorFill": ["Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision", "Hotel.Feedback.PatrolListenLight"],
     "SFX_PhoneRing_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhoneRing"],
     "SFX_PhonePickup_FrontDesk_ManualTrigger_v0": ["Hotel.Audio.PhonePickup"],
     "SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0": ["Hotel.Audio.PhoneLineStatic"],
@@ -215,6 +217,7 @@ REQUIRED_ACTOR_TAGS = {
     "AMB_Stairwell_Air_Source_v0": ["Hotel.Audio.StairwellAir"],
     "AMB_PatrolRoute_ElevatorGroanBleed_Source_v0": ["Hotel.Audio.ElevatorShaftGroan", "Hotel.Audio.PatrolDecision"],
     "AMB_PatrolRoute_StairAirBleed_Source_v0": ["Hotel.Audio.StairwellAir", "Hotel.Audio.PatrolDecision"],
+    "SFX_PatrolListen_StopLine_ManualTrigger_v0": ["Hotel.Audio.PatrolListen"],
 }
 
 REQUIRED_AUDIO_LABELS = [
@@ -229,6 +232,7 @@ REQUIRED_AUDIO_LABELS = [
     "AMB_Stairwell_Air_Source_v0",
     "AMB_PatrolRoute_ElevatorGroanBleed_Source_v0",
     "AMB_PatrolRoute_StairAirBleed_Source_v0",
+    "SFX_PatrolListen_StopLine_ManualTrigger_v0",
 ]
 
 MOVABLE_STATIC_MESH_LABELS = [

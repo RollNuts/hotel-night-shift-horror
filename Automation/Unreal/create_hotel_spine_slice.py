@@ -123,6 +123,21 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         paper = 0.08 * math.sin(2 * math.pi * 240 * t) if 0.10 <= t <= 0.34 else 0.0
         return 0.48 * stamp + scratch + paper
 
+    def patrol_listen_drop(t: float) -> float:
+        floor_bloom = 0.18 * math.sin(2 * math.pi * 54 * t) * math.exp(-t * 1.2)
+        elevator_reply = 0.0
+        for start, pitch in ((0.18, 112), (0.62, 74), (1.08, 92)):
+            dt = t - start
+            if 0.0 <= dt <= 0.42:
+                elevator_reply += math.exp(-dt * 5.2) * math.sin(2 * math.pi * pitch * dt)
+        dry_click = 0.0
+        for start in (0.06, 0.42, 1.35):
+            dt = t - start
+            if 0.0 <= dt <= 0.035:
+                dry_click += math.exp(-dt * 95.0) * math.sin(2 * math.pi * 720 * dt)
+        stair_breath = 0.05 * math.sin(2 * math.pi * 186 * t) if 1.2 <= t <= 2.2 else 0.0
+        return floor_bloom + 0.28 * elevator_reply + 0.24 * dry_click + stair_breath
+
     sources = {
         "SFX_PhoneRing_v0": (2.5, phone_ring),
         "SFX_PhonePickup_v0": (0.45, phone_pickup),
@@ -133,6 +148,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "AMB_StairwellAir_v0": (6.0, stairwell_air),
         "SFX_DoorKnock203_v0": (1.4, door_knock),
         "SFX_ReportLogFiled_v0": (0.55, report_log_filed),
+        "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -588,7 +604,7 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     add_light("LIGHT_Transition_ElevatorCallPanelDread", unreal.PointLight, (1122, 398, 150), (0, 0, 0), 980.0, unreal.Color(255, 155, 58, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=360.0)
     add_light("LIGHT_Transition_StairExitCold", unreal.PointLight, (1122, -560, 230), (0, 0, 0), 720.0, unreal.Color(92, 210, 170, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=420.0)
     add_light("LIGHT_Transition_CaptureEvidenceSoftFill", unreal.PointLight, (925, 0, 190), (0, 0, 0), 1850.0, unreal.Color(178, 218, 205, 255), ("Hotel.Capture.Readability", "Hotel.Capture.TransitionFear"), attenuation_radius=760.0)
-    add_light("LIGHT_PatrolRoute_DecisionCueFloorFill", unreal.PointLight, (955, 0, 115), (0, 0, 0), 1100.0, unreal.Color(190, 218, 194, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision"), attenuation_radius=520.0)
+    add_light("LIGHT_PatrolRoute_DecisionCueFloorFill", unreal.PointLight, (955, 0, 115), (0, 0, 0), 1100.0, unreal.Color(190, 218, 194, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PatrolDecision", "Hotel.Feedback.PatrolListenLight"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentA", unreal.RectLight, (2820, 0, 262), (-90, 0, 0), 4800.0, unreal.Color(205, 225, 255, 255), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
     add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
@@ -628,6 +644,8 @@ def build_level(sounds: dict[str, unreal.SoundWave]) -> None:
     if "AMB_StairwellAir_v0" in sounds:
         add_audio("AMB_Stairwell_Air_Source_v0", sounds["AMB_StairwellAir_v0"], (1120, -565, 180), True, ("Hotel.Audio.StairwellAir",))
         add_audio("AMB_PatrolRoute_StairAirBleed_Source_v0", sounds["AMB_StairwellAir_v0"], (960, -250, 164), True, ("Hotel.Audio.StairwellAir", "Hotel.Audio.PatrolDecision"))
+    if "SFX_PatrolListenDrop_v0" in sounds:
+        add_audio("SFX_PatrolListen_StopLine_ManualTrigger_v0", sounds["SFX_PatrolListenDrop_v0"], (930, 0, 72), False, ("Hotel.Audio.PatrolListen",))
     if "SFX_PhoneRing_v0" in sounds:
         add_audio("SFX_PhoneRing_FrontDesk_ManualTrigger_v0", sounds["SFX_PhoneRing_v0"], (-430, -525, 150), False, ("Hotel.Audio.PhoneRing",))
     if "SFX_PhonePickup_v0" in sounds:
