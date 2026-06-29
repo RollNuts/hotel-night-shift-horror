@@ -23,6 +23,10 @@ SOURCE_TEXTURE_DIR = PROJECT_ROOT / "SourceAssets" / "TextureGenerated"
 MAP_PATH = "/Game/Hotel/Maps/L_HotelNightShift_Slice"
 UPDATED_SOURCE_MESHES: set[str] = set()
 UPDATED_SOURCE_TEXTURES: set[str] = set()
+ALWAYS_REIMPORT_TEXTURES = {
+    "TX_Hotel_ReturnRouteSlipPaper_v0",
+    "TX_Hotel_RoomDoorPaint_v0",
+}
 
 
 def log(message: str) -> None:
@@ -85,7 +89,7 @@ def write_png_rgb(path: pathlib.Path, width: int, height: int, pixels: list[tupl
 def generate_source_textures() -> dict[str, pathlib.Path]:
     UPDATED_SOURCE_TEXTURES.clear()
 
-    def texture_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+    def wallpaper_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
         u = x / max(1, width - 1)
         v = y / max(1, height - 1)
         noise = (
@@ -115,13 +119,174 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             max(0, min(255, int(blue - darken * 0.70 + brighten * 0.45))),
         )
 
+    def return_slip_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        fiber = (
+            math.sin(x * 0.211 + y * 0.031)
+            + math.sin(x * 0.047 - y * 0.173 + 1.8)
+            + math.sin(x * 0.379 + y * 0.091 + 3.4)
+        ) / 3.0
+        vertical_fold = max(0.0, 1.0 - abs(u - 0.63) / 0.018)
+        lower_thumb = max(0.0, 1.0 - (((u - 0.36) / 0.22) ** 2 + ((v - 0.72) / 0.16) ** 2))
+        damp_corner = max(0.0, 1.0 - (((u - 0.82) / 0.18) ** 2 + ((v - 0.20) / 0.24) ** 2))
+        edge_shadow = max(0.0, 1.0 - min(u, 1.0 - u, v, 1.0 - v) / 0.055)
+        crease = max(0.0, 1.0 - abs((u + v * 0.13) - 0.46) / 0.010) * (0.35 + 0.65 * v)
+        pin_prick = 0.0
+        for px, py in ((0.18, 0.16), (0.24, 0.18), (0.77, 0.84)):
+            pin_prick += max(0.0, 1.0 - (((u - px) / 0.018) ** 2 + ((v - py) / 0.014) ** 2))
+
+        red = 146 + 5 * fiber
+        green = 128 + 4 * fiber
+        blue = 94 + 3 * fiber
+        darken = 11 * edge_shadow + 10 * damp_corner + 7 * lower_thumb + 6 * vertical_fold + 5 * crease + 10 * pin_prick
+        warm = 4 * (0.5 + 0.5 * math.sin((u * 3.0 + v * 1.7) * math.pi))
+        return (
+            max(0, min(255, int(red + warm - darken))),
+            max(0, min(255, int(green + warm * 0.55 - darken * 0.82))),
+            max(0, min(255, int(blue + warm * 0.25 - darken * 0.64))),
+        )
+
+    def room_door_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        draw_v = 1.0 - v
+        grain = (
+            math.sin(x * 0.097 + y * 0.021)
+            + math.sin(x * 0.019 - y * 0.163 + 1.4)
+            + math.sin(x * 0.231 + y * 0.047 + 2.9)
+        ) / 3.0
+        panel_shadow = 0.0
+        for panel_u in (0.13, 0.38, 0.62, 0.87):
+            panel_shadow += max(0.0, 1.0 - abs(u - panel_u) / 0.010)
+        horizontal_wear = 0.0
+        for panel_v in (0.18, 0.49, 0.73, 0.92):
+            horizontal_wear += max(0.0, 1.0 - abs(v - panel_v) / 0.012)
+        edge_oil = max(0.0, 1.0 - min(u, 1.0 - u, v, 1.0 - v) / 0.045)
+        handle_grime = max(0.0, 1.0 - (((u - 0.82) / 0.18) ** 2 + ((v - 0.50) / 0.20) ** 2))
+        latch_drag = max(0.0, 1.0 - abs((u - 0.80) + (v - 0.50) * 0.10) / 0.013) * max(0.0, 1.0 - abs(v - 0.50) / 0.24)
+        scratches = 0.0
+        for scratch_u in (0.18, 0.24, 0.34, 0.57, 0.66, 0.76, 0.91):
+            scratches += max(0.0, 1.0 - abs(u - (scratch_u + 0.012 * math.sin(v * 19.0))) / 0.004) * max(0.0, math.sin(v * 17.0 + scratch_u * 12.0))
+        paint_chips = 0.0
+        for chip_u, chip_v, chip_w, chip_h in (
+            (0.06, 0.15, 0.035, 0.075),
+            (0.10, 0.66, 0.030, 0.060),
+            (0.88, 0.38, 0.040, 0.105),
+            (0.73, 0.74, 0.055, 0.040),
+            (0.42, 0.25, 0.036, 0.036),
+        ):
+            chip = max(0.0, 1.0 - (((u - chip_u) / chip_w) ** 2 + ((v - chip_v) / chip_h) ** 2))
+            paint_chips += chip
+
+        red = 67 + 8 * grain
+        green = 51 + 6 * grain
+        blue = 37 + 5 * grain
+        darken = 20 * edge_oil + 26 * panel_shadow + 18 * handle_grime + 16 * latch_drag + 9 * horizontal_wear
+        brighten = 34 * paint_chips + 15 * scratches
+        r = red - darken + brighten
+        g = green - darken * 0.84 + brighten * 0.72
+        b = blue - darken * 0.66 + brighten * 0.48
+
+        def inside_rect(x0: float, x1: float, y0: float, y1: float) -> bool:
+            return x0 <= u <= x1 and y0 <= draw_v <= y1
+
+        def soft_rect(x0: float, x1: float, y0: float, y1: float, feather: float) -> float:
+            if not inside_rect(x0 - feather, x1 + feather, y0 - feather, y1 + feather):
+                return 0.0
+            edge = min(u - x0, x1 - u, draw_v - y0, y1 - draw_v)
+            return max(0.0, min(1.0, (edge + feather) / max(feather, 0.001)))
+
+        def segment_hit(cx: float, cy: float, scale: float, segments: tuple[str, ...]) -> float:
+            local_x = (u - cx) / scale
+            local_y = (draw_v - cy) / scale
+            thickness = 0.055
+            hit = 0.0
+            segment_defs = {
+                "top": (-0.32, 0.32, 0.39, 0.48),
+                "mid": (-0.32, 0.32, -0.04, 0.05),
+                "bottom": (-0.32, 0.32, -0.48, -0.39),
+                "ul": (-0.42, -0.30, 0.02, 0.40),
+                "ur": (0.30, 0.42, 0.02, 0.40),
+                "ll": (-0.42, -0.30, -0.40, -0.02),
+                "lr": (0.30, 0.42, -0.40, -0.02),
+            }
+            for name in segments:
+                x0, x1, y0, y1 = segment_defs[name]
+                if x0 - thickness <= local_x <= x1 + thickness and y0 - thickness <= local_y <= y1 + thickness:
+                    hit = max(hit, 1.0)
+            return hit
+
+        plate = soft_rect(0.105, 0.330, 0.748, 0.842, 0.008)
+        if plate:
+            r = r * (1.0 - 0.88 * plate) + 10 * plate
+            g = g * (1.0 - 0.88 * plate) + 9 * plate
+            b = b * (1.0 - 0.88 * plate) + 8 * plate
+        digit = max(
+            segment_hit(0.150, 0.796, 0.105, ("top", "ur", "mid", "ll", "bottom")),
+            segment_hit(0.218, 0.796, 0.105, ("top", "ul", "ur", "ll", "lr", "bottom")),
+            segment_hit(0.286, 0.796, 0.105, ("top", "ur", "mid", "lr", "bottom")),
+        )
+        if digit:
+            uneven = 0.78 + 0.22 * math.sin(x * 0.41 + y * 0.19)
+            r = r * 0.24 + 178 * digit * uneven
+            g = g * 0.24 + 134 * digit * uneven
+            b = b * 0.24 + 82 * digit * uneven
+
+        paper = soft_rect(0.305, 0.560, 0.405, 0.585, 0.012)
+        if paper:
+            paper_fiber = 0.5 + 0.5 * math.sin(x * 0.51 + y * 0.19)
+            r = r * (1.0 - 0.92 * paper) + (132 + 18 * paper_fiber) * paper
+            g = g * (1.0 - 0.92 * paper) + (118 + 12 * paper_fiber) * paper
+            b = b * (1.0 - 0.92 * paper) + (88 + 8 * paper_fiber) * paper
+        writing = 0.0
+        for line_y, slope, start, end in (
+            (0.550, -0.02, 0.330, 0.530),
+            (0.510, 0.01, 0.325, 0.545),
+            (0.475, -0.01, 0.342, 0.520),
+        ):
+            center = line_y + slope * (u - 0.43)
+            if start <= u <= end:
+                writing = max(writing, max(0.0, 1.0 - abs(draw_v - center) / 0.004))
+        slash = max(0.0, 1.0 - abs((u - 0.435) - (draw_v - 0.495) * 0.38) / 0.006) if inside_rect(0.350, 0.515, 0.430, 0.570) else 0.0
+        writing = max(writing, slash)
+        if writing:
+            r = r * (1.0 - 0.85 * writing) + 42 * writing
+            g = g * (1.0 - 0.85 * writing) + 24 * writing
+            b = b * (1.0 - 0.85 * writing) + 14 * writing
+        tape = soft_rect(0.330, 0.535, 0.386, 0.408, 0.004)
+        if tape:
+            r = r * (1.0 - 0.70 * tape) + 144 * tape
+            g = g * (1.0 - 0.70 * tape) + 83 * tape
+            b = b * (1.0 - 0.70 * tape) + 30 * tape
+
+        handle_plate = soft_rect(0.855, 0.935, 0.390, 0.640, 0.006)
+        if handle_plate:
+            r = r * (1.0 - 0.72 * handle_plate) + 18 * handle_plate
+            g = g * (1.0 - 0.72 * handle_plate) + 17 * handle_plate
+            b = b * (1.0 - 0.72 * handle_plate) + 15 * handle_plate
+        for screw_u, screw_v in ((0.895, 0.605), (0.895, 0.425)):
+            screw = max(0.0, 1.0 - (((u - screw_u) / 0.012) ** 2 + ((draw_v - screw_v) / 0.012) ** 2))
+            if screw:
+                r = r * (1.0 - 0.55 * screw) + 80 * screw
+                g = g * (1.0 - 0.55 * screw) + 72 * screw
+                b = b * (1.0 - 0.55 * screw) + 58 * screw
+
+        return (
+            max(0, min(255, int(r))),
+            max(0, min(255, int(g))),
+            max(0, min(255, int(b))),
+        )
+
     textures = {
-        "TX_Hotel_Room203WallpaperPanel_v0": (512, 512),
+        "TX_Hotel_Room203WallpaperPanel_v0": (512, 512, wallpaper_pixel),
+        "TX_Hotel_RoomDoorPaint_v0": (512, 512, room_door_pixel),
+        "TX_Hotel_ReturnRouteSlipPaper_v0": (512, 512, return_slip_pixel),
     }
     output: dict[str, pathlib.Path] = {}
-    for name, (width, height) in textures.items():
+    for name, (width, height, pixel_func) in textures.items():
         path = SOURCE_TEXTURE_DIR / f"{name}.png"
-        pixels = [texture_pixel(x, y, width, height) for y in range(height) for x in range(width)]
+        pixels = [pixel_func(x, y, width, height) for y in range(height) for x in range(width)]
         previous = path.read_bytes() if path.exists() else None
         write_png_rgb(path, width, height, pixels)
         if previous != path.read_bytes():
@@ -366,16 +531,35 @@ def import_audio(source_paths: dict[str, pathlib.Path]) -> dict[str, unreal.Soun
     return sounds
 
 
-def write_obj(path: pathlib.Path, vertices: list[tuple[float, float, float]], faces: list[tuple[int, ...]]) -> bool:
+def write_obj(
+    path: pathlib.Path,
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    uv_axes: tuple[str, str] = ("x", "y"),
+    fit_uv: bool = False,
+) -> bool:
+    axis_index = {"x": 0, "y": 1, "z": 2}
+    u_axis, v_axis = axis_index[uv_axes[0]], axis_index[uv_axes[1]]
+    u_values = [vertex[u_axis] for vertex in vertices]
+    v_values = [vertex[v_axis] for vertex in vertices]
+    min_u, max_u = min(u_values, default=-100.0), max(u_values, default=100.0)
+    min_v, max_v = min(v_values, default=-100.0), max(v_values, default=100.0)
+    span_u = max(max_u - min_u, 1.0)
+    span_v = max(max_v - min_v, 1.0)
+
     lines = [
         "# Project-authored procedural mesh for Hotel Night Shift Horror.\n",
         "# Generated by Automation/Unreal/create_hotel_spine_slice.py; no third-party geometry.\n",
     ]
     for x, y, z in vertices:
         lines.append(f"v {x:.5f} {y:.5f} {z:.5f}\n")
-    for x, y, _z in vertices:
-        u = (x + 100.0) / 200.0
-        v = (y + 100.0) / 200.0
+    for vertex in vertices:
+        if fit_uv:
+            u = (vertex[u_axis] - min_u) / span_u
+            v = (vertex[v_axis] - min_v) / span_v
+        else:
+            u = (vertex[u_axis] + 100.0) / 200.0
+            v = (vertex[v_axis] + 100.0) / 200.0
         lines.append(f"vt {u:.5f} {v:.5f}\n")
     for face in faces:
         lines.append("f " + " ".join(f"{index + 1}/{index + 1}" for index in face) + "\n")
@@ -704,6 +888,228 @@ def create_room203_handle_lever_mesh() -> tuple[list[tuple[float, float, float]]
     return vertices, faces
 
 
+def append_planar_stroke(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    points: list[tuple[float, float]],
+    thickness: float,
+    phase: float,
+    y: float = -0.4,
+) -> None:
+    base = len(vertices)
+    for index, (x, z) in enumerate(points):
+        if index == 0:
+            dx, dz = points[1][0] - x, points[1][1] - z
+        elif index == len(points) - 1:
+            dx, dz = x - points[index - 1][0], z - points[index - 1][1]
+        else:
+            dx, dz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+        length = math.sqrt(dx * dx + dz * dz) or 1.0
+        px, pz = -dz / length, dx / length
+        wobble = math.sin(index * 1.37 + phase) * thickness * 0.10
+        half = thickness * (0.54 + 0.10 * math.cos(index * 1.11 + phase))
+        vertices.append((x + px * (half + wobble), y, z + pz * (half + wobble)))
+        vertices.append((x - px * (half - wobble * 0.35), y - 0.05, z - pz * (half - wobble * 0.35)))
+
+    for index in range(len(points) - 1):
+        a = base + index * 2
+        b = a + 1
+        c = a + 3
+        d = a + 2
+        faces.append((a, b, c, d))
+        faces.append((d, c, b, a))
+
+
+def append_planar_blob(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    center_x: float,
+    center_z: float,
+    radius_x: float,
+    radius_z: float,
+    count: int,
+    phase: float,
+    y: float = -0.45,
+) -> None:
+    points: list[tuple[float, float, float]] = []
+    for index in range(count):
+        theta = 2.0 * math.pi * index / count
+        wobble = 1.0 + 0.10 * math.sin(index * 1.71 + phase) + 0.07 * math.cos(index * 2.43 + phase)
+        points.append((center_x + math.cos(theta) * radius_x * wobble, y, center_z + math.sin(theta) * radius_z * wobble))
+    append_flat_polygon(vertices, faces, points, double_sided=True)
+
+
+def create_room203_number_digits_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    def append_plate_bar(center_x: float, center_z: float, width: float, height: float, y: float = -0.48) -> None:
+        append_flat_polygon(
+            vertices,
+            faces,
+            [
+                (center_x - width * 0.5, y, center_z - height * 0.5),
+                (center_x + width * 0.5, y, center_z - height * 0.5),
+                (center_x + width * 0.5, y, center_z + height * 0.5),
+                (center_x - width * 0.5, y, center_z + height * 0.5),
+            ],
+            double_sided=True,
+        )
+
+    def append_digit(center_x: float, segments: tuple[str, ...]) -> None:
+        segment_shapes = {
+            "top": (center_x, 11.0, 21.0, 3.2),
+            "mid": (center_x, 0.0, 21.0, 3.0),
+            "bottom": (center_x, -11.0, 21.0, 3.2),
+            "ul": (center_x - 10.0, 5.7, 3.2, 12.0),
+            "ur": (center_x + 10.0, 5.7, 3.2, 12.0),
+            "ll": (center_x - 10.0, -5.7, 3.2, 12.0),
+            "lr": (center_x + 10.0, -5.7, 3.2, 12.0),
+        }
+        for name in segments:
+            append_plate_bar(*segment_shapes[name])
+
+    # Room number is authored as geometry, not font/text, so the public repo has no font dependency.
+    append_digit(-24.0, ("top", "ur", "mid", "ll", "bottom"))
+    append_digit(0.0, ("top", "ul", "ur", "ll", "lr", "bottom"))
+    append_digit(24.0, ("top", "ur", "mid", "lr", "bottom"))
+    return vertices, faces
+
+
+def create_room203_door_grime_streaks_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    streaks = [
+        [(-105.0, 105.0), (-108.0, 70.0), (-102.0, 34.0), (-111.0, -8.0)],
+        [(-74.0, 74.0), (-70.0, 38.0), (-76.0, -3.0), (-69.0, -58.0)],
+        [(-32.0, 34.0), (-36.0, 4.0), (-31.0, -42.0)],
+        [(18.0, 96.0), (14.0, 56.0), (21.0, 18.0), (12.0, -20.0)],
+        [(66.0, 52.0), (72.0, 22.0), (64.0, -8.0), (70.0, -56.0)],
+        [(100.0, 86.0), (94.0, 44.0), (103.0, 2.0), (98.0, -74.0)],
+    ]
+    for index, points in enumerate(streaks):
+        append_planar_stroke(vertices, faces, points, 1.35 + 0.25 * (index % 2), index * 0.7, y=-0.50)
+    append_planar_stroke(vertices, faces, [(-82.0, -95.0), (-34.0, -88.0), (28.0, -96.0), (78.0, -84.0)], 2.1, 4.8, y=-0.52)
+    return vertices, faces
+
+
+def create_room203_door_paint_chips_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    for center_x, center_z, radius_x, radius_z, count, phase in (
+        (-116.0, 70.0, 7.5, 24.0, 10, 0.2),
+        (-116.0, -46.0, 8.0, 32.0, 11, 1.1),
+        (116.0, 28.0, 8.0, 36.0, 12, 2.0),
+        (80.0, -66.0, 15.0, 6.0, 10, 2.9),
+        (-18.0, 82.0, 10.0, 5.5, 9, 3.8),
+        (36.0, -6.0, 8.0, 5.0, 8, 4.6),
+    ):
+        append_planar_blob(vertices, faces, center_x, center_z, radius_x, radius_z, count, phase, y=-0.60)
+    return vertices, faces
+
+
+def create_room203_lock_hardware_breakup_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_planar_blob(vertices, faces, 0.0, 46.0, 12.0, 12.0, 18, 0.1, y=-0.70)
+    append_planar_blob(vertices, faces, 0.0, 0.0, 9.5, 9.5, 16, 0.8, y=-0.70)
+    append_planar_stroke(vertices, faces, [(-6.0, 0.0), (7.0, 0.0)], 1.8, 1.2, y=-0.76)
+    append_planar_stroke(vertices, faces, [(0.0, 6.0), (0.0, -6.0)], 1.2, 1.6, y=-0.77)
+    append_planar_stroke(vertices, faces, [(-11.0, -31.0), (8.0, -29.0), (16.0, -20.0)], 2.2, 2.2, y=-0.72)
+    for screw_x, screw_z, phase in ((-8.0, 62.0, 2.9), (8.0, 30.0, 3.4), (-8.0, -58.0, 4.2), (8.0, -42.0, 4.8)):
+        append_planar_blob(vertices, faces, screw_x, screw_z, 2.8, 2.8, 10, phase, y=-0.78)
+    return vertices, faces
+
+
+def create_room203_sconce_glass_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_planar_blob(vertices, faces, -7.0, 2.0, 13.0, 28.0, 22, 0.4, y=-0.62)
+    append_planar_blob(vertices, faces, 10.0, 0.0, 10.0, 23.0, 19, 1.6, y=-0.66)
+    append_planar_stroke(vertices, faces, [(-18.0, -24.0), (-4.0, -29.0), (12.0, -25.0)], 2.2, 2.5, y=-0.70)
+    return vertices, faces
+
+
+def create_room203_sconce_bracket_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_planar_stroke(vertices, faces, [(-25.0, 30.0), (-20.0, 6.0), (-24.0, -28.0)], 3.0, 0.2, y=-0.72)
+    append_planar_stroke(vertices, faces, [(24.0, 28.0), (20.0, 4.0), (22.0, -26.0)], 2.6, 1.0, y=-0.73)
+    append_planar_stroke(vertices, faces, [(-16.0, 2.0), (0.0, -5.0), (17.0, 1.0)], 3.0, 1.8, y=-0.74)
+    append_planar_blob(vertices, faces, 0.0, -34.0, 8.0, 5.0, 14, 2.4, y=-0.76)
+    return vertices, faces
+
+
+def create_room203_notice_writing_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    strokes = [
+        [(-24.0, 13.0), (-10.0, 12.0), (5.0, 14.0), (24.0, 10.0)],
+        [(-21.0, 5.0), (-4.0, 7.0), (15.0, 4.0), (26.0, 6.0)],
+        [(-26.0, -3.0), (-8.0, -2.0), (9.0, -5.0), (22.0, -3.0)],
+        [(-18.0, -12.0), (-2.0, -10.0), (14.0, -14.0)],
+    ]
+    for index, points in enumerate(strokes):
+        append_planar_stroke(vertices, faces, points, 0.75 + 0.1 * (index % 2), index * 0.8, y=-0.78)
+    append_planar_stroke(vertices, faces, [(-12.0, 18.0), (6.0, -18.0)], 1.4, 4.1, y=-0.80)
+    return vertices, faces
+
+
+def create_room203_notice_tape_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    strip = [
+        (-30.0, 3.0, 0.0),
+        (-18.0, 5.0, 0.0),
+        (-4.0, 2.0, 0.0),
+        (10.0, 5.0, 0.0),
+        (32.0, 2.0, 0.0),
+        (31.0, -5.0, 0.0),
+        (12.0, -4.0, 0.0),
+        (-2.0, -7.0, 0.0),
+        (-17.0, -4.0, 0.0),
+        (-32.0, -6.0, 0.0),
+    ]
+    append_flat_polygon(vertices, faces, [(x, -0.75, z) for x, z, _ in strip], double_sided=True)
+    return vertices, faces
+
+
+def create_guesthall_service_cart_silhouette_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_box(vertices, faces, (0.0, 0.0, -30.0), (128.0, 44.0, 7.0))
+    append_box(vertices, faces, (-56.0, -18.0, 4.0), (6.0, 6.0, 76.0))
+    append_box(vertices, faces, (54.0, -18.0, 2.0), (6.0, 6.0, 70.0))
+    append_box(vertices, faces, (0.0, -18.0, 39.0), (116.0, 6.0, 5.0))
+    append_box(vertices, faces, (-42.0, 18.0, 8.0), (5.0, 6.0, 62.0))
+    append_box(vertices, faces, (38.0, 18.0, 6.0), (5.0, 6.0, 58.0))
+    append_box(vertices, faces, (-3.0, 18.0, 30.0), (84.0, 6.0, 5.0))
+    cloth_front = [
+        (-48.0, -24.0, 31.0),
+        (-28.0, -25.0, 43.0),
+        (-3.0, -23.0, 36.0),
+        (22.0, -26.0, 44.0),
+        (49.0, -24.0, 29.0),
+        (43.0, -25.0, -11.0),
+        (19.0, -27.0, -27.0),
+        (-8.0, -26.0, -21.0),
+        (-36.0, -24.0, -32.0),
+        (-53.0, -25.0, -8.0),
+    ]
+    append_flat_polygon(vertices, faces, cloth_front, double_sided=True)
+    cloth_side = [
+        (48.0, -20.0, 28.0),
+        (58.0, -2.0, 23.0),
+        (52.0, 18.0, 7.0),
+        (48.0, 15.0, -18.0),
+        (43.0, -24.0, -11.0),
+    ]
+    append_flat_polygon(vertices, faces, cloth_side, double_sided=True)
+    for wheel_x, wheel_y in ((-45.0, -24.0), (43.0, -24.0), (-36.0, 22.0), (34.0, 20.0)):
+        append_planar_blob(vertices, faces, wheel_x, -38.0, 7.0, 7.0, 14, wheel_x * 0.02, y=wheel_y)
+    return vertices, faces
+
+
 def append_flat_polygon(
     vertices: list[tuple[float, float, float]],
     faces: list[tuple[int, ...]],
@@ -770,7 +1176,7 @@ def create_guesthall_room203_aftershock_paper_mesh() -> tuple[list[tuple[float, 
                 ragged = math.sin(row * 1.71 + column * 0.83 + phase) * (0.8 + 2.8 * edge)
                 x = center_x + (u - 0.5) * width * taper + ragged
                 z = top_z - height * v + math.sin(u * math.pi + phase) * 2.2 * edge
-                y = -(curl * (v ** 1.65) + 2.8 * edge * v + math.sin(v * math.pi * 2.0 + phase) * 1.4)
+                y = -(curl * 0.18 * (v ** 1.65) + 0.85 * edge * v + math.sin(v * math.pi * 2.0 + phase) * 0.45)
                 vertices.append((x, y, z))
 
         stride = columns + 1
@@ -1014,39 +1420,40 @@ def create_guesthall_return_route_hand_shadow_mesh() -> tuple[list[tuple[float, 
 def create_guesthall_return_route_torn_slip_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, ...]] = []
-    main = [
-        (-50.0, -0.2, 31.0),
-        (-19.0, -0.3, 38.0),
-        (13.0, -0.5, 34.0),
-        (48.0, -0.4, 24.0),
-        (43.0, -0.9, 8.0),
-        (52.0, -0.6, -10.0),
-        (28.0, -1.0, -31.0),
-        (2.0, -1.2, -26.0),
-        (-24.0, -0.9, -38.0),
-        (-52.0, -0.6, -22.0),
-        (-43.0, -0.4, -2.0),
-    ]
-    append_flat_polygon(vertices, faces, main, double_sided=True)
-    folded_corner = [
-        (28.0, -1.2, -31.0),
-        (46.0, -2.2, -12.0),
-        (39.0, -0.8, -7.0),
-    ]
-    append_flat_polygon(vertices, faces, folded_corner, double_sided=True)
-    torn_upper = [
-        (-49.0, -0.5, 33.0),
-        (-31.0, -0.8, 41.0),
-        (-9.0, -0.6, 36.0),
-        (14.0, -0.7, 39.0),
-        (47.0, -0.5, 27.0),
-        (45.0, -0.9, 21.0),
-        (9.0, -0.8, 27.0),
-        (-31.0, -0.8, 26.0),
-    ]
-    append_flat_polygon(vertices, faces, torn_upper, double_sided=True)
-    append_flat_polygon(vertices, faces, [(-57.0, -0.9, -7.0), (-43.0, -0.8, -3.0), (-48.0, -0.8, 8.0), (-61.0, -1.0, 2.0)], double_sided=True)
-    append_flat_polygon(vertices, faces, [(20.0, -1.0, -38.0), (33.0, -1.1, -30.0), (24.0, -0.9, -22.0), (10.0, -1.0, -30.0)], double_sided=True)
+
+    columns = 4
+    rows = 8
+    base = len(vertices)
+    for row in range(rows + 1):
+        v = row / rows
+        center_z = 48.0 - 96.0 * v
+        left = -29.0 + math.sin(row * 1.37) * 2.7 + (3.0 if row in (0, rows) else 0.0)
+        right = 30.0 + math.cos(row * 1.11 + 0.6) * 2.4 - (2.0 if row == rows else 0.0)
+        if row == 1:
+            left += 5.0
+        if row == 6:
+            right -= 6.0
+        for column in range(columns + 1):
+            u = column / columns
+            edge = 1.0 if column in (0, columns) else 0.0
+            x = left + (right - left) * u + math.sin(row * 0.83 + column * 1.91) * (0.35 + edge * 1.7)
+            z = center_z + math.sin(row * 1.23 + column * 0.71) * (0.6 + edge * 1.4)
+            y = -0.08 - 0.012 * edge
+            vertices.append((x, y, z))
+
+    stride = columns + 1
+    for row in range(rows):
+        for column in range(columns):
+            a = base + row * stride + column
+            b = a + 1
+            c = a + stride + 1
+            d = a + stride
+            faces.append((a, b, c, d))
+            faces.append((d, c, b, a))
+
+    append_flat_polygon(vertices, faces, [(-35.0, -0.11, -11.0), (-28.0, -0.10, -4.0), (-31.0, -0.10, 9.0), (-38.0, -0.12, 3.0)], double_sided=True)
+    append_flat_polygon(vertices, faces, [(9.0, -0.11, -55.0), (21.0, -0.12, -42.0), (17.0, -0.10, -31.0), (5.0, -0.11, -41.0)], double_sided=True)
+    append_flat_polygon(vertices, faces, [(-5.0, -0.10, 8.0), (5.0, -0.11, 5.0), (4.0, -0.10, -6.0), (-6.0, -0.11, -4.0)], double_sided=True)
     return vertices, faces
 
 
@@ -1080,10 +1487,10 @@ def create_guesthall_return_route_slip_writing_mesh() -> tuple[list[tuple[float,
                 dx, dz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
             length = math.sqrt(dx * dx + dz * dz) or 1.0
             px, pz = -dz / length, dx / length
-            wobble = math.sin(index * 1.43 + phase) * 0.7
+            wobble = math.sin(index * 1.43 + phase) * 0.35
             half = thickness * (0.54 + 0.18 * math.cos(index * 1.17 + phase))
-            vertices.append((x + px * (half + wobble), -1.8, z + pz * (half + wobble)))
-            vertices.append((x - px * (half - wobble * 0.45), -2.2, z - pz * (half - wobble * 0.45)))
+            vertices.append((x + px * (half + wobble), -0.36, z + pz * (half + wobble)))
+            vertices.append((x - px * (half - wobble * 0.45), -0.46, z - pz * (half - wobble * 0.45)))
 
         for index in range(len(points) - 1):
             a = base + index * 2
@@ -1093,15 +1500,13 @@ def create_guesthall_return_route_slip_writing_mesh() -> tuple[list[tuple[float,
             faces.append((a, b, c, d))
             faces.append((d, c, b, a))
 
-    # Ragged, mostly unreadable "203 / BACK" warning strokes. It should read
-    # as frantic handwriting in the evidence shot, not UI text.
-    append_stroke([(-34.0, 20.0), (-24.0, 27.0), (-10.0, 25.0), (-20.0, 13.0), (-6.0, 8.0)], 2.1, 0.1)
-    append_stroke([(4.0, 24.0), (18.0, 26.0), (26.0, 18.0), (18.0, 8.0), (4.0, 10.0), (0.0, 18.0)], 2.0, 0.8)
-    append_stroke([(36.0, 25.0), (22.0, 18.0), (36.0, 12.0), (24.0, 4.0), (42.0, 2.0)], 1.9, 1.5)
-    append_stroke([(-40.0, -5.0), (-24.0, -10.0), (-4.0, -6.0), (16.0, -12.0), (36.0, -8.0)], 1.9, 2.1)
-    append_stroke([(-34.0, -23.0), (-16.0, -18.0), (0.0, -25.0), (18.0, -20.0), (34.0, -26.0)], 1.6, 2.9)
-    append_stroke([(43.0, -7.0), (55.0, -1.0), (43.0, 7.0), (48.0, -1.0), (42.0, -7.0)], 1.7, 3.7)
-    append_stroke([(-48.0, 0.0), (-39.0, -4.0), (-48.0, -9.0), (-38.0, -13.0)], 1.4, 4.4)
+    # Thin marker scars, not readable UI text.
+    append_stroke([(-21.0, 13.0), (-8.0, 16.0), (5.0, 12.0)], 1.1, 0.1)
+    append_stroke([(10.0, 14.0), (23.0, 11.0), (16.0, 6.0)], 1.0, 0.8)
+    append_stroke([(-24.0, -2.0), (-8.0, -5.0), (8.0, -3.0), (22.0, -7.0)], 1.1, 1.5)
+    append_stroke([(-18.0, -15.0), (-4.0, -12.0), (12.0, -16.0)], 0.9, 2.1)
+    append_stroke([(24.0, -2.0), (33.0, 3.0), (27.0, 7.0)], 0.9, 2.9)
+    append_stroke([(-30.0, 5.0), (-20.0, 1.0), (-28.0, -5.0)], 0.8, 3.7)
     return vertices, faces
 
 
@@ -1223,10 +1628,10 @@ def create_guesthall_return_route_direction_scratch_mesh() -> tuple[list[tuple[f
             faces.append((a, b, c, d))
             faces.append((d, c, b, a))
 
-    append_scratch([(-104.0, -7.0), (-56.0, -9.0), (-8.0, -4.0), (42.0, 2.0), (94.0, 8.0)], 8.6, 0.2)
-    append_scratch([(32.0, 30.0), (62.0, 14.0), (100.0, 8.0), (62.0, -8.0), (28.0, -28.0)], 7.4, 1.2)
-    append_scratch([(-76.0, 17.0), (-38.0, 11.0), (8.0, 14.0), (56.0, 21.0)], 4.6, 2.0)
-    append_scratch([(-68.0, -30.0), (-18.0, -24.0), (36.0, -21.0), (82.0, -18.0)], 3.8, 2.8)
+    append_scratch([(-104.0, -7.0), (-56.0, -9.0), (-8.0, -4.0), (42.0, 2.0), (94.0, 8.0)], 3.6, 0.2)
+    append_scratch([(32.0, 30.0), (62.0, 14.0), (100.0, 8.0), (62.0, -8.0), (28.0, -28.0)], 3.1, 1.2)
+    append_scratch([(-76.0, 17.0), (-38.0, 11.0), (8.0, 14.0), (56.0, 21.0)], 2.1, 2.0)
+    append_scratch([(-68.0, -30.0), (-18.0, -24.0), (36.0, -21.0), (82.0, -18.0)], 1.8, 2.8)
 
     chips = [
         [(-112.0, 8.0, 0.0), (-92.0, 14.0, 0.0), (-82.0, 4.0, 0.0), (-104.0, -2.0, 0.0)],
@@ -1262,6 +1667,15 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_Room203_ChainLinks_v0": create_room203_chain_links_mesh,
         "SM_Room203_TornNotice_v0": create_room203_torn_notice_mesh,
         "SM_Room203_HandleLever_v0": create_room203_handle_lever_mesh,
+        "SM_Room203_NumberDigits_v0": create_room203_number_digits_mesh,
+        "SM_Room203_DoorGrimeStreaks_v0": create_room203_door_grime_streaks_mesh,
+        "SM_Room203_DoorPaintChips_v0": create_room203_door_paint_chips_mesh,
+        "SM_Room203_LockHardwareBreakup_v0": create_room203_lock_hardware_breakup_mesh,
+        "SM_Room203_SconceGlass_v0": create_room203_sconce_glass_mesh,
+        "SM_Room203_SconceBracket_v0": create_room203_sconce_bracket_mesh,
+        "SM_Room203_NoticeWriting_v0": create_room203_notice_writing_mesh,
+        "SM_Room203_NoticeTape_v0": create_room203_notice_tape_mesh,
+        "SM_GuestHall_ServiceCartSilhouette_v0": create_guesthall_service_cart_silhouette_mesh,
         "SM_GuestHall_PeelingWallpaperPatch_v0": create_guesthall_peeling_wallpaper_mesh,
         "SM_GuestHall_Room203AftershockPaper_v0": create_guesthall_room203_aftershock_paper_mesh,
         "SM_GuestHall_Room203AftershockTearShadow_v0": create_guesthall_room203_aftershock_shadow_mesh,
@@ -1280,10 +1694,18 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
     }
 
     output: dict[str, pathlib.Path] = {}
+    wall_texture_uv_meshes = {
+        "SM_Room203_PaneledDoor_v0",
+        "SM_GuestHall_ReturnRouteTornSlip_v0",
+    }
     for name, builder in mesh_builders.items():
         path = SOURCE_MESH_DIR / f"{name}.obj"
         vertices, faces = builder()
-        if write_obj(path, vertices, faces):
+        if name in wall_texture_uv_meshes:
+            changed = write_obj(path, vertices, faces, ("x", "z"), True)
+        else:
+            changed = write_obj(path, vertices, faces)
+        if changed:
             UPDATED_SOURCE_MESHES.add(name)
         output[name] = path
     return output
@@ -1326,7 +1748,7 @@ def import_textures(source_paths: dict[str, pathlib.Path]) -> dict[str, unreal.T
         asset_path = f"/Game/Hotel/Textures/{name}"
         if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
             asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-            if asset and name not in UPDATED_SOURCE_TEXTURES:
+            if asset and name not in UPDATED_SOURCE_TEXTURES and name not in ALWAYS_REIMPORT_TEXTURES:
                 textures[name] = asset
                 continue
 
@@ -1347,6 +1769,33 @@ def import_textures(source_paths: dict[str, pathlib.Path]) -> dict[str, unreal.T
         if asset:
             textures[name] = asset
     return textures
+
+
+def scrub_texture_import_metadata(source_paths: dict[str, pathlib.Path]) -> None:
+    for name, source_path in source_paths.items():
+        asset_path = PROJECT_ROOT / "Content" / "Hotel" / "Textures" / f"{name}.uasset"
+        if not asset_path.exists():
+            continue
+
+        data = asset_path.read_bytes()
+        replacements = []
+        for raw_source in {str(source_path), source_path.as_posix()}:
+            old = f"Factory_{raw_source}".encode("utf-8")
+            new_base = f"Factory_SourceAssets/TextureGenerated/{source_path.name}".encode("utf-8")
+            if len(new_base) > len(old):
+                log(f"Skipping texture import metadata scrub for {name}: replacement is longer than source path.")
+                continue
+            replacements.append((old, new_base + (b"_" * (len(old) - len(new_base)))))
+
+        changed = False
+        for old, new in replacements:
+            if old in data:
+                data = data.replace(old, new)
+                changed = True
+
+        if changed:
+            asset_path.write_bytes(data)
+            log(f"Scrubbed local texture import metadata for {name}.")
 
 
 def ensure_material(
@@ -1688,7 +2137,7 @@ def add_camera(label: str, location, rotation, fov: float = 62.0, tags=()) -> un
             "override_auto_exposure_bias": True,
             "auto_exposure_min_brightness": 1.0,
             "auto_exposure_max_brightness": 1.0,
-            "auto_exposure_bias": 2.0,
+            "auto_exposure_bias": 2.55,
         }
         for name, value in exposure_overrides.items():
             try_set_property(settings, name, value)
@@ -1740,7 +2189,7 @@ def add_post_process_volume(label: str) -> unreal.Actor:
             "override_auto_exposure_bias": True,
             "auto_exposure_min_brightness": 1.0,
             "auto_exposure_max_brightness": 1.0,
-            "auto_exposure_bias": 2.0,
+            "auto_exposure_bias": 2.55,
         }
         for name, value in exposure_overrides.items():
             try_set_property(settings, name, value)
@@ -1793,6 +2242,8 @@ def build_level(
     prepare_level()
 
     room203_wallpaper_texture = textures.get("TX_Hotel_Room203WallpaperPanel_v0")
+    room_door_texture = textures.get("TX_Hotel_RoomDoorPaint_v0")
+    return_slip_texture = textures.get("TX_Hotel_ReturnRouteSlipPaper_v0")
     materials = {
         "floor": ensure_material("M_Hotel_WornFloor_v0", unreal.LinearColor(0.15, 0.13, 0.11, 1.0), 0.92),
         "wall": ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
@@ -1805,6 +2256,7 @@ def build_level(
         "brass": ensure_material("M_Hotel_TarnishedBrass_v0", unreal.LinearColor(0.62, 0.43, 0.20, 1.0), 0.58),
         "dull_metal": ensure_material("M_Hotel_DullDeskMetal_v0", unreal.LinearColor(0.30, 0.29, 0.27, 1.0), 0.72),
         "deep_red": ensure_material("M_Hotel_AgedLedgerRed_v0", unreal.LinearColor(0.46, 0.045, 0.032, 1.0), 0.82),
+        "return_faded_ink": ensure_material("M_Hotel_ReturnRouteFadedInk_v0", unreal.LinearColor(0.24, 0.115, 0.055, 1.0), 0.94),
         "paper": ensure_material("M_Hotel_AgedCallSlipPaper_v0", unreal.LinearColor(0.72, 0.64, 0.48, 1.0), 0.81),
         "button": ensure_material("M_Hotel_PhoneBoneButton_v0", unreal.LinearColor(0.58, 0.54, 0.46, 1.0), 0.62),
         "route_mark": ensure_material("M_Hotel_WornRouteTape_v0", unreal.LinearColor(0.46, 0.42, 0.32, 1.0), 0.88),
@@ -1813,7 +2265,7 @@ def build_level(
         "paper_tear_shadow": ensure_material("M_Hotel_PaperTearShadowBack_v0", unreal.LinearColor(0.13, 0.105, 0.078, 1.0), 0.96, two_sided=True),
         "paper_backing": ensure_material("M_Hotel_ExposedWallpaperBacking_v0", unreal.LinearColor(0.33, 0.265, 0.18, 1.0), 0.95, two_sided=True),
         "paper_edge": ensure_material("M_Hotel_TornPaperEdgeLight_v0", unreal.LinearColor(0.86, 0.74, 0.52, 1.0), 0.9, two_sided=True),
-        "paper_stripe": ensure_material("M_Hotel_FadedWallpaperStripe_v0", unreal.LinearColor(0.31, 0.285, 0.225, 1.0), 0.94, two_sided=True),
+        "paper_stripe": ensure_material("M_Hotel_FadedWallpaperStripe_v0", unreal.LinearColor(0.055, 0.051, 0.043, 1.0), 0.97, two_sided=True),
         "floor_scuff": ensure_material("M_Hotel_FloorScuffDark_v0", unreal.LinearColor(0.040, 0.035, 0.031, 1.0), 0.95, two_sided=True),
         "return_cold_glow": ensure_material(
             "M_Hotel_ReturnRouteColdGlow_v0",
@@ -1822,7 +2274,9 @@ def build_level(
             unreal.LinearColor(0.08, 1.05, 1.55, 1.0),
             two_sided=True,
         ),
-        "return_slip_paper": ensure_material(
+        "return_slip_paper": ensure_textured_material("M_Hotel_ReturnRouteSlipPaperTextured_v0", return_slip_texture, 0.92, two_sided=True)
+        if return_slip_texture
+        else ensure_material(
             "M_Hotel_ReturnRouteSlipPaper_v0",
             unreal.LinearColor(0.82, 0.73, 0.55, 1.0),
             0.9,
@@ -1830,9 +2284,11 @@ def build_level(
             two_sided=True,
         ),
         "ceiling_stain": ensure_material("M_Hotel_CeilingWaterStain_v0", unreal.LinearColor(0.105, 0.089, 0.063, 1.0), 0.98, two_sided=True),
-        "paint_chip": ensure_material("M_Hotel_DoorPaintChipLight_v0", unreal.LinearColor(0.55, 0.48, 0.35, 1.0), 0.9),
+        "paint_chip": ensure_material("M_Hotel_DoorPaintChipLight_v0", unreal.LinearColor(0.38, 0.33, 0.25, 1.0), 0.93),
         "screen": ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
-        "door": ensure_material("M_Hotel_RoomDoorPaint_v0", unreal.LinearColor(0.23, 0.18, 0.13, 1.0), 0.77),
+        "door": ensure_textured_material("M_Hotel_RoomDoorPaintTextured_v0", room_door_texture, 0.83)
+        if room_door_texture
+        else ensure_material("M_Hotel_RoomDoorPaint_v0", unreal.LinearColor(0.23, 0.18, 0.13, 1.0), 0.77),
         "warn": ensure_material("M_Hotel_ServiceAmber_v0", unreal.LinearColor(0.75, 0.43, 0.12, 1.0), 0.63),
         "screen_glow": ensure_material(
             "M_Hotel_MonitorGreenGlow_v0",
@@ -2101,10 +2557,10 @@ def build_level(
     add_cube("PROP_GuestHall_Room203_ThresholdDustCollect", (3920, 251, 8), (250, 20, 5), materials["floor_scuff"], guesthall_decay_tags, no_collision=True)
     add_sphere("PROP_GuestHall_LeftWall_DampPatch_CameraSide", (2980, -273, 172), (170, 7, 92), materials["wall_damp"], guesthall_decay_tags, no_collision=True)
     stripe_tags = guesthall_decay_tags + ("Hotel.Capture.Room203Aftershock",)
-    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_A", (3558, 278, 161), (4, 3, 214), materials["paper_stripe"], stripe_tags, no_collision=True)
-    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_B", (3666, 278, 156), (3, 3, 226), materials["paper_stripe"], stripe_tags, no_collision=True)
-    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_C", (3788, 278, 163), (4, 3, 208), materials["paper_stripe"], stripe_tags, no_collision=True)
-    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_D", (3912, 278, 160), (3, 3, 216), materials["paper_stripe"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_A", (3558, 278, 158), (1, 1, 118), materials["wall_damp"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_B", (3666, 278, 154), (1, 1, 130), materials["wall_damp"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_C", (3788, 278, 160), (1, 1, 108), materials["wall_damp"], stripe_tags, no_collision=True)
+    add_cube("PROP_GuestHall_RightWall_FadedWallpaperStripe_Room203_D", (3912, 278, 157), (1, 1, 122), materials["wall_damp"], stripe_tags, no_collision=True)
     add_cube("PROP_GuestHall_RightWall_FadedWallpaperWaterline_Room203", (3760, 279, 226), (410, 3, 4), materials["wall_damp"], stripe_tags, no_collision=True)
     if "SM_GuestHall_PeelingWallpaperPatch_v0" in meshes:
         add_authored_mesh(
@@ -2245,7 +2701,7 @@ def build_level(
             "RETURN_Route_RightWall_BackKnockShadow_Echo",
             meshes["SM_GuestHall_ReturnRouteWallEcho_v0"],
             (3285, 276, 136),
-            (0.92, 1.0, 0.66),
+            (0.48, 1.0, 0.36),
             materials["wall_damp"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2255,8 +2711,8 @@ def build_level(
             "RETURN_Route_RightWall_ColdPressureRipple",
             meshes["SM_GuestHall_ReturnRouteWallEcho_v0"],
             (3204, 274, 116),
-            (0.34, 1.0, 0.34),
-            materials["return_cold_glow"],
+            (0.12, 1.0, 0.12),
+            materials["wall_damp"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2266,7 +2722,7 @@ def build_level(
             "RETURN_Route_RightWall_PalmDragShadow_BackKnock",
             meshes["SM_GuestHall_ReturnRouteHandShadow_v0"],
             (3098, 277, 158),
-            (0.58, 1.0, 0.58),
+            (0.30, 1.0, 0.30),
             materials["paper_tear_shadow"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2289,8 +2745,8 @@ def build_level(
             "RETURN_Route_BackKnockDirectionStripe",
             meshes["SM_GuestHall_ReturnRouteDirectionScratch_v0"],
             (2860, -84, 9),
-            (1.0, 1.0, 1.0),
-            materials["warn"],
+            (0.62, 0.62, 0.62),
+            materials["floor_scuff"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2299,8 +2755,8 @@ def build_level(
             "RETURN_Route_BackKnockDirectionStripe_Return",
             meshes["SM_GuestHall_ReturnRouteDirectionScratch_v0"],
             (2860, 84, 9),
-            (1.0, 1.0, 1.0),
-            materials["warn"],
+            (0.34, 0.34, 0.34),
+            materials["floor_scuff"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2314,7 +2770,7 @@ def build_level(
             "RETURN_Route_WallStatusSlip_ReportAfterHall",
             meshes["SM_GuestHall_ReturnRouteTornSlip_v0"],
             (3135, 268, 126),
-            (0.86, 1.0, 0.86),
+            (0.28, 1.0, 0.30),
             materials["return_slip_paper"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
@@ -2327,8 +2783,8 @@ def build_level(
             "RETURN_Route_WallStatusSlip_Underline",
             meshes["SM_GuestHall_ReturnRouteWarningUnderline_v0"],
             (3135, 264, 101),
-            (0.54, 1.0, 0.56),
-            materials["warn"],
+            (0.16, 1.0, 0.18),
+            materials["return_faded_ink"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2340,8 +2796,8 @@ def build_level(
             "RETURN_Route_WallStatusSlip_FranticWriting",
             meshes["SM_GuestHall_ReturnRouteSlipWriting_v0"],
             (3135, 263, 126),
-            (0.82, 1.0, 0.82),
-            materials["deep_red"],
+            (0.10, 1.0, 0.10),
+            materials["return_faded_ink"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2352,7 +2808,7 @@ def build_level(
             meshes["SM_GuestHall_ReturnRouteFootprint_v0"],
             (3040, -90, 5),
             (0.78, 0.78, 0.78),
-            materials["black"],
+            materials["floor_scuff"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2363,7 +2819,7 @@ def build_level(
             meshes["SM_GuestHall_ReturnRouteFootprint_v0"],
             (2920, -32, 5),
             (0.70, 0.70, 0.70),
-            materials["black"],
+            materials["floor_scuff"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2374,7 +2830,7 @@ def build_level(
             meshes["SM_GuestHall_ReturnRouteFootprint_v0"],
             (2785, 48, 5),
             (0.64, 0.64, 0.64),
-            materials["black"],
+            materials["floor_scuff"],
             return_route_authored_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2415,8 +2871,49 @@ def build_level(
     add_cube("PROP_GuestHall_Room203_RightDoorJamb", (4056, 272, 122), (14, 12, 244), materials["trim"])
     add_cube("PROP_GuestHall_Room203_TopDoorJamb", (3920, 272, 245), (286, 12, 14), materials["trim"])
     add_cube("PROP_GuestHall_Room203_DarkLatchGap", (4042, 266, 122), (8, 8, 188), materials["black"])
-    add_cube("PROP_GuestHall_Room203_NumberPlate", (3840, 272, 178), (55, 8, 28), materials["warn_glow"])
-    add_cube("PROP_GuestHall_Room203_HandleBackplate_Readable", (4028, 264, 132), (22, 8, 70), materials["black"], door_decision_tags, no_collision=True)
+    add_cube("PROP_GuestHall_Room203_NumberPlate", (3840, 257, 190), (76, 3, 30), materials["black"], room203_art_tags + door_decision_tags, no_collision=True)
+    if "SM_Room203_NumberDigits_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203_NumberDigits_Authored",
+            meshes["SM_Room203_NumberDigits_v0"],
+            (3838, 252, 190),
+            (0.92, 1.0, 0.92),
+            materials["paper_edge"],
+            room203_art_tags + door_decision_tags,
+            no_collision=True,
+        )
+    if "SM_Room203_DoorGrimeStreaks_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203_DoorGrimeStreaks_Authored",
+            meshes["SM_Room203_DoorGrimeStreaks_v0"],
+            (3920, 255, 120),
+            (1.0, 1.0, 1.0),
+            materials["floor_scuff"],
+            room203_art_tags + door_surface_refusal_tags,
+            no_collision=True,
+        )
+    if "SM_Room203_DoorPaintChips_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203_DoorPaintChips_Authored",
+            meshes["SM_Room203_DoorPaintChips_v0"],
+            (3920, 254, 120),
+            (0.58, 1.0, 0.58),
+            materials["paint_chip"],
+            room203_art_tags + door_surface_refusal_tags,
+            no_collision=True,
+        )
+    add_cube("PROP_GuestHall_Room203_HandleBackplate_Readable", (4028, 257, 132), (16, 5, 58), materials["black"], door_decision_tags, no_collision=True)
+    if "SM_Room203_LockHardwareBreakup_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203_LockHardwareBreakup_Authored",
+            meshes["SM_Room203_LockHardwareBreakup_v0"],
+            (4028, 253, 132),
+            (1.0, 1.0, 1.0),
+            materials["dull_metal"],
+            room203_art_tags + door_latch_refusal_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
     if "SM_Room203_HandleLever_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_Room203_AuthoredHandleLever",
@@ -2431,8 +2928,8 @@ def build_level(
     add_cube(
         "PROP_GuestHall_Room203_LatchJoltCue",
         (4046, 257, 143),
-        (54, 10, 10),
-        materials["warn"],
+        (28, 6, 7),
+        materials["dull_metal"],
         door_latch_refusal_tags,
         unreal.ComponentMobility.MOVABLE,
         no_collision=True,
@@ -2440,8 +2937,8 @@ def build_level(
     add_cube(
         "PROP_GuestHall_Room203_ChainJoltCue",
         (3992, 258, 166),
-        (72, 8, 8),
-        materials["trim"],
+        (26, 4, 4),
+        materials["dull_metal"],
         door_chain_refusal_tags,
         unreal.ComponentMobility.MOVABLE,
         no_collision=True,
@@ -2451,8 +2948,8 @@ def build_level(
             "PROP_GuestHall_Room203_AuthoredChainLinks",
             meshes["SM_Room203_ChainLinks_v0"],
             (3992, 257, 166),
-            (1.0, 1.0, 1.0),
-            materials["brass"],
+            (0.40, 0.40, 0.40),
+            materials["dull_metal"],
             room203_art_tags + door_chain_refusal_tags,
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
@@ -2469,8 +2966,8 @@ def build_level(
     add_cube(
         "PROP_GuestHall_Room203_NoticeCornerJoltCue",
         (3908, 256, 124),
-        (18, 5, 14),
-        materials["paper"],
+        (11, 4, 9),
+        materials["paper_edge"],
         door_surface_refusal_tags,
         unreal.ComponentMobility.MOVABLE,
         no_collision=True,
@@ -2486,15 +2983,69 @@ def build_level(
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
-    add_cube("PROP_GuestHall_Room203_PeepholeBlackCue", (3920, 262, 186), (22, 7, 22), materials["black"], door_decision_tags, no_collision=True)
-    add_cube("PROP_GuestHall_Room203_DoNotOpenNotice", (3880, 260, 112), (62, 5, 42), materials["paper"], door_decision_tags, no_collision=True)
-    add_cube("PROP_GuestHall_Room203_NoticeUnderline", (3880, 256, 101), (46, 5, 4), materials["warn"], door_decision_tags, no_collision=True)
+    add_sphere("PROP_GuestHall_Room203_PeepholeBlackCue", (3920, 257, 186), (16, 4, 16), materials["black"], door_decision_tags, no_collision=True)
+    if "SM_Room203_NoticeWriting_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203_DoNotOpenNotice",
+            meshes["SM_Room203_NoticeWriting_v0"],
+            (3880, 252, 112),
+            (1.0, 1.0, 1.0),
+            materials["return_faded_ink"],
+            room203_art_tags + door_decision_tags,
+            no_collision=True,
+        )
+    else:
+        add_cube("PROP_GuestHall_Room203_DoNotOpenNotice", (3880, 256, 112), (42, 4, 24), materials["paper"], door_decision_tags, no_collision=True)
+    if "SM_Room203_NoticeTape_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203_NoticeUnderline",
+            meshes["SM_Room203_NoticeTape_v0"],
+            (3880, 252, 101),
+            (0.78, 1.0, 0.78),
+            materials["warn"],
+            room203_art_tags + door_decision_tags,
+            no_collision=True,
+        )
+    else:
+        add_cube("PROP_GuestHall_Room203_NoticeUnderline", (3880, 256, 101), (34, 4, 3), materials["warn"], door_decision_tags, no_collision=True)
     add_cube("PROP_GuestHall_Room203_ThresholdShadow", (3920, 257, 2), (230, 18, 6), materials["black"], door_decision_tags, no_collision=True)
-    add_cube("LIGHTMESH_GuestHall_Room203DoorPractical", (3775, 268, 212), (96, 8, 24), materials["warn_glow"], ("Hotel.Capture.Readability",))
-    add_cube("PROP_GuestHall_ServiceCart_BlockingSightline", (3380, -205, 58), (150, 82, 116), materials["trim"])
+    if "SM_Room203_SconceGlass_v0" in meshes:
+        add_authored_mesh(
+            "LIGHTMESH_GuestHall_Room203DoorPractical",
+            meshes["SM_Room203_SconceGlass_v0"],
+            (3778, 254, 214),
+            (0.46, 0.46, 0.46),
+            materials["warn_glow"],
+            room203_art_tags + ("Hotel.Capture.Readability",),
+            no_collision=True,
+        )
+    else:
+        add_cube("LIGHTMESH_GuestHall_Room203DoorPractical", (3775, 260, 212), (32, 4, 24), materials["warn_glow"], ("Hotel.Capture.Readability",), no_collision=True)
+    if "SM_Room203_SconceBracket_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_Room203DoorPractical_Bracket",
+            meshes["SM_Room203_SconceBracket_v0"],
+            (3778, 253, 214),
+            (0.52, 0.52, 0.52),
+            materials["dull_metal"],
+            room203_art_tags + ("Hotel.Capture.Readability",),
+            no_collision=True,
+        )
+    if "SM_GuestHall_ServiceCartSilhouette_v0" in meshes:
+        add_authored_mesh(
+            "PROP_GuestHall_ServiceCart_BlockingSightline",
+            meshes["SM_GuestHall_ServiceCartSilhouette_v0"],
+            (3370, -208, 52),
+            (1.0, 1.0, 1.0),
+            materials["trim"],
+            guesthall_authored_decay_tags,
+            no_collision=True,
+        )
+    else:
+        add_cube("PROP_GuestHall_ServiceCart_BlockingSightline", (3380, -205, 46), (120, 58, 78), materials["trim"])
     add_cube("PROP_GuestHall_EndShadow_NoSmallRoomExtension", (4450, 0, 125), (44, 520, 250), materials["black"])
-    add_cube("LIGHTMESH_GuestHall_FluorescentPanelA", (2820, 0, 274), (360, 44, 10), materials["fluorescent_panel"], ("Hotel.Capture.Readability",))
-    add_cube("LIGHTMESH_GuestHall_FluorescentPanelB", (3920, 0, 274), (360, 44, 10), materials["fluorescent_panel"], ("Hotel.Capture.Readability",))
+    add_cube("LIGHTMESH_GuestHall_FluorescentPanelA", (2820, 0, 274), (260, 28, 6), materials["fluorescent_panel"], ("Hotel.Capture.Readability",))
+    add_cube("LIGHTMESH_GuestHall_FluorescentPanelB", (3920, 0, 274), (260, 28, 6), materials["fluorescent_panel"], ("Hotel.Capture.Readability",))
     add_cube("LIGHTMESH_FrontDesk_OverheadFluorescent", (-260, -330, 276), (460, 54, 10), materials["fluorescent_panel"], ("Hotel.Capture.Readability",))
 
     # Lighting and atmosphere: final-intent mood direction, still placeholder geometry.
@@ -2514,11 +3065,12 @@ def build_level(
     add_light("LIGHT_ReturnRoute_ColdPulseAfterRefusal", unreal.PointLight, (2860, -90, 188), (0, 0, 0), 620.0, unreal.Color(120, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"), attenuation_radius=680.0)
     add_light("LIGHT_ReturnRoute_PursuitTailColdSkim", unreal.PointLight, (3020, -30, 174), (0, 0, 0), 120.0, unreal.Color(95, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteTailLight"), attenuation_radius=560.0)
     add_light("LIGHT_ReturnRoute_BackKnockWallSkim", unreal.PointLight, (3190, 220, 154), (0, 0, 0), 1650.0, unreal.Color(118, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly"), attenuation_radius=520.0)
-    add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 3600.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1120.0, source_width=380.0, source_height=55.0)
-    add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 620.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=430.0)
-    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 5200.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=1050.0)
-    add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 3100.0, unreal.Color(255, 214, 158, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=760.0)
-    add_light("LIGHT_GuestHall_Room203TornPaperEdgeRim", unreal.PointLight, (3435, 72, 138), (0, 0, 0), 1450.0, unreal.Color(255, 225, 176, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=520.0)
+    add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 4200.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1160.0, source_width=380.0, source_height=55.0)
+    add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 460.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=320.0)
+    add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 8800.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=1180.0)
+    add_light("LIGHT_GuestHall_TrailerProofDoorKicker", unreal.PointLight, (3340, -170, 178), (0, 0, 0), 2200.0, unreal.Color(195, 224, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=820.0)
+    add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 4600.0, unreal.Color(255, 214, 158, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=820.0)
+    add_light("LIGHT_GuestHall_Room203TornPaperEdgeRim", unreal.PointLight, (3435, 72, 138), (0, 0, 0), 2100.0, unreal.Color(255, 225, 176, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=560.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
     add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 1350.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=920.0)
     add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
@@ -2605,6 +3157,8 @@ def main() -> None:
     textures = import_textures(source_textures)
     log("Building production-intent hotel spine level.")
     build_level(sounds, meshes, textures)
+    log("Scrubbing public-repo unsafe texture import metadata.")
+    scrub_texture_import_metadata(source_textures)
     log("Done.")
 
 
