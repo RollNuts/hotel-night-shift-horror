@@ -18,6 +18,7 @@ const FVector PhoneSoundAnchor(-430.0f, -525.0f, 150.0f);
 const FVector PhonePickupSoundAnchor(-430.0f, -548.0f, 150.0f);
 const FVector PhoneLineSoundAnchor(-438.0f, -552.0f, 154.0f);
 const FVector PhoneReceiverAnchor(-430.0f, -558.0f, 150.0f);
+const FVector PhoneCordTugAnchor(-356.0f, -558.0f, 140.0f);
 const FVector PhoneIndicatorLightAnchor(-395.0f, -555.0f, 158.0f);
 const FVector DoorKnockSoundAnchor(3920.0f, 285.0f, 150.0f);
 const FVector DoorRefusalFeedbackAnchor(4020.0f, 258.0f, 150.0f);
@@ -41,6 +42,7 @@ const FVector PostReportLogSelfCorrectionLightAnchor(-190.0f, -520.0f, 166.0f);
 const FVector HallTargetLightAnchor(3920.0f, 0.0f, 260.0f);
 const FName PhoneInteractTag(TEXT("Hotel.Interact.Phone"));
 const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
+const FName PhoneCordTugTag(TEXT("Hotel.Feedback.PhoneCordTug"));
 const FName PhoneLineAudioTag(TEXT("Hotel.Audio.PhoneLineStatic"));
 const FName MonitorInteractTag(TEXT("Hotel.Interact.Monitor"));
 const FName Room203DoorInteractTag(TEXT("Hotel.Interact.Room203Door"));
@@ -269,6 +271,23 @@ float AHotelNightShiftPawn::AutomationGetPhoneReceiverLiftAlpha() const
 FVector AHotelNightShiftPawn::AutomationGetPhoneReceiverLocation() const
 {
 	return PhoneReceiverActor ? PhoneReceiverActor->GetActorLocation() : FVector::ZeroVector;
+}
+
+FRotator AHotelNightShiftPawn::AutomationGetPhoneReceiverRotation() const
+{
+	return PhoneReceiverActor ? PhoneReceiverActor->GetActorRotation() : FRotator::ZeroRotator;
+}
+
+bool AHotelNightShiftPawn::AutomationIsPhoneReceiverLiftActive() const
+{
+	return bPhoneReceiverLiftActive;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetPhoneCordTugLocation() const
+{
+	return PhoneCordTugActors.IsValidIndex(0) && PhoneCordTugActors[0]
+		? PhoneCordTugActors[0]->GetActorLocation()
+		: FVector::ZeroVector;
 }
 
 void AHotelNightShiftPawn::AutomationAdvanceDoorRefusalFeedback(float DeltaSeconds)
@@ -515,6 +534,11 @@ void AHotelNightShiftPawn::CacheHotelActors()
 		PhoneReceiverActors.Add(ReceiverPart);
 	}
 	PhoneReceiverActor = FindActorWithTagNear(PhoneReceiverTag, PhoneReceiverAnchor, 120.0f);
+	PhoneCordTugActors.Reset();
+	for (AActor* CordPart : FindActorsWithTagNear(PhoneCordTugTag, PhoneCordTugAnchor, 90.0f))
+	{
+		PhoneCordTugActors.Add(CordPart);
+	}
 	DoorKnockSoundActor = FindAudioActorNear(DoorKnockSoundAnchor, 140.0f);
 	DoorRefusalFeedbackActors.Reset();
 	for (AActor* FeedbackPart : FindActorsWithTagNear(Room203DoorRefusalFeedbackTag, DoorRefusalFeedbackAnchor, 190.0f))
@@ -568,6 +592,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		PhoneReceiverPartRestLocations.Add(ReceiverPart->GetActorLocation());
 		PhoneReceiverPartRestRotations.Add(ReceiverPart->GetActorRotation());
+	}
+
+	PhoneCordTugRestLocations.Reset();
+	PhoneCordTugRestRotations.Reset();
+	for (AActor* CordPart : PhoneCordTugActors)
+	{
+		PhoneCordTugRestLocations.Add(CordPart->GetActorLocation());
+		PhoneCordTugRestRotations.Add(CordPart->GetActorRotation());
 	}
 
 	DoorRefusalFeedbackRestLocations.Reset();
@@ -1081,6 +1113,7 @@ void AHotelNightShiftPawn::LiftPhoneReceiver()
 
 	bPhoneReceiverLiftActive = true;
 	PhoneReceiverLiftAlpha = 0.0f;
+	PhoneReceiverLiftSeconds = 0.0f;
 }
 
 void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
@@ -1090,10 +1123,52 @@ void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
 		return;
 	}
 
-	PhoneReceiverLiftAlpha = FMath::Clamp(PhoneReceiverLiftAlpha + DeltaSeconds / 0.42f, 0.0f, 1.0f);
-	const float Ease = FMath::InterpEaseInOut(0.0f, 1.0f, PhoneReceiverLiftAlpha, 2.0f);
+	constexpr float AnticipationSeconds = 0.10f;
+	constexpr float LiftSeconds = 0.30f;
+	constexpr float SettleSeconds = 0.18f;
+	constexpr float TotalSeconds = AnticipationSeconds + LiftSeconds + SettleSeconds;
+	const auto LerpRotator = [](const FRotator& From, const FRotator& To, float Alpha)
+	{
+		return FRotator(
+			FMath::Lerp(From.Pitch, To.Pitch, Alpha),
+			FMath::Lerp(From.Yaw, To.Yaw, Alpha),
+			FMath::Lerp(From.Roll, To.Roll, Alpha));
+	};
+
+	PhoneReceiverLiftSeconds = FMath::Min(PhoneReceiverLiftSeconds + DeltaSeconds, TotalSeconds);
+	PhoneReceiverLiftAlpha = FMath::Clamp(PhoneReceiverLiftSeconds / TotalSeconds, 0.0f, 1.0f);
 	const FVector LiftOffset = PhoneReceiverLiftLocation - PhoneReceiverRestLocation;
 	const FRotator LiftRotationDelta = PhoneReceiverLiftRotation - PhoneReceiverRestRotation;
+	const FVector AnticipationOffset(-5.0f, 5.0f, -3.5f);
+	const FRotator AnticipationRotation(3.0f, -2.0f, 5.0f);
+	const FVector OvershootOffset = LiftOffset + FVector(5.0f, -3.0f, 4.0f);
+	const FRotator OvershootRotation = LiftRotationDelta + FRotator(-3.0f, 1.0f, -5.0f);
+	FVector MotionOffset = LiftOffset;
+	FRotator MotionRotationDelta = LiftRotationDelta;
+
+	if (PhoneReceiverLiftSeconds < AnticipationSeconds)
+	{
+		const float PhaseAlpha = PhoneReceiverLiftSeconds / AnticipationSeconds;
+		const float Ease = FMath::InterpEaseOut(0.0f, 1.0f, PhaseAlpha, 2.0f);
+		MotionOffset = AnticipationOffset * Ease;
+		MotionRotationDelta = AnticipationRotation * Ease;
+	}
+	else if (PhoneReceiverLiftSeconds < AnticipationSeconds + LiftSeconds)
+	{
+		const float PhaseAlpha = (PhoneReceiverLiftSeconds - AnticipationSeconds) / LiftSeconds;
+		const float Ease = FMath::InterpEaseOut(0.0f, 1.0f, PhaseAlpha, 2.4f);
+		MotionOffset = FMath::Lerp(AnticipationOffset, OvershootOffset, Ease);
+		MotionRotationDelta = LerpRotator(AnticipationRotation, OvershootRotation, Ease);
+	}
+	else
+	{
+		const float PhaseAlpha = (PhoneReceiverLiftSeconds - AnticipationSeconds - LiftSeconds) / SettleSeconds;
+		const float Ease = FMath::InterpEaseOut(0.0f, 1.0f, PhaseAlpha, 3.0f);
+		const float Wobble = FMath::Sin(PhaseAlpha * UE_PI * 2.0f) * (1.0f - PhaseAlpha);
+		MotionOffset = FMath::Lerp(OvershootOffset, LiftOffset, Ease) + FVector(0.0f, Wobble * 2.4f, Wobble * 1.6f);
+		MotionRotationDelta = LerpRotator(OvershootRotation, LiftRotationDelta, Ease) + FRotator(Wobble * 3.0f, 0.0f, Wobble * 4.0f);
+	}
+
 	for (int32 Index = 0; Index < PhoneReceiverActors.Num(); ++Index)
 	{
 		AActor* ReceiverPart = PhoneReceiverActors[Index];
@@ -1102,13 +1177,27 @@ void AHotelNightShiftPawn::UpdatePhoneReceiverAnimation(float DeltaSeconds)
 			continue;
 		}
 
-		const FVector NewLocation = PhoneReceiverPartRestLocations[Index] + LiftOffset * Ease;
-		const FRotator TargetRotation = PhoneReceiverPartRestRotations[Index] + LiftRotationDelta;
-		const FQuat NewRotation = FQuat::Slerp(
-			PhoneReceiverPartRestRotations[Index].Quaternion(),
-			TargetRotation.Quaternion(),
-			Ease);
-		ReceiverPart->SetActorLocationAndRotation(NewLocation, NewRotation.Rotator());
+		ReceiverPart->SetActorLocationAndRotation(
+			PhoneReceiverPartRestLocations[Index] + MotionOffset,
+			PhoneReceiverPartRestRotations[Index] + MotionRotationDelta);
+	}
+
+	const float CordAlpha = FMath::Clamp((PhoneReceiverLiftSeconds - AnticipationSeconds) / (LiftSeconds + SettleSeconds), 0.0f, 1.0f);
+	const float CordEase = FMath::InterpEaseOut(0.0f, 1.0f, CordAlpha, 2.0f);
+	const float CordWobble = FMath::Sin(CordAlpha * UE_PI * 3.0f) * (1.0f - CordAlpha);
+	const FVector CordOffset(18.0f * CordEase, -7.0f * CordEase + CordWobble * 1.5f, 4.0f * CordEase + FMath::Abs(CordWobble) * 1.4f);
+	const FRotator CordRotation(0.0f, 0.0f, 9.0f * CordEase + CordWobble * 3.0f);
+	for (int32 Index = 0; Index < PhoneCordTugActors.Num(); ++Index)
+	{
+		AActor* CordPart = PhoneCordTugActors[Index];
+		if (!CordPart || !PhoneCordTugRestLocations.IsValidIndex(Index) || !PhoneCordTugRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		CordPart->SetActorLocationAndRotation(
+			PhoneCordTugRestLocations[Index] + CordOffset,
+			PhoneCordTugRestRotations[Index] + CordRotation);
 	}
 
 	if (PhoneReceiverLiftAlpha >= 1.0f)
