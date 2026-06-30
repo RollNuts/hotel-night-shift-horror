@@ -97,6 +97,8 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Cinematics/MRQ_Room203EvidenceReactionProofPng",
     "/Game/Hotel/Cinematics/LS_SecurityMonitorFeedReadabilityProof_5s",
     "/Game/Hotel/Cinematics/MRQ_SecurityMonitorFeedReadabilityProofPng",
+    "/Game/Hotel/Cinematics/LS_FirstLoop_PlaythroughProof_24s",
+    "/Game/Hotel/Cinematics/MRQ_FirstLoopPlaythroughProofPng",
 ]
 
 REQUIRED_ACTOR_LABELS = [
