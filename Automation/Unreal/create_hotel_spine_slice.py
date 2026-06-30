@@ -3151,10 +3151,11 @@ def build_level(
     post_report_desk_wait_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitVisual")
     add_cube("PROP_FrontDesk_FloorWaitMarker_PostReport", (-260, -620, 4), (220, 80, 4), materials["route_mark"], post_report_desk_wait_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CounterHoldLine_PostReport", (-210, -475, 122), (180, 6, 5), materials["warn"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportHoldClosedTape", (1062, -250, 172), (3, 42, 3), materials["lobby_tape_cloth"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportOutsidePalmSmear", (1060, -312, 132), (2, 18, 26), materials["lobby_hand_oil"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportNoGuestReflection", (1058, -188, 112), (2, 20, 28), materials["black"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("LIGHTMESH_LobbyDoor_PostReportRattleCue", (1035, -308, 181), (2, 18, 2), materials["lobby_crack_light"], post_report_desk_wait_tags, no_collision=True)
+    retired_blockout_size = (0.2, 0.2, 0.2)
+    add_cube("PROP_Lobby_GlassDoor_PostReportHoldClosedTape", (1062, -250, 172), retired_blockout_size, materials["lobby_tape_cloth"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportOutsidePalmSmear", (1060, -312, 132), retired_blockout_size, materials["lobby_hand_oil"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportNoGuestReflection", (1058, -188, 112), retired_blockout_size, materials["black"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("LIGHTMESH_LobbyDoor_PostReportRattleCue", (1035, -308, 181), retired_blockout_size, materials["lobby_crack_light"], post_report_desk_wait_tags, no_collision=True)
     post_report_lobby_art_tags = (
         "Hotel.Capture.Readability",
         "Hotel.Capture.PostReportDeskWait",
@@ -3174,7 +3175,7 @@ def build_level(
             "PROP_Lobby_GlassDoor_PostReportSmudgedPane_Authored",
             meshes["SM_LobbyDoor_SmudgedGlassPane_v0"],
             (1054, -250, 114),
-            (1.0, 1.0, 1.0),
+            (0.01, 0.01, 0.01),
             materials["lobby_glass_smudge"],
             post_report_lobby_art_tags,
             no_collision=True,
@@ -3184,7 +3185,7 @@ def build_level(
             "PROP_Lobby_GlassDoor_PostReportPalmSmear_Authored",
             meshes["SM_LobbyDoor_PalmSmear_v0"],
             (1051, -250, 126),
-            (1.0, 1.0, 1.0),
+            (0.18, 0.18, 0.18),
             materials["lobby_hand_oil"],
             post_report_lobby_art_tags,
             no_collision=True,
@@ -3196,7 +3197,10 @@ def build_level(
             (1049, -250, 126),
             (1.0, 1.0, 1.0),
             materials["lobby_crack_light"],
-            post_report_lobby_art_tags + ("Hotel.Feedback.PostReportDeskWaitRattle",),
+            post_report_lobby_art_tags + (
+                "Hotel.Feedback.PostReportDeskWaitRattle",
+                "Hotel.Feedback.PostReportDeskWaitCrack",
+            ),
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
@@ -3205,9 +3209,9 @@ def build_level(
             "PROP_Lobby_GlassDoor_PostReportTapeCross_Authored",
             meshes["SM_LobbyDoor_TornTapeCross_v0"],
             (1047, -266, 111),
-            (0.46, 0.46, 0.46),
+            (0.32, 0.32, 0.32),
             materials["lobby_tape_cloth"],
-            desk_wait_authored_rattle_tags,
+            desk_wait_authored_rattle_tags + ("Hotel.Feedback.PostReportDeskWaitTape",),
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
@@ -3218,13 +3222,13 @@ def build_level(
             (1048, -250, 142),
             (0.72, 0.72, 0.72),
             materials["dull_metal"],
-            desk_wait_authored_rattle_tags,
+            desk_wait_authored_rattle_tags + ("Hotel.Feedback.PostReportDeskWaitLatch",),
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
-    add_cylinder("PROP_Lobby_GlassDoor_PostReportHandleRattleBar", (1055, -250, 134), 6, 94, materials["dull_metal"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cylinder("PROP_Lobby_GlassDoor_PostReportLatchRattlePin", (1048, -250, 158), 5, 18, materials["brass"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportTapeLooseEnd", (1053, -355, 178), (3, 18, 4), materials["lobby_tape_cloth"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cylinder("PROP_Lobby_GlassDoor_PostReportHandleRattleBar", (1055, -250, 134), 0.2, 0.2, materials["dull_metal"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cylinder("PROP_Lobby_GlassDoor_PostReportLatchRattlePin", (1048, -250, 158), 0.2, 0.2, materials["brass"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportTapeLooseEnd", (1053, -355, 178), retired_blockout_size, materials["lobby_tape_cloth"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
 
     # Controlled transition from work hub to guest-floor response.
     add_cube("AREA_Transition_CarpetRun_ToGuestHall_NoVoid", (1625, 0, -9), (750, 560, 18), materials["floor"])
