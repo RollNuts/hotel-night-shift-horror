@@ -1,4 +1,4 @@
-# Hotel Night Shift Horror
+# Hotel Night Shift
 
 Unreal Engine commercial game project for a first-person, single-location, night-shift business hotel horror game.
 

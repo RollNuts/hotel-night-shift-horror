@@ -13,14 +13,25 @@
 
 - Files/assets touched:
   - `Automation/Unreal/create_first_loop_playthrough_proof_assets.py`
+  - `Automation/Unreal/create_hotel_spine_slice.py`
   - `Automation/Tools/check_first_loop_playthrough_proof_pngs.py`
   - `Automation/Unreal/verify_hotel_spine_slice.py`
+  - `Config/DefaultGame.ini`
+  - `Config/DefaultEngine.ini`
+  - `Source/HotelNightShiftHorror/**`
+  - `SourceAssets/TextureGenerated/TX_Hotel_FrontDeskHeroBoard_v0.png`
+  - `Content/Hotel/Textures/TX_Hotel_FrontDeskHeroBoard_v0.uasset`
+  - `Content/Hotel/Materials/M_Hotel_FrontDeskHeroBoard_v0.uasset`
+  - `Content/Hotel/Maps/L_HotelNightShift_Slice.umap`
   - `Content/Hotel/Cinematics/LS_FirstLoop_PlaythroughProof_24s.uasset`
   - `Content/Hotel/Cinematics/MRQ_FirstLoopPlaythroughProofPng.uasset`
   - `Ledgers/PLACEHOLDER_LEDGER.md`
   - `Ledgers/ASSET_LICENSE_LEDGER.md`
   - `Veripsa/T2026-0630-FIRST-LOOP-PLAYTHROUGH-PROOF.md`
 - Binary Unreal assets claimed:
+  - `Content/Hotel/Maps/L_HotelNightShift_Slice.umap`
+  - `Content/Hotel/Textures/TX_Hotel_FrontDeskHeroBoard_v0.uasset`
+  - `Content/Hotel/Materials/M_Hotel_FrontDeskHeroBoard_v0.uasset`
   - `Content/Hotel/Cinematics/LS_FirstLoop_PlaythroughProof_24s.uasset`
   - `Content/Hotel/Cinematics/MRQ_FirstLoopPlaythroughProofPng.uasset`
 - Non-goals:
@@ -50,27 +61,30 @@
 - Security/secret risk: No networked runtime code, telemetry, account handling, or credential handling.
 - Paid tool/asset risk: None.
 - Small-room risk: None; the proof sequence loads and captures the production hotel map.
+- Warning-correction risk: Unreal project display name is shortened to `Hotel Night Shift` for the 20-character Project Browser limit; C++ module/repo identifiers remain unchanged in this task.
 - Veripsa Core role: traffic coordination and path/scope/index checks only; not code/art/product review.
 
 ## Evidence
 
 - Screenshot/video/log path:
-  - Local, uncommitted: `Saved/Logs/first_loop_playthrough_assets_r9.log`
-  - Local, uncommitted: `Saved/Logs/first_loop_playthrough_verify_r1.log`
-  - Local, uncommitted: `Saved/Logs/first_loop_playthrough_livemap_r2.log`
-  - Local, uncommitted: `Saved/Logs/first_loop_playthrough_mrq_render_r7.log`
+  - Local, uncommitted: `Saved/Logs/front_desk_first_loop_hero_map_r4_open.log`
+  - Local, uncommitted: `Saved/Logs/front_desk_first_loop_hero_assets_r4_open.log`
+  - Local, uncommitted: `Saved/Logs/front_desk_first_loop_hero_mrq_r4_open.log`
+  - Local, uncommitted: `Saved/Logs/front_desk_first_loop_hero_verify_r4_open.log`
+  - Local, uncommitted: `Saved/Logs/fix_project_settings_livemap_r4_open.log`
   - Local, uncommitted: `Saved/MovieRenders/FirstLoopPlaythrough/first_loop_playthrough_proof_*.png`
 - Performance note: Proof sequence and PNGs are editor/MRQ-only; runtime cost is unchanged.
 - Verification steps:
   - Python compile for updated automation and PNG gate: pass
-  - First-loop proof Sequencer/MRQ asset generation: pass, `Success - 0 error(s), 7 warning(s)`
-  - Production-map verifier with proof asset coverage: pass, `Success - 0 error(s), 2 warning(s)`
-  - LiveMap automation for the production first loop: pass, `Hotel.FrontDesk.PhoneResponse.LiveMap`
+  - Map regeneration via macOS `open -W -n` path: pass, `front_desk_first_loop_hero_map_r4_open.log`
+  - First-loop proof Sequencer/MRQ asset generation: pass, `front_desk_first_loop_hero_assets_r4_open.log`
+  - Production-map verifier with proof asset coverage: pass, `[HotelSpineVerify] Verified 114 assets, 261 required actors, 236 tagged actors, 19 audio actors, 70 movable feedback meshes, 166 non-interactive polish actors, and 52 authored mesh references.`
+  - LiveMap automation for the production first loop: pass, `Hotel.FrontDesk.PhoneResponse.LiveMap`, including `Project uses Enhanced Input defaults`
   - MRQ render of `LS_FirstLoop_PlaythroughProof_24s`: pass, `Movie Pipeline completed`
-  - First-loop proof PNG gate: pass, 48 PNGs, 48 unique frames
-  - Manual visual spot check: pass for front desk/phone, monitor, transition darkness, Room 203 refusal, report filing text, and post-report log self-correction text
-  - Public repo safety scan: pass on committed-path candidates
+  - First-loop proof PNG gate: pass, 48 PNGs, 48 unique frames, front-desk warm/green content, monitor/Room203/report readability, and exposure variation
+  - Manual visual spot check: pass for phone/desk opener, monitor, Room 203 refusal, report filing text, and post-report log self-correction text
+  - Public repo safety scan, project-file smoke check, `git diff --check`: pass
 
 ## Completion Statement
 
-The first hotel loop now has a concrete product-screen proof path instead of only isolated implementation claims. The proof captures the production hotel map across phone, monitor, patrol transition, Room 203 refusal, return route, report filing, post-report monitor mismatch, and log self-correction. It remains an internal proof lane only: no placeholder art/audio/UI is promoted to store or trailer quality by this task.
+The first hotel loop now has a concrete product-screen proof path instead of only isolated implementation claims. The proof captures the production hotel map across phone, monitor, patrol transition, Room 203 refusal, return route, report filing, post-report monitor mismatch, and log self-correction. This pass also corrects the Unreal Project Browser warnings by shortening the display name, using Enhanced Input defaults, and proving the changed input setup in LiveMap. It remains an internal proof lane only: no placeholder art/audio/UI is promoted to store or trailer quality by this task.

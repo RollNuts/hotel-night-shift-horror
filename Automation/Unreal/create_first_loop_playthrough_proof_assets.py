@@ -25,9 +25,9 @@ SECONDS = 24
 END_FRAME = FPS * SECONDS
 
 SHOT_CAMERAS = [
-    (0, 48, "CAPTURE_FrontDesk_FirstSteamShotCandidate", "Phone ringing / work desk", (8.0, -4.0, 1.0), 0.0),
-    (48, 96, "CAPTURE_PhoneResponse_LiftReceiverCandidate", "Answer phone", (5.0, -6.0, 2.0), -1.0),
-    (96, 144, "CAPTURE_SecurityMonitorFeed_ReadabilityCandidate", "Check monitor", (10.0, 6.0, 1.0), -2.0),
+    (0, 48, "CAPTURE_FrontDesk_FirstSteamShotCandidate", "Night reception work desk", (-10.0, -2.0, 0.0), -1.0),
+    (48, 96, "CAPTURE_PhoneResponse_LiftReceiverCandidate", "Answer phone", (-4.0, -4.0, 1.0), -1.0),
+    (96, 144, "CAPTURE_SecurityMonitorFeed_ReadabilityCandidate", "Check monitor", (-6.0, -2.0, 0.0), -1.0),
     (144, 196, "CAPTURE_Transition_ElevatorStair_AudioFearCandidate", "Leave desk", (16.0, 0.0, 0.0), 0.0),
     (196, 248, "CAPTURE_PatrolRoute_DecisionCueCandidate", "Hold and listen", (18.0, 0.0, 0.0), 1.0),
     (248, 316, "CAPTURE_GuestDoor_15SecondBeatCandidate", "Refuse Room 203", (12.0, -8.0, 1.0), -1.5),
@@ -38,14 +38,18 @@ SHOT_CAMERAS = [
 ]
 
 SHOT_EXPOSURE_BIAS = {
+    0: 1.8,
+    1: 2.3,
     # The transition shot is intentionally darker in-game, but the internal
     # proof must still let reviewers read the corridor and route geometry.
     3: 3.15,
+    7: 1.55,
+    9: 1.25,
 }
 
 ACTOR_JOLTS = {
-    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette": (52, (48.0, -20.0, 28.0), (-18.0, 6.0, -24.0), 1.0),
-    "PROP_FrontDesk_Phone_AuthoredCoiledCord": (58, (8.0, -7.0, 8.0), (0.0, 0.0, -5.0), 1.02),
+    "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette": (52, (26.0, -10.0, 18.0), (-8.0, 3.0, -12.0), 1.0),
+    "PROP_FrontDesk_Phone_AuthoredCoiledCord": (58, (5.0, -4.0, 5.0), (0.0, 0.0, -3.0), 1.01),
     "PROP_Surveillance_Monitor_CheckScanlineSweepA": (104, (0.0, 0.0, -26.0), (0.0, 0.0, 0.0), 1.08),
     "PROP_Surveillance_Monitor_CheckScanlineSweepB": (112, (0.0, 0.0, 22.0), (0.0, 0.0, 0.0), 1.06),
     "PROP_Surveillance_Monitor_CheckRoom203TargetBox": (116, (-10.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.12),

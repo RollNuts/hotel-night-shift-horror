@@ -4,7 +4,17 @@
 #include "Components/AudioComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/LightComponent.h"
+#include "EnhancedActionKeyMapping.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Engine/LocalPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "InputAction.h"
+#include "InputActionValue.h"
+#include "InputCoreTypes.h"
+#include "InputMappingContext.h"
+#include "InputModifiers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/AmbientSound.h"
 
@@ -95,6 +105,15 @@ constexpr float ReturnRouteTailSoundDelaySeconds = 0.48f;
 constexpr float ReturnRouteCameraMaxFovKick = 4.2f;
 const FVector ReturnRouteCameraImpactOffset(-8.0f, 0.0f, -2.4f);
 const FVector ReturnRouteCameraTailOffset(2.4f, 0.0f, 0.8f);
+
+void AddNegateModifier(FEnhancedActionKeyMapping& Mapping, UObject* Outer)
+{
+	UInputModifierNegate* NegateModifier = NewObject<UInputModifierNegate>(Outer);
+	NegateModifier->bX = true;
+	NegateModifier->bY = false;
+	NegateModifier->bZ = false;
+	Mapping.Modifiers.Add(NegateModifier);
+}
 }
 
 AHotelNightShiftPawn::AHotelNightShiftPawn()
@@ -117,6 +136,8 @@ void AHotelNightShiftPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
+	EnsureInputAssets();
+	ApplyDefaultInputMappingContext();
 	CacheHotelActors();
 	CaptureReturnRouteCameraRestState();
 	SetWorkState(
@@ -147,6 +168,19 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 void AHotelNightShiftPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	EnsureInputAssets();
+	ApplyDefaultInputMappingContext();
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(MoveForwardAction, ETriggerEvent::Triggered, this, &AHotelNightShiftPawn::MoveForwardInput);
+		EnhancedInputComponent->BindAction(MoveRightAction, ETriggerEvent::Triggered, this, &AHotelNightShiftPawn::MoveRightInput);
+		EnhancedInputComponent->BindAction(TurnAction, ETriggerEvent::Triggered, this, &AHotelNightShiftPawn::TurnInput);
+		EnhancedInputComponent->BindAction(LookUpAction, ETriggerEvent::Triggered, this, &AHotelNightShiftPawn::LookUpInput);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AHotelNightShiftPawn::Interact);
+		return;
+	}
 
 	PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &AHotelNightShiftPawn::MoveForward);
 	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &AHotelNightShiftPawn::MoveRight);
@@ -551,9 +585,75 @@ void AHotelNightShiftPawn::LookUp(float Value)
 	AddControllerPitchInput(Value);
 }
 
+void AHotelNightShiftPawn::MoveForwardInput(const FInputActionValue& Value)
+{
+	MoveForward(Value.Get<float>());
+}
+
+void AHotelNightShiftPawn::MoveRightInput(const FInputActionValue& Value)
+{
+	MoveRight(Value.Get<float>());
+}
+
+void AHotelNightShiftPawn::TurnInput(const FInputActionValue& Value)
+{
+	Turn(Value.Get<float>());
+}
+
+void AHotelNightShiftPawn::LookUpInput(const FInputActionValue& Value)
+{
+	LookUp(Value.Get<float>());
+}
+
 void AHotelNightShiftPawn::Interact()
 {
 	TryInteractWithActor(CurrentLookActor);
+}
+
+void AHotelNightShiftPawn::EnsureInputAssets()
+{
+	auto EnsureAction = [this](TObjectPtr<UInputAction>& Action, const TCHAR* Name, EInputActionValueType ValueType)
+	{
+		if (!Action)
+		{
+			Action = NewObject<UInputAction>(this, FName(Name));
+			Action->ValueType = ValueType;
+		}
+	};
+
+	EnsureAction(MoveForwardAction, TEXT("IA_Hotel_MoveForward"), EInputActionValueType::Axis1D);
+	EnsureAction(MoveRightAction, TEXT("IA_Hotel_MoveRight"), EInputActionValueType::Axis1D);
+	EnsureAction(TurnAction, TEXT("IA_Hotel_Turn"), EInputActionValueType::Axis1D);
+	EnsureAction(LookUpAction, TEXT("IA_Hotel_LookUp"), EInputActionValueType::Axis1D);
+	EnsureAction(InteractAction, TEXT("IA_Hotel_Interact"), EInputActionValueType::Boolean);
+
+	if (!DefaultInputMappingContext)
+	{
+		DefaultInputMappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_Hotel_Default"));
+		DefaultInputMappingContext->MapKey(MoveForwardAction, EKeys::W);
+		AddNegateModifier(DefaultInputMappingContext->MapKey(MoveForwardAction, EKeys::S), DefaultInputMappingContext);
+		DefaultInputMappingContext->MapKey(MoveRightAction, EKeys::D);
+		AddNegateModifier(DefaultInputMappingContext->MapKey(MoveRightAction, EKeys::A), DefaultInputMappingContext);
+		DefaultInputMappingContext->MapKey(TurnAction, EKeys::MouseX);
+		AddNegateModifier(DefaultInputMappingContext->MapKey(LookUpAction, EKeys::MouseY), DefaultInputMappingContext);
+		DefaultInputMappingContext->MapKey(InteractAction, EKeys::E);
+	}
+}
+
+void AHotelNightShiftPawn::ApplyDefaultInputMappingContext()
+{
+	if (!DefaultInputMappingContext)
+	{
+		return;
+	}
+
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	ULocalPlayer* LocalPlayer = PlayerController ? PlayerController->GetLocalPlayer() : nullptr;
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+	if (InputSubsystem && !InputSubsystem->HasMappingContext(DefaultInputMappingContext))
+	{
+		InputSubsystem->AddMappingContext(DefaultInputMappingContext, 0);
+	}
 }
 
 bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
