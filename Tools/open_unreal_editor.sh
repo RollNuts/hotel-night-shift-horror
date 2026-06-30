@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-uproject="${UPROJECT:-$repo_root/HotelNightShiftHorror.uproject}"
+uproject="${UPROJECT:-$repo_root/HotelNightShift.uproject}"
 
 if [[ -z "${UE_EDITOR:-}" ]]; then
   echo "ERROR: Set UE_EDITOR to your local UnrealEditor executable path." >&2

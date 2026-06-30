@@ -50,6 +50,10 @@ const TCHAR* Room203DoNotOpenNoticeLabel = TEXT("PROP_GuestHall_Room203_DoNotOpe
 const TCHAR* Room203SconceLightMeshLabel = TEXT("LIGHTMESH_GuestHall_Room203DoorPractical");
 const TCHAR* Room203AftershockLoosePaperLabel = TEXT("PROP_GuestHall_RightWall_Room203AftershockLoosePaper");
 const TCHAR* Room203AftershockHighCurlLabel = TEXT("PROP_GuestHall_RightWall_Room203AftershockHighCurl");
+const TCHAR* AuthoredLobbyDoorCrackWebLabel = TEXT("PROP_Lobby_GlassDoor_PostReportCrackWeb_Authored");
+const TCHAR* AuthoredLobbyDoorTapeCrossLabel = TEXT("PROP_Lobby_GlassDoor_PostReportTapeCross_Authored");
+const TCHAR* AuthoredLobbyDoorLatchPlateLabel = TEXT("PROP_Lobby_GlassDoor_PostReportLatchPlate_Authored");
+const TCHAR* LegacyLobbyDoorNoGuestReflectionLabel = TEXT("PROP_Lobby_GlassDoor_PostReportNoGuestReflection");
 
 AActor* FindActorByTag(UWorld* World, FName RequiredTag)
 {
@@ -198,6 +202,10 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* Room203SconceLightMesh = FindActorByLabel(World, Room203SconceLightMeshLabel);
 		AActor* Room203AftershockLoosePaper = FindActorByLabel(World, Room203AftershockLoosePaperLabel);
 		AActor* Room203AftershockHighCurl = FindActorByLabel(World, Room203AftershockHighCurlLabel);
+		AActor* AuthoredLobbyDoorCrackWeb = FindActorByLabel(World, AuthoredLobbyDoorCrackWebLabel);
+		AActor* AuthoredLobbyDoorTapeCross = FindActorByLabel(World, AuthoredLobbyDoorTapeCrossLabel);
+		AActor* AuthoredLobbyDoorLatchPlate = FindActorByLabel(World, AuthoredLobbyDoorLatchPlateLabel);
+		AActor* LegacyLobbyDoorNoGuestReflection = FindActorByLabel(World, LegacyLobbyDoorNoGuestReflectionLabel);
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
@@ -236,10 +244,15 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Room 203 sconce lightmesh exists in production map"), Room203SconceLightMesh);
 		TestNotNull(TEXT("Room 203 aftershock loose-paper mesh exists in production map"), Room203AftershockLoosePaper);
 		TestNotNull(TEXT("Room 203 aftershock high-curl mesh exists in production map"), Room203AftershockHighCurl);
-		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !ReportLogFiledReaction || !ReportLogFiledLight || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !AuthoredReportPenBody || !AuthoredReportPenNib || !AuthoredReportFiledInk || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
+		TestNotNull(TEXT("Authored lobby door crack web exists in production map"), AuthoredLobbyDoorCrackWeb);
+		TestNotNull(TEXT("Authored lobby door tape cross exists in production map"), AuthoredLobbyDoorTapeCross);
+		TestNotNull(TEXT("Authored lobby door latch plate exists in production map"), AuthoredLobbyDoorLatchPlate);
+		TestNotNull(TEXT("Legacy lobby door no-guest reflection blockout actor remains ledger-visible"), LegacyLobbyDoorNoGuestReflection);
+		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !ReportLogFiledReaction || !ReportLogFiledLight || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !AuthoredReportPenBody || !AuthoredReportFiledInk || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl || !AuthoredLobbyDoorCrackWeb || !AuthoredLobbyDoorTapeCross || !AuthoredLobbyDoorLatchPlate || !LegacyLobbyDoorNoGuestReflection)
 		{
 			return true;
 		}
+		TestTrue(TEXT("Legacy lobby door black blockout panel is retired to non-compositional scale"), LegacyLobbyDoorNoGuestReflection->GetActorScale3D().GetAbsMax() < 0.05f);
 
 		TestEqual(TEXT("Initial loop stage is PhoneRinging"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::PhoneRinging);
 		TestTrue(TEXT("Phone ring timer starts active"), Pawn->AutomationIsPhoneRingTimerActive());
@@ -424,11 +437,20 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Desk wait anomaly keeps ReportFiled as the terminal loop stage"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
 		TestFalse(TEXT("Post-report log self-correction waits while lobby glass feedback is active"), Pawn->AutomationInteractWithActor(ReportLog));
 		const FVector PostReportDeskWaitRattleRestLocation = Pawn->AutomationGetPostReportDeskWaitRattleLocation();
+		const FVector AuthoredLobbyDoorCrackRestLocation = AuthoredLobbyDoorCrackWeb->GetActorLocation();
+		const FVector AuthoredLobbyDoorTapeRestLocation = AuthoredLobbyDoorTapeCross->GetActorLocation();
+		const FVector AuthoredLobbyDoorLatchRestLocation = AuthoredLobbyDoorLatchPlate->GetActorLocation();
 		Pawn->AutomationAdvancePostReportDeskWait(0.10f);
 		TestTrue(TEXT("Post-report lobby door rattle moves visibly"), FVector::DistSquared(PostReportDeskWaitRattleRestLocation, Pawn->AutomationGetPostReportDeskWaitRattleLocation()) > FMath::Square(2.0f));
+		TestTrue(TEXT("Authored lobby door crack web trembles during the runtime glass pressure"), FVector::DistSquared(AuthoredLobbyDoorCrackRestLocation, AuthoredLobbyDoorCrackWeb->GetActorLocation()) > FMath::Square(1.0f));
+		TestTrue(TEXT("Authored lobby door tape cross flutters during the runtime glass pressure"), FVector::DistSquared(AuthoredLobbyDoorTapeRestLocation, AuthoredLobbyDoorTapeCross->GetActorLocation()) > FMath::Square(1.0f));
+		TestTrue(TEXT("Authored lobby door latch plate jolts during the runtime glass pressure"), FVector::DistSquared(AuthoredLobbyDoorLatchRestLocation, AuthoredLobbyDoorLatchPlate->GetActorLocation()) > FMath::Square(2.0f));
 		Pawn->AutomationAdvancePostReportDeskWait(1.20f);
 		TestFalse(TEXT("Post-report desk wait feedback settles"), Pawn->AutomationIsPostReportDeskWaitActive());
 		TestTrue(TEXT("Post-report lobby door rattle returns to rest"), FVector::DistSquared(PostReportDeskWaitRattleRestLocation, Pawn->AutomationGetPostReportDeskWaitRattleLocation()) < FMath::Square(0.5f));
+		TestTrue(TEXT("Authored lobby door crack web returns to rest after runtime pressure"), FVector::DistSquared(AuthoredLobbyDoorCrackRestLocation, AuthoredLobbyDoorCrackWeb->GetActorLocation()) < FMath::Square(0.75f));
+		TestTrue(TEXT("Authored lobby door tape cross returns to rest after runtime pressure"), FVector::DistSquared(AuthoredLobbyDoorTapeRestLocation, AuthoredLobbyDoorTapeCross->GetActorLocation()) < FMath::Square(0.75f));
+		TestTrue(TEXT("Authored lobby door latch plate returns to rest after runtime pressure"), FVector::DistSquared(AuthoredLobbyDoorLatchRestLocation, AuthoredLobbyDoorLatchPlate->GetActorLocation()) < FMath::Square(0.75f));
 		const FVector PostReportLogCorrectionRestLocation = Pawn->AutomationGetPostReportLogSelfCorrectionLocation();
 		TestTrue(TEXT("Post-report log self-correction succeeds after the lobby wait settles"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestTrue(TEXT("Post-report log self-correction feedback starts"), Pawn->AutomationIsPostReportLogSelfCorrectionActive());

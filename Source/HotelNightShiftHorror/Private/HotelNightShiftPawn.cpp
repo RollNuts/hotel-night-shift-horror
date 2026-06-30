@@ -83,6 +83,9 @@ const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMon
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 const FName PostReportDeskWaitLightTag(TEXT("Hotel.Feedback.PostReportDeskWaitLight"));
 const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitRattle"));
+const FName PostReportDeskWaitCrackTag(TEXT("Hotel.Feedback.PostReportDeskWaitCrack"));
+const FName PostReportDeskWaitTapeTag(TEXT("Hotel.Feedback.PostReportDeskWaitTape"));
+const FName PostReportDeskWaitLatchTag(TEXT("Hotel.Feedback.PostReportDeskWaitLatch"));
 const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionFeedbackTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrection"));
 const FName PostReportLogSelfCorrectionLightTag(TEXT("Hotel.Feedback.PostReportLogSelfCorrectionLight"));
@@ -1468,8 +1471,6 @@ void AHotelNightShiftPawn::UpdatePostReportDeskWaitAnomaly(float DeltaSeconds)
 		SetPostReportDeskWaitLightIntensity(220.0f + Pulse * 1880.0f);
 		const float RattleAlpha = FMath::Clamp(PostReportDeskWaitSeconds / 1.25f, 0.0f, 1.0f);
 		const float RattleKick = FMath::Sin(RattleAlpha * UE_PI * 8.0f) * (1.0f - RattleAlpha);
-		const FVector RattleOffset(0.0f, RattleKick * 14.0f, FMath::Abs(RattleKick) * 3.0f);
-		const FRotator RattleRotation(RattleKick * 8.0f, 0.0f, RattleKick * 5.0f);
 
 		for (int32 Index = 0; Index < PostReportDeskWaitRattleActors.Num(); ++Index)
 		{
@@ -1479,6 +1480,22 @@ void AHotelNightShiftPawn::UpdatePostReportDeskWaitAnomaly(float DeltaSeconds)
 				continue;
 			}
 
+			const bool bCrackWeb = RattlePart->ActorHasTag(PostReportDeskWaitCrackTag);
+			const bool bTape = RattlePart->ActorHasTag(PostReportDeskWaitTapeTag);
+			const bool bLatch = RattlePart->ActorHasTag(PostReportDeskWaitLatchTag);
+			const float Flutter = FMath::Sin((RattleAlpha * UE_PI * 13.0f) + Index * 0.47f) * (1.0f - RattleAlpha);
+			const float SideTravel = bLatch ? 16.0f : (bTape ? 10.0f : (bCrackWeb ? 7.0f : 3.0f));
+			const float LiftTravel = bLatch ? 3.6f : (bTape ? 2.8f : (bCrackWeb ? 1.6f : 0.6f));
+			const float PitchTravel = bLatch ? 9.0f : (bTape ? 4.0f : (bCrackWeb ? 1.4f : 0.8f));
+			const float RollTravel = bLatch ? 5.5f : (bTape ? 11.0f : (bCrackWeb ? 1.2f : 0.6f));
+			const FVector RattleOffset(
+				0.0f,
+				RattleKick * SideTravel,
+				FMath::Abs(RattleKick) * LiftTravel + (bTape ? Flutter * 2.2f : 0.0f));
+			const FRotator RattleRotation(
+				RattleKick * PitchTravel,
+				bCrackWeb ? Flutter * 0.7f : 0.0f,
+				RattleKick * RollTravel + (bTape ? Flutter * 6.0f : 0.0f));
 			RattlePart->SetActorLocationAndRotation(
 				PostReportDeskWaitRattleRestLocations[Index] + RattleOffset,
 				PostReportDeskWaitRattleRestRotations[Index] + RattleRotation);

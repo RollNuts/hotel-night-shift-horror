@@ -30,7 +30,7 @@ The short version:
 
 ## Project Files
 
-- `HotelNightShiftHorror.uproject` is the Unreal project descriptor.
+- `HotelNightShift.uproject` is the Unreal project descriptor.
 - `Config/` contains minimal project configuration.
 - `REQUIRED.md` contains non-negotiable product rules.
 - `Ledgers/` contains public-safe templates for asset/license and placeholder tracking.
@@ -42,4 +42,3 @@ The short version:
 Free assets, music, SFX, 3D models, and tools may be used only when their licenses are clear and commercial use is allowed. "Free" does not mean safe to redistribute in a public repository.
 
 Every asset must be recorded in [Ledgers/ASSET_LICENSE_LEDGER.md](Ledgers/ASSET_LICENSE_LEDGER.md). If no suitable free asset exists, create an original asset and record its source and license status.
-
