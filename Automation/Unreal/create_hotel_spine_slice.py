@@ -26,6 +26,7 @@ UPDATED_SOURCE_TEXTURES: set[str] = set()
 ALWAYS_REIMPORT_TEXTURES = {
     "TX_Hotel_ReturnRouteSlipPaper_v0",
     "TX_Hotel_RoomDoorPaint_v0",
+    "TX_Hotel_SecurityMonitorFeed_v0",
 }
 
 
@@ -278,10 +279,94 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             max(0, min(255, int(b))),
         )
 
+    def security_monitor_feed_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        qx = 0 if u < 0.5 else 1
+        qy = 0 if v < 0.5 else 1
+        local_u = (u - qx * 0.5) * 2.0
+        local_v = (v - qy * 0.5) * 2.0
+        scanline = 0.78 + 0.22 * (1.0 if y % 4 < 2 else 0.0)
+        static = (
+            math.sin(x * 0.91 + y * 0.31)
+            + math.sin(x * 0.17 - y * 1.11 + 2.4)
+            + math.sin(x * 1.73 + y * 0.07 + 5.2)
+        ) / 3.0
+        border = 0.0
+        if abs(u - 0.5) < 0.006 or abs(v - 0.5) < 0.008:
+            border = 1.0
+        if local_u < 0.035 or local_u > 0.965 or local_v < 0.045 or local_v > 0.955:
+            border = max(border, 0.75)
+
+        red = 5 + 7 * static
+        green = 42 + 22 * static
+        blue = 23 + 10 * static
+
+        # Hallway perspective lines in the main Room 203 feed.
+        if qx == 0 and qy == 0:
+            center = 0.52
+            left_wall = 0.12 + 0.28 * local_v
+            right_wall = 0.88 - 0.24 * local_v
+            floor_line = 0.70 + 0.12 * abs(local_u - center)
+            ceiling_line = 0.18 - 0.04 * abs(local_u - center)
+            wall_hit = max(0.0, 1.0 - abs(local_u - left_wall) / 0.012)
+            wall_hit = max(wall_hit, max(0.0, 1.0 - abs(local_u - right_wall) / 0.012))
+            floor_hit = max(0.0, 1.0 - abs(local_v - floor_line) / 0.012)
+            ceiling_hit = max(0.0, 1.0 - abs(local_v - ceiling_line) / 0.010)
+            door = 1.0 if 0.61 <= local_u <= 0.78 and 0.30 <= local_v <= 0.79 else 0.0
+            plate = 1.0 if 0.66 <= local_u <= 0.73 and 0.34 <= local_v <= 0.40 else 0.0
+            red += 3 * (wall_hit + floor_hit + ceiling_hit) + 10 * door + 18 * plate
+            green += 50 * (wall_hit + floor_hit + ceiling_hit) + 36 * door + 70 * plate
+            blue += 20 * (wall_hit + floor_hit + ceiling_hit) + 14 * door + 28 * plate
+
+        # Empty lobby feed: visible counter edge, no figure.
+        if qx == 1 and qy == 0:
+            counter = 1.0 if 0.18 <= local_v <= 0.28 and 0.10 <= local_u <= 0.92 else 0.0
+            glass_line = max(0.0, 1.0 - abs(local_u - 0.74) / 0.012) if 0.28 < local_v < 0.86 else 0.0
+            red += 4 * counter + 5 * glass_line
+            green += 42 * counter + 48 * glass_line
+            blue += 16 * counter + 30 * glass_line
+
+        # Stair/elevator feed: the split route is represented without adding another mechanic.
+        if qx == 0 and qy == 1:
+            elevator_seam = max(0.0, 1.0 - abs(local_u - 0.36) / 0.010) if 0.18 < local_v < 0.84 else 0.0
+            stair_sign = 1.0 if 0.58 <= local_u <= 0.86 and 0.20 <= local_v <= 0.31 else 0.0
+            red += 15 * stair_sign + 4 * elevator_seam
+            green += 50 * stair_sign + 42 * elevator_seam
+            blue += 30 * stair_sign + 18 * elevator_seam
+
+        # Alert/status feed: no-guest and mismatch marks are drawn as geometry-like bars.
+        if qx == 1 and qy == 1:
+            red_bar = 1.0 if 0.18 <= local_u <= 0.84 and 0.28 <= local_v <= 0.35 else 0.0
+            red_bar = max(red_bar, 1.0 if 0.24 <= local_u <= 0.76 and 0.46 <= local_v <= 0.51 else 0.0)
+            slash = max(0.0, 1.0 - abs((local_u - 0.28) - (local_v - 0.62) * 0.55) / 0.016) if 0.18 < local_u < 0.78 and 0.56 < local_v < 0.80 else 0.0
+            red += 64 * max(red_bar, slash)
+            green += 18 * max(red_bar, slash)
+            blue += 10 * max(red_bar, slash)
+
+        # CCTV labels/timestamp are simple block strokes, not font assets.
+        label = 1.0 if 0.055 <= local_u <= 0.38 and 0.070 <= local_v <= 0.092 else 0.0
+        label = max(label, 1.0 if 0.055 <= local_u <= 0.23 and 0.118 <= local_v <= 0.136 else 0.0)
+        timestamp = 1.0 if 0.61 <= local_u <= 0.92 and 0.875 <= local_v <= 0.895 else 0.0
+        red += 7 * (label + timestamp) + 18 * border
+        green += 70 * (label + timestamp) + 80 * border
+        blue += 30 * (label + timestamp) + 36 * border
+
+        green *= scanline
+        red *= scanline
+        blue *= scanline
+        vignette = 1.0 - 0.42 * max(0.0, math.sqrt((u - 0.5) ** 2 + (v - 0.5) ** 2) - 0.35)
+        return (
+            max(0, min(255, int(red * vignette))),
+            max(0, min(255, int(green * vignette))),
+            max(0, min(255, int(blue * vignette))),
+        )
+
     textures = {
         "TX_Hotel_Room203WallpaperPanel_v0": (512, 512, wallpaper_pixel),
         "TX_Hotel_RoomDoorPaint_v0": (512, 512, room_door_pixel),
         "TX_Hotel_ReturnRouteSlipPaper_v0": (512, 512, return_slip_pixel),
+        "TX_Hotel_SecurityMonitorFeed_v0": (512, 512, security_monitor_feed_pixel),
     }
     output: dict[str, pathlib.Path] = {}
     for name, (width, height, pixel_func) in textures.items():
@@ -441,6 +526,21 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         dead_air = 0.05 * math.sin(2 * math.pi * 52 * t) if 0.55 <= t <= 1.25 else 0.0
         return scan + 0.42 * low_relay + 0.30 * frame_skip + dead_air
 
+    def monitor_check_glitch(t: float) -> float:
+        relay = 0.0
+        for start, pitch in ((0.015, 1140), (0.075, 360), (0.19, 840), (0.33, 128)):
+            dt = t - start
+            if 0.0 <= dt <= 0.075:
+                relay += math.exp(-dt * 48.0) * math.sin(2 * math.pi * pitch * dt)
+        scan = 0.055 * math.sin(2 * math.pi * 3180 * t) if 0.06 <= t <= 0.52 else 0.0
+        sync = 0.035 * math.sin(2 * math.pi * 68 * t) * math.exp(-t * 3.0)
+        frame_tick = 0.0
+        for start in (0.11, 0.25, 0.41):
+            dt = t - start
+            if 0.0 <= dt <= 0.024:
+                frame_tick += math.exp(-dt * 128.0) * math.sin(2 * math.pi * 1540 * dt)
+        return 0.34 * relay + scan + sync + 0.26 * frame_tick
+
     def post_report_desk_wait_rattle(t: float) -> float:
         glass = 0.0
         for start, pitch in ((0.05, 162), (0.18, 91), (0.42, 126), (0.68, 73)):
@@ -486,6 +586,7 @@ def generate_source_audio() -> dict[str, pathlib.Path]:
         "SFX_PatrolListenDrop_v0": (2.4, patrol_listen_drop),
         "SFX_ReturnRouteKnockback_v0": (1.7, return_route_knockback),
         "SFX_ReturnRoutePursuitTail_v0": (2.6, return_route_pursuit_tail),
+        "SFX_MonitorCheckGlitch_v0": (0.72, monitor_check_glitch),
         "SFX_PostReportMonitorMismatch_v0": (1.55, post_report_monitor_mismatch),
         "SFX_PostReportDeskWaitRattle_v0": (1.65, post_report_desk_wait_rattle),
         "SFX_PostReportLogSelfCorrection_v0": (1.25, post_report_log_self_correction),
@@ -2244,6 +2345,7 @@ def build_level(
     room203_wallpaper_texture = textures.get("TX_Hotel_Room203WallpaperPanel_v0")
     room_door_texture = textures.get("TX_Hotel_RoomDoorPaint_v0")
     return_slip_texture = textures.get("TX_Hotel_ReturnRouteSlipPaper_v0")
+    security_monitor_texture = textures.get("TX_Hotel_SecurityMonitorFeed_v0")
     materials = {
         "floor": ensure_material("M_Hotel_WornFloor_v0", unreal.LinearColor(0.15, 0.13, 0.11, 1.0), 0.92),
         "wall": ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
@@ -2296,6 +2398,9 @@ def build_level(
             0.28,
             unreal.LinearColor(0.0, 0.55, 0.28, 1.0),
         ),
+        "security_monitor_feed": ensure_textured_material("M_Hotel_SecurityMonitorFeed_v0", security_monitor_texture, 0.42)
+        if security_monitor_texture
+        else ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
         "warn_glow": ensure_material(
             "M_Hotel_ServiceAmberGlow_v0",
             unreal.LinearColor(0.85, 0.48, 0.14, 1.0),
@@ -2421,7 +2526,25 @@ def build_level(
     add_cylinder("PROP_FrontDesk_DeskLamp_ThinStem", (-332, -552, 158), 8, 48, materials["brass"], front_desk_art_tags, no_collision=True)
     add_sphere("PROP_FrontDesk_DeskLamp_ShadeCurvedSilhouette", (-320, -548, 176), (74, 34, 22), materials["desk_lamp"], front_desk_art_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
-    add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -525, 160), (130, 16, 72), materials["screen_glow"], ("Hotel.Interact.Monitor",))
+    monitor_feed_tags = (
+        "Hotel.Interact.Monitor",
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.SecurityMonitorFeed",
+    )
+    monitor_feedback_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.SecurityMonitorFeed",
+        "Hotel.Feedback.MonitorCheckVisual",
+    )
+    add_cube("PROP_Surveillance_Monitor_CRT_Housing", (-620, -520, 160), (168, 34, 106), materials["black"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -541, 160), (132, 6, 74), materials["security_monitor_feed"], monitor_feed_tags)
+    add_cube("PROP_Surveillance_Monitor_CheckFeedGlassReflection", (-674, -545, 160), (7, 3, 64), materials["screen_glow"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckScanlineSweepA", (-642, -548, 176), (48, 3, 3), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckScanlineSweepB", (-600, -548, 144), (62, 3, 3), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckRoom203TargetBox", (-585, -549, 159), (10, 3, 30), materials["warn_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckNoGuestUnderline", (-646, -549, 134), (34, 3, 3), materials["warn"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckTimestampBlock", (-574, -549, 186), (24, 3, 3), materials["paper"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("LIGHTMESH_Surveillance_Monitor_CheckGlow", (-620, -550, 122), (118, 3, 4), materials["screen_glow"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
     monitor_mismatch_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchVisual")
     add_cube("PROP_Surveillance_Monitor_PostReportFeedFrame", (-620, -536, 160), (112, 5, 58), materials["screen"], monitor_mismatch_tags, no_collision=True)
     add_cube("PROP_Surveillance_Monitor_PostReportStaticBarA", (-646, -540, 178), (58, 4, 4), materials["screen_glow"], monitor_mismatch_tags, no_collision=True)
@@ -3118,6 +3241,7 @@ def build_level(
     add_light("LIGHT_FrontDesk_PhoneCallLampPulse", unreal.PointLight, (-395, -555, 158), (0, 0, 0), 760.0, unreal.Color(255, 168, 72, 255), ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"), attenuation_radius=280.0)
     add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 2700.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=900.0)
     add_light("LIGHT_FrontDesk_PhoneResponseEvidenceFill", unreal.PointLight, (-390, -650, 188), (0, 0, 0), 5200.0, unreal.Color(255, 196, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PhoneResponse"), attenuation_radius=720.0)
+    add_light("LIGHT_Surveillance_Monitor_CheckPulse", unreal.PointLight, (-620, -552, 178), (0, 0, 0), 420.0, unreal.Color(86, 255, 164, 255), ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed", "Hotel.Feedback.MonitorCheckLight"), attenuation_radius=360.0)
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 2200.0, unreal.Color(120, 165, 255, 255), attenuation_radius=950.0, source_width=280.0, source_height=240.0)
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 1400.0, unreal.Color(255, 198, 90, 255), attenuation_radius=780.0)
     add_light("LIGHT_Transition_ElevatorCallPanelDread", unreal.PointLight, (1122, 398, 150), (0, 0, 0), 980.0, unreal.Color(255, 155, 58, 255), ("Hotel.Capture.TransitionFear",), attenuation_radius=360.0)
@@ -3165,6 +3289,7 @@ def build_level(
     player_start.set_actor_label("PLAYERSTART_FrontDesk_FacingPhoneAndMonitor")
 
     add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-130, -690, 178), (2, 151, 0), 60.0)
+    add_camera("CAPTURE_SecurityMonitorFeed_ReadabilityCandidate", (-445, -710, 178), (0.5, 126, 0), 62.0, ("Hotel.Capture.SecurityMonitorFeed",))
     add_camera("CAPTURE_ReportLog_ReadabilityCandidate", (-255, -660, 218), (-28, 90, 0), 48.0)
     add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
@@ -3203,6 +3328,8 @@ def build_level(
         add_audio("SFX_PhonePickup_FrontDesk_ManualTrigger_v0", sounds["SFX_PhonePickup_v0"], (-430, -548, 150), False, ("Hotel.Audio.PhonePickup",))
     if "SFX_PhoneLineStatic_v0" in sounds:
         add_audio("SFX_PhoneLineStatic_FrontDesk_ConnectedCue_v0", sounds["SFX_PhoneLineStatic_v0"], (-438, -552, 154), False, ("Hotel.Audio.PhoneLineStatic",))
+    if "SFX_MonitorCheckGlitch_v0" in sounds:
+        add_audio("SFX_MonitorCheckGlitch_FrontDesk_ManualTrigger_v0", sounds["SFX_MonitorCheckGlitch_v0"], (-620, -542, 172), False, ("Hotel.Audio.MonitorCheck",))
     if "SFX_DoorKnock203_v0" in sounds:
         add_audio("SFX_DoorKnock203_ManualTrigger_v0", sounds["SFX_DoorKnock203_v0"], (3920, 285, 150), False, ("Hotel.Audio.Room203Knock",))
     if "SFX_Room203AftershockRustle_v0" in sounds:

@@ -17,6 +17,9 @@ const FVector ReportLogAnchor(-255.0f, -522.0f, 128.0f);
 const FVector PhoneSoundAnchor(-430.0f, -525.0f, 150.0f);
 const FVector PhonePickupSoundAnchor(-430.0f, -548.0f, 150.0f);
 const FVector PhoneLineSoundAnchor(-438.0f, -552.0f, 154.0f);
+const FVector MonitorCheckSoundAnchor(-620.0f, -542.0f, 172.0f);
+const FVector MonitorCheckFeedbackAnchor(-620.0f, -548.0f, 160.0f);
+const FVector MonitorCheckLightAnchor(-620.0f, -552.0f, 178.0f);
 const FVector PhoneReceiverAnchor(-430.0f, -558.0f, 150.0f);
 const FVector PhoneCordTugAnchor(-356.0f, -558.0f, 140.0f);
 const FVector PhoneIndicatorLightAnchor(-395.0f, -555.0f, 158.0f);
@@ -50,6 +53,9 @@ const FName PhoneReceiverTag(TEXT("Hotel.Feedback.PhoneReceiver"));
 const FName PhoneCordTugTag(TEXT("Hotel.Feedback.PhoneCordTug"));
 const FName PhoneLineAudioTag(TEXT("Hotel.Audio.PhoneLineStatic"));
 const FName MonitorInteractTag(TEXT("Hotel.Interact.Monitor"));
+const FName MonitorCheckAudioTag(TEXT("Hotel.Audio.MonitorCheck"));
+const FName MonitorCheckFeedbackTag(TEXT("Hotel.Feedback.MonitorCheckVisual"));
+const FName MonitorCheckLightTag(TEXT("Hotel.Feedback.MonitorCheckLight"));
 const FName Room203DoorInteractTag(TEXT("Hotel.Interact.Room203Door"));
 const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName Room203LatchRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203LatchJolt"));
@@ -125,6 +131,7 @@ void AHotelNightShiftPawn::Tick(float DeltaSeconds)
 	UpdatePostReportDeskWaitAnomaly(DeltaSeconds);
 	UpdatePostReportLogSelfCorrection(DeltaSeconds);
 	UpdatePhoneRingVisual(DeltaSeconds);
+	UpdateMonitorCheckFeedback(DeltaSeconds);
 	UpdatePhoneReceiverAnimation(DeltaSeconds);
 	UpdateDoorRefusalFeedback(DeltaSeconds);
 	UpdateReportLogFiledFeedback(DeltaSeconds);
@@ -192,6 +199,38 @@ bool AHotelNightShiftPawn::AutomationHasPhoneLineSound() const
 	const AAmbientSound* PhoneLineSound = Cast<AAmbientSound>(PhoneLineSoundActor);
 	const UAudioComponent* AudioComponent = PhoneLineSound ? PhoneLineSound->GetAudioComponent() : nullptr;
 	return AudioComponent && AudioComponent->Sound;
+}
+
+bool AHotelNightShiftPawn::AutomationHasMonitorCheckSound() const
+{
+	const AAmbientSound* MonitorCheckSound = Cast<AAmbientSound>(MonitorCheckSoundActor);
+	const UAudioComponent* AudioComponent = MonitorCheckSound ? MonitorCheckSound->GetAudioComponent() : nullptr;
+	return AudioComponent && AudioComponent->Sound;
+}
+
+bool AHotelNightShiftPawn::AutomationIsMonitorCheckFeedbackActive() const
+{
+	return bMonitorCheckFeedbackActive;
+}
+
+void AHotelNightShiftPawn::AutomationAdvanceMonitorCheckFeedback(float DeltaSeconds)
+{
+	UpdateMonitorCheckFeedback(DeltaSeconds);
+}
+
+float AHotelNightShiftPawn::AutomationGetMonitorCheckFeedbackAlpha() const
+{
+	return MonitorCheckFeedbackAlpha;
+}
+
+FVector AHotelNightShiftPawn::AutomationGetMonitorCheckFeedbackLocation() const
+{
+	return MonitorCheckFeedbackActor ? MonitorCheckFeedbackActor->GetActorLocation() : FVector::ZeroVector;
+}
+
+float AHotelNightShiftPawn::AutomationGetMonitorCheckLightIntensity() const
+{
+	return GetLightIntensity(MonitorCheckLightActor);
 }
 
 bool AHotelNightShiftPawn::AutomationIsPatrolListenActive() const
@@ -501,6 +540,7 @@ bool AHotelNightShiftPawn::TryInteractWithActor(AActor* TargetActor)
 	{
 		bMonitorChecked = true;
 		StopPhoneLineAudio();
+		TriggerMonitorCheckFeedback();
 		PulseHallLight(85.0f);
 		SetWorkState(
 			EHotelLoopStage::MonitorChecked,
@@ -646,6 +686,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	PhoneRingSoundActor = FindAudioActorNear(PhoneSoundAnchor, 90.0f);
 	PhonePickupSoundActor = FindAudioActorNear(PhonePickupSoundAnchor, 80.0f);
 	PhoneLineSoundActor = FindActorWithTagNear(PhoneLineAudioTag, PhoneLineSoundAnchor, 90.0f);
+	MonitorCheckSoundActor = FindActorWithTagNear(MonitorCheckAudioTag, MonitorCheckSoundAnchor, 120.0f);
+	MonitorCheckFeedbackActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(MonitorCheckFeedbackTag, MonitorCheckFeedbackAnchor, 150.0f))
+	{
+		MonitorCheckFeedbackActors.Add(FeedbackPart);
+	}
+	MonitorCheckFeedbackActor = FindActorWithTagNear(MonitorCheckFeedbackTag, MonitorCheckFeedbackAnchor, 150.0f);
+	MonitorCheckLightActor = FindLightActorWithTagNear(MonitorCheckLightTag, MonitorCheckLightAnchor, 140.0f);
 	PhoneReceiverActors.Reset();
 	for (AActor* ReceiverPart : FindActorsWithTagNear(PhoneReceiverTag, PhoneReceiverAnchor, 120.0f))
 	{
@@ -754,6 +802,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		PhoneCordTugRestLocations.Add(CordPart->GetActorLocation());
 		PhoneCordTugRestRotations.Add(CordPart->GetActorRotation());
+	}
+
+	MonitorCheckFeedbackRestLocations.Reset();
+	MonitorCheckFeedbackRestRotations.Reset();
+	for (AActor* FeedbackPart : MonitorCheckFeedbackActors)
+	{
+		MonitorCheckFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
+		MonitorCheckFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 
 	DoorRefusalFeedbackRestLocations.Reset();
@@ -991,6 +1047,65 @@ void AHotelNightShiftPawn::PlayActorSound(AActor* SoundActor) const
 	if (AudioComponent && AudioComponent->Sound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, AudioComponent->Sound, AmbientSound->GetActorLocation());
+	}
+}
+
+void AHotelNightShiftPawn::TriggerMonitorCheckFeedback()
+{
+	bMonitorCheckFeedbackActive = true;
+	MonitorCheckFeedbackAlpha = 0.0f;
+	MonitorCheckFeedbackPulseClock = 0.0f;
+	PlayActorSound(MonitorCheckSoundActor);
+	SetMonitorCheckLightIntensity(1700.0f);
+}
+
+void AHotelNightShiftPawn::UpdateMonitorCheckFeedback(float DeltaSeconds)
+{
+	if (!bMonitorCheckFeedbackActive)
+	{
+		return;
+	}
+
+	MonitorCheckFeedbackPulseClock += DeltaSeconds;
+	MonitorCheckFeedbackAlpha = FMath::Min(1.0f, MonitorCheckFeedbackAlpha + DeltaSeconds / 0.68f);
+	const float Settle = 1.0f - MonitorCheckFeedbackAlpha;
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(MonitorCheckFeedbackPulseClock * 18.0f);
+	SetMonitorCheckLightIntensity(420.0f + Pulse * 1180.0f * Settle);
+
+	for (int32 Index = 0; Index < MonitorCheckFeedbackActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = MonitorCheckFeedbackActors[Index];
+		if (!FeedbackPart || !MonitorCheckFeedbackRestLocations.IsValidIndex(Index) || !MonitorCheckFeedbackRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		const float Phase = MonitorCheckFeedbackPulseClock * (16.0f + Index * 1.7f) + Index * 0.61f;
+		const FVector Jitter(
+			FMath::Sin(Phase) * (2.2f + Index * 0.12f) * Settle,
+			-FMath::Abs(FMath::Sin(Phase * 0.73f)) * 0.9f * Settle,
+			FMath::Cos(Phase * 0.83f) * (1.2f + Index * 0.08f) * Settle);
+		const FRotator Tilt(0.0f, 0.0f, FMath::Sin(Phase * 0.51f) * 0.8f * Settle);
+		FeedbackPart->SetActorLocationAndRotation(
+			MonitorCheckFeedbackRestLocations[Index] + Jitter,
+			MonitorCheckFeedbackRestRotations[Index] + Tilt);
+	}
+
+	if (MonitorCheckFeedbackAlpha >= 1.0f)
+	{
+		bMonitorCheckFeedbackActive = false;
+		for (int32 Index = 0; Index < MonitorCheckFeedbackActors.Num(); ++Index)
+		{
+			AActor* FeedbackPart = MonitorCheckFeedbackActors[Index];
+			if (!FeedbackPart || !MonitorCheckFeedbackRestLocations.IsValidIndex(Index) || !MonitorCheckFeedbackRestRotations.IsValidIndex(Index))
+			{
+				continue;
+			}
+			FeedbackPart->SetActorLocationAndRotation(
+				MonitorCheckFeedbackRestLocations[Index],
+				MonitorCheckFeedbackRestRotations[Index]);
+		}
+		SetMonitorCheckLightIntensity(420.0f);
 	}
 }
 
@@ -1743,6 +1858,19 @@ void AHotelNightShiftPawn::SetPhoneIndicatorIntensity(float NewIntensity)
 	}
 
 	if (ULightComponent* LightComponent = PhoneIndicatorLightActor->FindComponentByClass<ULightComponent>())
+	{
+		LightComponent->SetIntensity(NewIntensity);
+	}
+}
+
+void AHotelNightShiftPawn::SetMonitorCheckLightIntensity(float NewIntensity)
+{
+	if (!MonitorCheckLightActor)
+	{
+		return;
+	}
+
+	if (ULightComponent* LightComponent = MonitorCheckLightActor->FindComponentByClass<ULightComponent>())
 	{
 		LightComponent->SetIntensity(NewIntensity);
 	}

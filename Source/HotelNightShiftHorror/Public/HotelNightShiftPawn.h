@@ -50,6 +50,12 @@ public:
 	bool AutomationIsPhoneRingTimerActive() const;
 	bool AutomationIsPhoneLineConnected() const;
 	bool AutomationHasPhoneLineSound() const;
+	bool AutomationHasMonitorCheckSound() const;
+	bool AutomationIsMonitorCheckFeedbackActive() const;
+	void AutomationAdvanceMonitorCheckFeedback(float DeltaSeconds);
+	float AutomationGetMonitorCheckFeedbackAlpha() const;
+	FVector AutomationGetMonitorCheckFeedbackLocation() const;
+	float AutomationGetMonitorCheckLightIntensity() const;
 	bool AutomationIsPatrolListenActive() const;
 	bool AutomationIsPatrolListenResolved() const;
 	void AutomationAdvancePatrolListen(float DeltaSeconds);
@@ -114,6 +120,8 @@ private:
 	void StartPhoneLineAudio();
 	void StopPhoneLineAudio();
 	void PlayActorSound(AActor* SoundActor) const;
+	void TriggerMonitorCheckFeedback();
+	void UpdateMonitorCheckFeedback(float DeltaSeconds);
 	void UpdatePatrolListenAnomaly(float DeltaSeconds);
 	void StartPatrolListenAnomaly();
 	void ResolvePatrolListenAnomaly();
@@ -139,6 +147,7 @@ private:
 	void TriggerReportLogFiledFeedback();
 	void UpdateReportLogFiledFeedback(float DeltaSeconds);
 	void SetPhoneIndicatorIntensity(float NewIntensity);
+	void SetMonitorCheckLightIntensity(float NewIntensity);
 	void SetPatrolListenLightIntensity(float NewIntensity);
 	void SetReturnRouteLightIntensity(float NewIntensity);
 	void SetReturnRouteTailLightIntensity(float NewIntensity);
@@ -169,6 +178,18 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhoneLineSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> MonitorCheckSoundActor;
+
+	UPROPERTY()
+	TObjectPtr<AActor> MonitorCheckFeedbackActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> MonitorCheckFeedbackActors;
+
+	UPROPERTY()
+	TObjectPtr<AActor> MonitorCheckLightActor;
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhoneReceiverActor;
@@ -300,6 +321,8 @@ private:
 	TArray<FRotator> PhoneReceiverPartRestRotations;
 	TArray<FVector> PhoneCordTugRestLocations;
 	TArray<FRotator> PhoneCordTugRestRotations;
+	TArray<FVector> MonitorCheckFeedbackRestLocations;
+	TArray<FRotator> MonitorCheckFeedbackRestRotations;
 	TArray<FVector> DoorRefusalFeedbackRestLocations;
 	TArray<FRotator> DoorRefusalFeedbackRestRotations;
 	TArray<FVector> DoorRefusalLatchRestLocations;
@@ -326,6 +349,9 @@ private:
 	bool bMonitorChecked = false;
 	bool bPhoneReceiverLiftActive = false;
 	bool bPhoneLineConnected = false;
+	float MonitorCheckFeedbackAlpha = 0.0f;
+	float MonitorCheckFeedbackPulseClock = 0.0f;
+	bool bMonitorCheckFeedbackActive = false;
 	float PatrolListenHoldSeconds = 0.0f;
 	float PatrolListenPulseClock = 0.0f;
 	bool bPatrolListenActive = false;

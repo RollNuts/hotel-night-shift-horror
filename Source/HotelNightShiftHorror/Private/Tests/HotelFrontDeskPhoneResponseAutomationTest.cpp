@@ -15,6 +15,9 @@ namespace
 const TCHAR* HotelMapPath = TEXT("/Game/Hotel/Maps/L_HotelNightShift_Slice");
 const FName PhoneTag(TEXT("Hotel.Interact.Phone"));
 const FName MonitorTag(TEXT("Hotel.Interact.Monitor"));
+const FName MonitorCheckAudioTag(TEXT("Hotel.Audio.MonitorCheck"));
+const FName MonitorCheckFeedbackTag(TEXT("Hotel.Feedback.MonitorCheckVisual"));
+const FName MonitorCheckLightTag(TEXT("Hotel.Feedback.MonitorCheckLight"));
 const FName Room203DoorTag(TEXT("Hotel.Interact.Room203Door"));
 const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"));
 const FName Room203WallpaperFlutterTag(TEXT("Hotel.Feedback.Room203WallpaperFlutter"));
@@ -155,6 +158,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 
 		AActor* Phone = FindActorByTag(World, PhoneTag);
 		AActor* Monitor = FindActorByTag(World, MonitorTag);
+		AActor* MonitorCheckSound = FindActorByTag(World, MonitorCheckAudioTag);
+		AActor* MonitorCheckFeedback = FindActorByTag(World, MonitorCheckFeedbackTag);
+		AActor* MonitorCheckLight = FindActorByTag(World, MonitorCheckLightTag);
 		AActor* Room203Door = FindActorByTag(World, Room203DoorTag);
 		AActor* Room203DoorFeedback = FindActorByTag(World, Room203DoorRefusalFeedbackTag);
 		AActor* Room203WallpaperFlutter = FindActorByTag(World, Room203WallpaperFlutterTag);
@@ -185,6 +191,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 
 		TestNotNull(TEXT("Phone interaction actor exists"), Phone);
 		TestNotNull(TEXT("Monitor interaction actor exists"), Monitor);
+		TestNotNull(TEXT("Monitor check glitch sound actor exists"), MonitorCheckSound);
+		TestNotNull(TEXT("Monitor check visual feedback actor exists"), MonitorCheckFeedback);
+		TestNotNull(TEXT("Monitor check pulse light exists"), MonitorCheckLight);
 		TestNotNull(TEXT("Room 203 door interaction actor exists"), Room203Door);
 		TestNotNull(TEXT("Room 203 door refusal feedback actor exists"), Room203DoorFeedback);
 		TestNotNull(TEXT("Room 203 wallpaper aftershock feedback actor exists"), Room203WallpaperFlutter);
@@ -212,7 +221,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Room 203 sconce lightmesh exists in production map"), Room203SconceLightMesh);
 		TestNotNull(TEXT("Room 203 aftershock loose-paper mesh exists in production map"), Room203AftershockLoosePaper);
 		TestNotNull(TEXT("Room 203 aftershock high-curl mesh exists in production map"), Room203AftershockHighCurl);
-		if (!Phone || !Monitor || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
+		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
 		{
 			return true;
 		}
@@ -220,6 +229,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Initial loop stage is PhoneRinging"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::PhoneRinging);
 		TestTrue(TEXT("Phone ring timer starts active"), Pawn->AutomationIsPhoneRingTimerActive());
 		TestTrue(TEXT("Phone line static source is cached"), Pawn->AutomationHasPhoneLineSound());
+		TestTrue(TEXT("Monitor check glitch source is cached"), Pawn->AutomationHasMonitorCheckSound());
 
 		const FVector ReceiverRestLocation = Pawn->AutomationGetPhoneReceiverLocation();
 		const FRotator ReceiverRestRotation = Pawn->AutomationGetPhoneReceiverRotation();
@@ -249,9 +259,20 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Authored receiver silhouette moves with the phone lift"), FVector::DistSquared(AuthoredReceiverRestLocation, AuthoredPhoneReceiver->GetActorLocation()) > FMath::Square(18.0f));
 		TestTrue(TEXT("Authored coiled cord tugs with the lifted receiver"), FVector::DistSquared(CordRestLocation, Pawn->AutomationGetPhoneCordTugLocation()) > FMath::Square(5.0f));
 
+		const FVector MonitorCheckRestLocation = Pawn->AutomationGetMonitorCheckFeedbackLocation();
+		const float MonitorCheckRestLightIntensity = Pawn->AutomationGetMonitorCheckLightIntensity();
+		TestTrue(TEXT("Monitor check visual feedback is cached"), MonitorCheckRestLocation.SizeSquared() > 0.0f);
 		TestTrue(TEXT("Checking monitor succeeds"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Monitor advances to MonitorChecked"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::MonitorChecked);
 		TestFalse(TEXT("Phone line disconnects after monitor check"), Pawn->AutomationIsPhoneLineConnected());
+		TestTrue(TEXT("Monitor check visual feedback starts"), Pawn->AutomationIsMonitorCheckFeedbackActive());
+		Pawn->AutomationAdvanceMonitorCheckFeedback(0.12f);
+		TestTrue(TEXT("Monitor check feedback alpha advances"), Pawn->AutomationGetMonitorCheckFeedbackAlpha() > 0.0f);
+		TestTrue(TEXT("Monitor screen cues twitch after camera check"), FVector::DistSquared(MonitorCheckRestLocation, Pawn->AutomationGetMonitorCheckFeedbackLocation()) > FMath::Square(1.0f));
+		TestTrue(TEXT("Monitor check light pulses after camera check"), Pawn->AutomationGetMonitorCheckLightIntensity() > MonitorCheckRestLightIntensity + 220.0f);
+		Pawn->AutomationAdvanceMonitorCheckFeedback(0.70f);
+		TestFalse(TEXT("Monitor check feedback settles"), Pawn->AutomationIsMonitorCheckFeedbackActive());
+		TestTrue(TEXT("Monitor check screen cues return to rest"), FVector::DistSquared(MonitorCheckRestLocation, Pawn->AutomationGetMonitorCheckFeedbackLocation()) < FMath::Square(1.0f));
 		TestFalse(TEXT("Patrol listen is not already resolved"), Pawn->AutomationIsPatrolListenResolved());
 
 		TestFalse(TEXT("Room 203 refusal is blocked before listening at the patrol line"), Pawn->AutomationInteractWithActor(Room203Door));
