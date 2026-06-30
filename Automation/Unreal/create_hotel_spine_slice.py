@@ -29,6 +29,7 @@ ALWAYS_REIMPORT_TEXTURES = {
     "TX_Hotel_RoomDoorPaint_v0",
     "TX_Hotel_SecurityMonitorFeed_v0",
     "TX_Hotel_LobbyDoorSmudgedGlass_v0",
+    "TX_Hotel_FrontDeskHeroBoard_v0",
 }
 
 
@@ -421,6 +422,49 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             cursor_u += (glyph_width + 1) * cell
         return 0.0
 
+    def frontdesk_hero_board_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        grain = (
+            math.sin(x * 0.091 + y * 0.037)
+            + math.sin(x * 0.021 - y * 0.171 + 1.6)
+            + math.sin(x * 0.317 + y * 0.061 + 3.2)
+        ) / 3.0
+        edge_shadow = max(0.0, 1.0 - min(u, 1.0 - u, v, 1.0 - v) / 0.055)
+        old_tape = max(0.0, 1.0 - abs(v - 0.18) / 0.020) * max(0.0, 1.0 - abs(u - 0.12) / 0.095)
+        old_tape = max(old_tape, max(0.0, 1.0 - abs(v - 0.82) / 0.020) * max(0.0, 1.0 - abs(u - 0.88) / 0.095))
+        screw_a = max(0.0, 1.0 - (((u - 0.055) / 0.018) ** 2 + ((v - 0.105) / 0.025) ** 2))
+        screw_b = max(0.0, 1.0 - (((u - 0.945) / 0.018) ** 2 + ((v - 0.105) / 0.025) ** 2))
+        amber_rule = max(0.0, 1.0 - abs(v - 0.385) / 0.006) * max(0.0, 1.0 - abs(u - 0.50) / 0.42)
+
+        red = 50 + 8 * grain
+        green = 38 + 6 * grain
+        blue = 25 + 4 * grain
+        red -= 20 * edge_shadow
+        green -= 16 * edge_shadow
+        blue -= 12 * edge_shadow
+        red += 88 * old_tape + 52 * amber_rule
+        green += 58 * old_tape + 30 * amber_rule
+        blue += 24 * old_tape + 10 * amber_rule
+        red += 34 * (screw_a + screw_b)
+        green += 30 * (screw_a + screw_b)
+        blue += 24 * (screw_a + screw_b)
+
+        title = monitor_text_mask(u, v, "NIGHT RECEPTION", 0.075, 0.145, 0.016)
+        call = monitor_text_mask(u, v, "ROOM203 CALL 02:13", 0.078, 0.455, 0.012)
+        camera = monitor_text_mask(u, v, "CHECK CAMERA", 0.078, 0.612, 0.012)
+        keys = monitor_text_mask(u, v, "KEYS 201 202 203", 0.078, 0.760, 0.0105)
+        title_wear = 0.72 + 0.28 * max(0.0, math.sin(x * 0.23 + y * 0.11))
+        text_wear = 0.62 + 0.38 * max(0.0, math.sin(x * 0.37 - y * 0.13))
+        red += 178 * title * title_wear + 120 * call * text_wear + 90 * camera * text_wear + 82 * keys * text_wear
+        green += 135 * title * title_wear + 64 * call * text_wear + 110 * camera * text_wear + 90 * keys * text_wear
+        blue += 76 * title * title_wear + 28 * call * text_wear + 58 * camera * text_wear + 42 * keys * text_wear
+        return (
+            max(0, min(255, int(red))),
+            max(0, min(255, int(green))),
+            max(0, min(255, int(blue))),
+        )
+
     def security_monitor_feed_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
         u = x / max(1, width - 1)
         v = y / max(1, height - 1)
@@ -571,6 +615,7 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
         "TX_Hotel_SecurityMonitorFeed_v0": (512, 512, security_monitor_feed_pixel),
         "TX_Hotel_ReportLogFiledPaper_v0": (512, 512, report_log_filed_paper_pixel),
         "TX_Hotel_LobbyDoorSmudgedGlass_v0": (512, 512, lobby_door_smudged_glass_pixel),
+        "TX_Hotel_FrontDeskHeroBoard_v0": (512, 256, frontdesk_hero_board_pixel),
     }
     output: dict[str, pathlib.Path] = {}
     for name, (width, height, pixel_func) in textures.items():
@@ -2894,6 +2939,7 @@ def build_level(
     security_monitor_texture = textures.get("TX_Hotel_SecurityMonitorFeed_v0")
     report_log_paper_texture = textures.get("TX_Hotel_ReportLogFiledPaper_v0")
     lobby_glass_texture = textures.get("TX_Hotel_LobbyDoorSmudgedGlass_v0")
+    frontdesk_hero_board_texture = textures.get("TX_Hotel_FrontDeskHeroBoard_v0")
     materials = {
         "floor": ensure_material("M_Hotel_WornFloor_v0", unreal.LinearColor(0.15, 0.13, 0.11, 1.0), 0.92),
         "wall": ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
@@ -3001,10 +3047,20 @@ def build_level(
         ),
         "desk_lamp": ensure_material(
             "M_Hotel_DeskLampGlow_v0",
-            unreal.LinearColor(0.95, 0.72, 0.42, 1.0),
-            0.35,
-            unreal.LinearColor(1.9, 1.18, 0.48, 1.0),
+            unreal.LinearColor(0.68, 0.48, 0.27, 1.0),
+            0.72,
+            unreal.LinearColor(0.055, 0.030, 0.012, 1.0),
         ),
+        "frontdesk_hero_board": ensure_textured_material(
+            "M_Hotel_FrontDeskHeroBoard_v0",
+            frontdesk_hero_board_texture,
+            0.78,
+            emissive=True,
+            emissive_strength=0.18,
+            force_recreate=True,
+        )
+        if frontdesk_hero_board_texture
+        else ensure_material("M_Hotel_FrontDeskHeroBoard_v0", unreal.LinearColor(0.19, 0.13, 0.08, 1.0), 0.84),
     }
     materials["report_log_paper"] = (
         ensure_textured_material("M_Hotel_ReportLogFiledPaper_v0", report_log_paper_texture, 0.89, two_sided=True)
@@ -3020,6 +3076,25 @@ def build_level(
     add_cube("AREA_FrontDesk_Ceiling_LowPressure", (0, 0, 286), (2500, 1600, 20), materials["trim"])
     add_cube("PROP_FrontDesk_Counter_PlayerWorkSurface", (-430, -410, 55), (520, 120, 110), materials["desk"])
     add_cube("PROP_FrontDesk_BackShelf_KeyAndLogSilhouette", (-880, -400, 145), (30, 520, 170), materials["trim"])
+    front_desk_art_tags = ("Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk")
+    hero_frontdesk_tags = front_desk_art_tags + ("Hotel.Capture.FirstSteamShot",)
+    add_cube(
+        "PROP_FrontDesk_BackWall_NightReceptionHeroBoard",
+        (-884, -292, 205),
+        (6, 278, 92),
+        materials["frontdesk_hero_board"],
+        hero_frontdesk_tags,
+        no_collision=True,
+    )
+    add_cube("PROP_FrontDesk_BackWall_HeroBoardTopFrame", (-879, -292, 254), (8, 292, 5), materials["brass"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_BackWall_HeroBoardBottomFrame", (-879, -292, 156), (8, 292, 5), materials["brass"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_BackWall_HeroBoardLeftFrame", (-879, -436, 205), (8, 5, 100), materials["brass"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_BackWall_HeroBoardRightFrame", (-879, -148, 205), (8, 5, 100), materials["brass"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_KeyRack_DarkWoodBacking", (-874, -512, 164), (10, 132, 78), materials["desk"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_KeyRack_Missing203HookGlowTape", (-866, -492, 184), (6, 34, 4), materials["warn"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_KeyRack_Room203EmptySlotShadow", (-865, -492, 158), (7, 42, 22), materials["black"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_NightAuditPinnedNote_Room203", (-866, -566, 174), (7, 54, 38), materials["report_log_paper"], hero_frontdesk_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_NightAuditPinnedNote_203Underline", (-862, -566, 176), (8, 34, 3), materials["warn"], hero_frontdesk_tags, no_collision=True)
     phone_visual_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual")
 
     add_cube("PROP_FrontDesk_DeskMat_UnderPhoneOnly", (-430, -529, 118), (170, 112, 6), materials["trim"], phone_visual_tags, no_collision=True)
@@ -3088,7 +3163,6 @@ def build_level(
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopA", (-354, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopB", (-336, -560, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_Phone_CoiledCordLoopC", (-318, -553, 137), (16, 8, 8), materials["trim"], phone_visual_tags, no_collision=True)
-    front_desk_art_tags = ("Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk")
     receiver_art_tags = ("Hotel.Feedback.PhoneReceiver", "Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk")
     if "SM_FrontDesk_CoiledPhoneCord_v0" in meshes:
         add_authored_mesh(
@@ -3113,9 +3187,9 @@ def build_level(
     add_sphere("PROP_FrontDesk_Phone_CordRoundLoopC", (-318, -553, 140), (15, 9, 7), materials["black"], front_desk_art_tags, no_collision=True)
     add_cylinder("PROP_FrontDesk_ServiceBell_Dome", (-525, -505, 133), 40, 18, materials["dull_metal"], front_desk_art_tags, no_collision=True)
     add_sphere("PROP_FrontDesk_ServiceBell_Button", (-525, -505, 149), (14, 14, 10), materials["brass"], front_desk_art_tags, no_collision=True)
-    add_cylinder("PROP_FrontDesk_DeskLamp_RoundFoot", (-350, -568, 132), 38, 8, materials["brass"], front_desk_art_tags, no_collision=True)
-    add_cylinder("PROP_FrontDesk_DeskLamp_ThinStem", (-350, -568, 158), 7, 48, materials["brass"], front_desk_art_tags, no_collision=True)
-    add_sphere("PROP_FrontDesk_DeskLamp_ShadeCurvedSilhouette", (-342, -564, 176), (56, 26, 18), materials["desk_lamp"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_DeskLamp_RoundFoot", (-300, -557, 132), 28, 7, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_DeskLamp_ThinStem", (-300, -557, 154), 5, 40, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_DeskLamp_ShadeCurvedSilhouette", (-294, -553, 169), (35, 17, 12), materials["desk_lamp"], front_desk_art_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
     monitor_feed_tags = (
         "Hotel.Interact.Monitor",
@@ -3259,9 +3333,41 @@ def build_level(
     add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine", (-167, -581, 148), (54, 4, 3), materials["screen_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash", (-191, -571, 148), (30, 4, 3), materials["warn"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue", (-155, -601, 168), (38, 8, 10), materials["warn_glow"], log_self_correction_visual_tags, no_collision=True)
+    night_audit_work_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.FirstSteamShot",
+        "Hotel.ArtDensity.FrontDesk",
+    )
+    if "SM_FrontDesk_ReportLogFiledPaper_v0" in meshes:
+        add_authored_mesh(
+            "PROP_FrontDesk_NightAudit_OpenLedgerWarmPage",
+            meshes["SM_FrontDesk_ReportLogFiledPaper_v0"],
+            (-520, -604, 130.8),
+            (0.72, 0.52, 0.52),
+            materials["report_log_paper"],
+            night_audit_work_tags + ("Hotel.ArtSource.AuthoredMesh",),
+            no_collision=True,
+            rotation=(0.0, 0.0, 7.0),
+        )
+        add_authored_mesh(
+            "PROP_FrontDesk_NightAudit_CheckoutSlipCurl",
+            meshes["SM_FrontDesk_ReportLogFiledPaper_v0"],
+            (-590, -572, 131.2),
+            (0.45, 0.32, 0.32),
+            materials["paper"],
+            night_audit_work_tags + ("Hotel.ArtSource.AuthoredMesh",),
+            no_collision=True,
+            rotation=(0.0, 0.0, -13.0),
+        )
+    else:
+        add_cube("PROP_FrontDesk_NightAudit_OpenLedgerWarmPage", (-520, -604, 131), (96, 58, 3), materials["report_log_paper"], night_audit_work_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_NightAudit_Room203AmberTab", (-516, -622, 134), (78, 9, 2), materials["warn"], night_audit_work_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_NightAudit_DeskShiftCard", (-585, -615, 134), (62, 26, 2), materials["warn"], night_audit_work_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_NightAudit_StampPadAgedBrown", (-555, -543, 133), (54, 28, 8), materials["return_faded_ink"], night_audit_work_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_NightAudit_KeyReturnTrayBrassLip", (-498, -568, 134), (72, 8, 6), materials["brass"], night_audit_work_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue", (-315, -565, 131), (76, 38, 4), materials["paper"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Underline203", (-315, -565, 135), (42, 4, 3), materials["warn"], phone_visual_tags, no_collision=True)
-    add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-342, -564, 176), (54, 14, 14), materials["desk_lamp"], ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogFiledReaction"), unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-294, -553, 169), (28, 8, 8), materials["desk_lamp"], ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogFiledReaction"), unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookA", (-858, -560, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookB", (-858, -495, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookC", (-858, -430, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
@@ -3967,11 +4073,13 @@ def build_level(
     add_cube("LIGHTMESH_FrontDesk_OverheadFluorescent", (-260, -330, 276), (460, 54, 10), materials["fluorescent_panel"], ("Hotel.Capture.Readability",))
 
     # Lighting and atmosphere: final-intent mood direction, still placeholder geometry.
-    add_light("LIGHT_FrontDesk_TiredWarmCounter", unreal.RectLight, (-250, -440, 232), (-68, 0, 0), 6500.0, unreal.Color(255, 184, 116, 255), attenuation_radius=1250.0, source_width=360.0, source_height=90.0)
-    add_light("LIGHT_FrontDesk_WorkSurfacePracticalFill", unreal.PointLight, (-330, -535, 178), (0, 0, 0), 2000.0, unreal.Color(255, 190, 112, 255), ("Hotel.Capture.Readability",), attenuation_radius=560.0)
-    add_light("LIGHT_FrontDesk_PhoneCallLampPulse", unreal.PointLight, (-395, -555, 158), (0, 0, 0), 760.0, unreal.Color(255, 168, 72, 255), ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"), attenuation_radius=280.0)
-    add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 2700.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=900.0)
-    add_light("LIGHT_FrontDesk_PhoneResponseEvidenceFill", unreal.PointLight, (-390, -650, 188), (0, 0, 0), 5200.0, unreal.Color(255, 196, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PhoneResponse"), attenuation_radius=720.0)
+    add_light("LIGHT_FrontDesk_TiredWarmCounter", unreal.RectLight, (-250, -440, 232), (-68, 0, 0), 2800.0, unreal.Color(255, 184, 116, 255), attenuation_radius=1250.0, source_width=360.0, source_height=90.0)
+    add_light("LIGHT_FrontDesk_WorkSurfacePracticalFill", unreal.PointLight, (-455, -590, 178), (0, 0, 0), 1100.0, unreal.Color(255, 184, 104, 255), ("Hotel.Capture.Readability", "Hotel.Capture.FirstSteamShot"), attenuation_radius=640.0)
+    add_light("LIGHT_FrontDesk_PhoneCallLampPulse", unreal.PointLight, (-395, -555, 158), (0, 0, 0), 360.0, unreal.Color(255, 168, 72, 255), ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"), attenuation_radius=280.0)
+    add_light("LIGHT_FrontDesk_CaptureEvidenceSoftFill", unreal.PointLight, (-110, -565, 210), (0, 0, 0), 900.0, unreal.Color(255, 205, 145, 255), ("Hotel.Capture.Readability",), attenuation_radius=900.0)
+    add_light("LIGHT_FrontDesk_PhoneResponseEvidenceFill", unreal.PointLight, (-390, -650, 188), (0, 0, 0), 2600.0, unreal.Color(255, 196, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PhoneResponse"), attenuation_radius=780.0)
+    add_light("LIGHT_FrontDesk_NightAuditLedgerWarmPractical", unreal.PointLight, (-525, -610, 164), (0, 0, 0), 1800.0, unreal.Color(255, 178, 92, 255), ("Hotel.Capture.Readability", "Hotel.Capture.FirstSteamShot"), attenuation_radius=520.0)
+    add_light("LIGHT_FrontDesk_HeroBoardWarmSkim", unreal.PointLight, (-735, -300, 218), (0, 0, 0), 680.0, unreal.Color(255, 174, 84, 255), ("Hotel.Capture.Readability", "Hotel.Capture.FirstSteamShot"), attenuation_radius=460.0)
     add_light("LIGHT_Surveillance_Monitor_CheckPulse", unreal.PointLight, (-620, -552, 178), (0, 0, 0), 420.0, unreal.Color(86, 255, 164, 255), ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed", "Hotel.Feedback.MonitorCheckLight"), attenuation_radius=360.0)
     add_light("LIGHT_Lobby_ColdExteriorSpill", unreal.RectLight, (1000, 0, 230), (-75, 0, 180), 2200.0, unreal.Color(120, 165, 255, 255), attenuation_radius=950.0, source_width=280.0, source_height=240.0)
     add_light("LIGHT_Elevator_SickAmberTransition", unreal.PointLight, (1120, 565, 210), (0, 0, 0), 1400.0, unreal.Color(255, 198, 90, 255), attenuation_radius=780.0)
@@ -4000,10 +4108,10 @@ def build_level(
     add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 4600.0, unreal.Color(255, 214, 158, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=820.0)
     add_light("LIGHT_GuestHall_Room203TornPaperEdgeRim", unreal.PointLight, (3435, 72, 138), (0, 0, 0), 2100.0, unreal.Color(255, 225, 176, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=560.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
-    add_light("LIGHT_FrontDesk_ReportLogFiledDeskLampPulse", unreal.PointLight, (-342, -564, 176), (0, 0, 0), 620.0, unreal.Color(255, 198, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReportLogFiledPressure", "Hotel.Feedback.ReportLogFiledLight"), attenuation_radius=520.0)
+    add_light("LIGHT_FrontDesk_ReportLogFiledDeskLampPulse", unreal.PointLight, (-294, -553, 169), (0, 0, 0), 180.0, unreal.Color(255, 198, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReportLogFiledPressure", "Hotel.Feedback.ReportLogFiledLight"), attenuation_radius=360.0)
     add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 920.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=620.0)
     add_light("LIGHT_LobbyDoor_PostReportSurfaceSkim", unreal.PointLight, (845, -460, 188), (0, 0, 0), 2500.0, unreal.Color(150, 205, 245, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=680.0)
-    add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
+    add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 7200.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
     add_light("LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse", unreal.PointLight, (-190, -520, 166), (0, 0, 0), 520.0, unreal.Color(255, 190, 120, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionLight"), attenuation_radius=420.0)
 
     fog = unreal.EditorLevelLibrary.spawn_actor_from_class(
@@ -4021,17 +4129,17 @@ def build_level(
     )
     player_start.set_actor_label("PLAYERSTART_FrontDesk_FacingPhoneAndMonitor")
 
-    add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-130, -690, 178), (2, 151, 0), 60.0)
+    add_camera("CAPTURE_FrontDesk_FirstSteamShotCandidate", (-250, -730, 230), (-20.0, 135, 0), 72.0, ("Hotel.Capture.FirstSteamShot",))
     add_camera("CAPTURE_SecurityMonitorFeed_ReadabilityCandidate", (-445, -710, 178), (0.5, 126, 0), 62.0, ("Hotel.Capture.SecurityMonitorFeed",))
     add_camera("CAPTURE_ReportLog_ReadabilityCandidate", (-255, -660, 218), (-28, 90, 0), 48.0)
-    add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 168), (3, 136, 0), 54.0)
+    add_camera("CAPTURE_PhoneResponse_LiftReceiverCandidate", (-255, -704, 208), (-18, 136, 0), 62.0)
     add_camera("CAPTURE_Transition_ElevatorStair_AudioFearCandidate", (760, -18, 168), (1, 0, 0), 76.0)
     add_camera("CAPTURE_PatrolRoute_DecisionCueCandidate", (780, -430, 214), (-20, 58, 0), 78.0)
     add_camera("CAPTURE_GuestDoor_15SecondBeatCandidate", (3185, -205, 164), (1.5, 30, 0), 52.0, ("Hotel.Capture.Room203Surface", "Hotel.Capture.Room203Aftershock"))
     add_camera("CAPTURE_ReturnRoute_BackKnockCandidate", (2668, -248, 158), (0.5, 43, 0), 46.0, ("Hotel.Capture.ReturnRouteAnomaly",))
     add_camera("CAPTURE_PostReportMonitorMismatchCandidate", (-780, -620, 180), (2, 28, 0), 72.0)
     add_camera("CAPTURE_PostReportDeskWait_DoNotAnswerCandidate", (-350, -720, 174), (1, 22, 0), 72.0)
-    add_camera("CAPTURE_PostReportLogSelfCorrectionCandidate", (-265, -755, 232), (-31, 90, 0), 62.0)
+    add_camera("CAPTURE_PostReportLogSelfCorrectionCandidate", (-265, -690, 218), (-30, 88, 0), 52.0)
 
     if "AMB_LobbyFluorescentHum_v0" in sounds:
         add_audio("AMB_Lobby_FluorescentHum_Source_v0", sounds["AMB_LobbyFluorescentHum_v0"], (-180, -450, 210), True)

@@ -11,6 +11,7 @@ public class HotelNightShiftHorror : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"EnhancedInput",
 			"InputCore"
 		});
 	}

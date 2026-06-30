@@ -5,6 +5,9 @@
 #include "HotelNightShiftPawn.generated.h"
 
 class UCameraComponent;
+class UInputAction;
+class UInputMappingContext;
+struct FInputActionValue;
 
 UENUM(BlueprintType)
 enum class EHotelLoopStage : uint8
@@ -114,7 +117,13 @@ private:
 	void MoveRight(float Value);
 	void Turn(float Value);
 	void LookUp(float Value);
+	void MoveForwardInput(const FInputActionValue& Value);
+	void MoveRightInput(const FInputActionValue& Value);
+	void TurnInput(const FInputActionValue& Value);
+	void LookUpInput(const FInputActionValue& Value);
 	void Interact();
+	void EnsureInputAssets();
+	void ApplyDefaultInputMappingContext();
 	bool TryInteractWithActor(AActor* TargetActor);
 	void CacheHotelActors();
 	void UpdateLookTarget();
@@ -173,6 +182,24 @@ private:
 	AActor* FindLightActorNear(const FVector& Anchor, float Radius) const;
 	AActor* FindLightActorWithTagNear(FName RequiredTag, const FVector& Anchor, float Radius) const;
 	float GetLightIntensity(const AActor* LightActor) const;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputMappingContext> DefaultInputMappingContext;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> MoveForwardAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> MoveRightAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> TurnAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> LookUpAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InteractAction;
 
 	UPROPERTY()
 	TObjectPtr<AActor> PhoneRingSoundActor;

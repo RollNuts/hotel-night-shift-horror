@@ -1,5 +1,7 @@
 #include "HotelNightShiftPawn.h"
 
+#include "EnhancedInputComponent.h"
+#include "EnhancedPlayerInput.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -125,6 +127,16 @@ bool HasInteractEKeyBinding()
 	return false;
 }
 
+bool UsesEnhancedInputDefaults()
+{
+	const UInputSettings* InputSettings = GetDefault<UInputSettings>();
+	const UClass* InputComponentClass = InputSettings ? InputSettings->GetDefaultInputComponentClass() : nullptr;
+	const UClass* PlayerInputClass = InputSettings ? InputSettings->GetDefaultPlayerInputClass() : nullptr;
+	return InputComponentClass && PlayerInputClass
+		&& InputComponentClass->IsChildOf(UEnhancedInputComponent::StaticClass())
+		&& PlayerInputClass->IsChildOf(UEnhancedPlayerInput::StaticClass());
+}
+
 float MaxRotationDeltaDegrees(const FRotator& From, const FRotator& To)
 {
 	const float PitchDelta = FMath::Abs(FRotator::NormalizeAxis(To.Pitch - From.Pitch));
@@ -142,6 +154,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 {
 	if (!TestTrue(TEXT("Interact is bound to E"), HasInteractEKeyBinding()))
+	{
+		return false;
+	}
+	if (!TestTrue(TEXT("Project uses Enhanced Input defaults"), UsesEnhancedInputDefaults()))
 	{
 		return false;
 	}
