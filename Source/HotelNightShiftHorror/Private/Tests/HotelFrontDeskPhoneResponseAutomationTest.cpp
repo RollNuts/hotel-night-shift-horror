@@ -23,6 +23,8 @@ const FName Room203DoorRefusalFeedbackTag(TEXT("Hotel.Feedback.Room203Refusal"))
 const FName Room203WallpaperFlutterTag(TEXT("Hotel.Feedback.Room203WallpaperFlutter"));
 const FName ReportLogTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
+const FName ReportLogFiledReactionTag(TEXT("Hotel.Feedback.ReportLogFiledReaction"));
+const FName ReportLogFiledLightTag(TEXT("Hotel.Feedback.ReportLogFiledLight"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName ReturnRouteAudioTag(TEXT("Hotel.Audio.ReturnRoute"));
 const FName ReturnRouteTailAudioTag(TEXT("Hotel.Audio.ReturnRouteTail"));
@@ -38,6 +40,9 @@ const TCHAR* AuthoredPhoneBodyLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCurvedB
 const TCHAR* AuthoredPhoneReceiverLabel = TEXT("PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette");
 const TCHAR* AuthoredPhoneCordLabel = TEXT("PROP_FrontDesk_Phone_AuthoredCoiledCord");
 const TCHAR* AuthoredLedgerPagesLabel = TEXT("PROP_FrontDesk_ReportLog_AuthoredCurledPages");
+const TCHAR* AuthoredReportPenBodyLabel = TEXT("PROP_FrontDesk_ReportLog_AuthoredPenBody");
+const TCHAR* AuthoredReportPenNibLabel = TEXT("PROP_FrontDesk_ReportLog_AuthoredPenNib");
+const TCHAR* AuthoredReportFiledInkLabel = TEXT("PROP_FrontDesk_ReportLog_FiledInkStrokes");
 const TCHAR* Room203DoorEdgeSlamShadowLabel = TEXT("PROP_GuestHall_Room203_DoorEdgeSlamShadowCue");
 const TCHAR* Room203NoticeCornerJoltLabel = TEXT("PROP_GuestHall_Room203_NoticeCornerJoltCue");
 const TCHAR* Room203NumberDigitsLabel = TEXT("PROP_GuestHall_Room203_NumberDigits_Authored");
@@ -166,6 +171,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* Room203WallpaperFlutter = FindActorByTag(World, Room203WallpaperFlutterTag);
 		AActor* ReportLog = FindActorByTag(World, ReportLogTag);
 		AActor* ReportLogFiledFeedback = FindActorByTag(World, ReportLogFiledFeedbackTag);
+		AActor* ReportLogFiledReaction = FindActorByTag(World, ReportLogFiledReactionTag);
+		AActor* ReportLogFiledLight = FindActorByTag(World, ReportLogFiledLightTag);
 		AActor* PatrolListenSound = FindActorByTag(World, PatrolListenAudioTag);
 		AActor* ReturnRouteSound = FindActorByTag(World, ReturnRouteAudioTag);
 		AActor* ReturnRouteTailSound = FindActorByTag(World, ReturnRouteTailAudioTag);
@@ -181,6 +188,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* AuthoredPhoneReceiver = FindActorByLabel(World, AuthoredPhoneReceiverLabel);
 		AActor* AuthoredPhoneCord = FindActorByLabel(World, AuthoredPhoneCordLabel);
 		AActor* AuthoredLedgerPages = FindActorByLabel(World, AuthoredLedgerPagesLabel);
+		AActor* AuthoredReportPenBody = FindActorByLabel(World, AuthoredReportPenBodyLabel);
+		AActor* AuthoredReportPenNib = FindActorByLabel(World, AuthoredReportPenNibLabel);
+		AActor* AuthoredReportFiledInk = FindActorByLabel(World, AuthoredReportFiledInkLabel);
 		AActor* Room203DoorEdgeSlamShadow = FindActorByLabel(World, Room203DoorEdgeSlamShadowLabel);
 		AActor* Room203NoticeCornerJolt = FindActorByLabel(World, Room203NoticeCornerJoltLabel);
 		AActor* Room203NumberDigits = FindActorByLabel(World, Room203NumberDigitsLabel);
@@ -199,6 +209,8 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Room 203 wallpaper aftershock feedback actor exists"), Room203WallpaperFlutter);
 		TestNotNull(TEXT("Report log interaction actor exists"), ReportLog);
 		TestNotNull(TEXT("Report log filed feedback actor exists"), ReportLogFiledFeedback);
+		TestNotNull(TEXT("Report log filed reaction actors exist"), ReportLogFiledReaction);
+		TestNotNull(TEXT("Report log filed lamp pulse exists"), ReportLogFiledLight);
 		TestNotNull(TEXT("Patrol listen sound actor exists"), PatrolListenSound);
 		TestNotNull(TEXT("Return route anomaly sound actor exists"), ReturnRouteSound);
 		TestNotNull(TEXT("Return route pursuit-tail sound actor exists"), ReturnRouteTailSound);
@@ -214,6 +226,9 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Authored phone receiver mesh exists in production map"), AuthoredPhoneReceiver);
 		TestNotNull(TEXT("Authored phone cord mesh exists in production map"), AuthoredPhoneCord);
 		TestNotNull(TEXT("Authored curled ledger page mesh exists in production map"), AuthoredLedgerPages);
+		TestNotNull(TEXT("Authored report pen body mesh exists in production map"), AuthoredReportPenBody);
+		TestNotNull(TEXT("Authored report pen nib mesh exists in production map"), AuthoredReportPenNib);
+		TestNotNull(TEXT("Authored report filed ink mesh exists in production map"), AuthoredReportFiledInk);
 		TestNotNull(TEXT("Room 203 door-edge slam shadow exists in production map"), Room203DoorEdgeSlamShadow);
 		TestNotNull(TEXT("Room 203 notice-corner jolt cue exists in production map"), Room203NoticeCornerJolt);
 		TestNotNull(TEXT("Room 203 authored number digits exist in production map"), Room203NumberDigits);
@@ -221,7 +236,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Room 203 sconce lightmesh exists in production map"), Room203SconceLightMesh);
 		TestNotNull(TEXT("Room 203 aftershock loose-paper mesh exists in production map"), Room203AftershockLoosePaper);
 		TestNotNull(TEXT("Room 203 aftershock high-curl mesh exists in production map"), Room203AftershockHighCurl);
-		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
+		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !ReportLogFiledReaction || !ReportLogFiledLight || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !AuthoredReportPenBody || !AuthoredReportPenNib || !AuthoredReportFiledInk || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl)
 		{
 			return true;
 		}
@@ -374,11 +389,20 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Return route body FOV returns to rest after the pursuit tail"), FMath::Abs(Pawn->AutomationGetReturnRouteCameraFieldOfView() - ReturnRouteCameraRestFov) < 0.05f);
 
 		const FVector ReportFiledRestLocation = Pawn->AutomationGetReportLogFiledFeedbackLocation();
+		const FVector ReportFiledReactionRestLocation = Pawn->AutomationGetReportLogFiledReactionLocation();
+		const float ReportFiledLightRestIntensity = Pawn->AutomationGetReportLogFiledLightIntensity();
+		TestTrue(TEXT("Report filing reaction details are cached"), ReportFiledReactionRestLocation.SizeSquared() > 0.0f);
+		TestTrue(TEXT("Report filing desk lamp is cached"), ReportFiledLightRestIntensity > 0.0f);
 		TestTrue(TEXT("Filing report succeeds"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestEqual(TEXT("Report advances to ReportFiled"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
 		Pawn->AutomationAdvanceReportLogFiledFeedback(0.12f);
 		TestTrue(TEXT("Report filed feedback starts"), Pawn->AutomationGetReportLogFiledFeedbackAlpha() > 0.0f);
 		TestTrue(TEXT("Report filed stamp feedback moves visibly"), FVector::DistSquared(ReportFiledRestLocation, Pawn->AutomationGetReportLogFiledFeedbackLocation()) > FMath::Square(2.0f));
+		TestTrue(TEXT("Report filing pen/page reaction moves visibly"), FVector::DistSquared(ReportFiledReactionRestLocation, Pawn->AutomationGetReportLogFiledReactionLocation()) > FMath::Square(1.0f));
+		TestTrue(TEXT("Report filing desk lamp pulses during the stamp"), Pawn->AutomationGetReportLogFiledLightIntensity() > ReportFiledLightRestIntensity + 300.0f);
+		Pawn->AutomationAdvanceReportLogFiledFeedback(0.24f);
+		TestTrue(TEXT("Report filed feedback reaches completion"), Pawn->AutomationGetReportLogFiledFeedbackAlpha() >= 1.0f);
+		TestTrue(TEXT("Report filing desk lamp returns after the stamp"), FMath::Abs(Pawn->AutomationGetReportLogFiledLightIntensity() - ReportFiledLightRestIntensity) < 0.5f);
 
 		TestTrue(TEXT("Monitor recheck after report succeeds"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Monitor recheck keeps ReportFiled as the terminal loop stage"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);

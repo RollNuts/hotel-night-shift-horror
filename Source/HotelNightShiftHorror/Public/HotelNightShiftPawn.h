@@ -99,6 +99,8 @@ public:
 	void AutomationAdvanceReportLogFiledFeedback(float DeltaSeconds);
 	float AutomationGetReportLogFiledFeedbackAlpha() const;
 	FVector AutomationGetReportLogFiledFeedbackLocation() const;
+	FVector AutomationGetReportLogFiledReactionLocation() const;
+	float AutomationGetReportLogFiledLightIntensity() const;
 #endif
 
 protected:
@@ -240,6 +242,12 @@ private:
 	TArray<TObjectPtr<AActor>> ReportLogFiledFeedbackActors;
 
 	UPROPERTY()
+	TArray<TObjectPtr<AActor>> ReportLogFiledReactionActors;
+
+	UPROPERTY()
+	TObjectPtr<AActor> ReportLogFiledLightActor;
+
+	UPROPERTY()
 	TObjectPtr<AActor> PatrolListenSoundActor;
 
 	UPROPERTY()
@@ -337,6 +345,8 @@ private:
 	TArray<FRotator> DoorRefusalWallpaperFlutterRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;
 	TArray<FRotator> ReportLogFiledFeedbackRestRotations;
+	TArray<FVector> ReportLogFiledReactionRestLocations;
+	TArray<FRotator> ReportLogFiledReactionRestRotations;
 	TArray<FVector> ReturnRouteBackKnockRestLocations;
 	TArray<FRotator> ReturnRouteBackKnockRestRotations;
 	FVector ReturnRouteCameraRestRelativeLocation = FVector::ZeroVector;
@@ -378,6 +388,7 @@ private:
 	float DoorRefusalFeedbackSeconds = 0.0f;
 	float DoorRefusalFeedbackAlpha = 0.0f;
 	float Room203PracticalLightRestIntensity = 460.0f;
+	float ReportLogFiledLightRestIntensity = 620.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	bool bDoorRefusalAftershockSoundPlayed = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;
