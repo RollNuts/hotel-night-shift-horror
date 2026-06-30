@@ -2854,6 +2854,7 @@ def build_level(
     door_latch_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203LatchJolt",)
     door_chain_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203ChainJolt",)
     door_surface_refusal_tags = door_refusal_tags + ("Hotel.Feedback.Room203DoorSurfaceJolt",)
+    door_evidence_reaction_tags = door_refusal_tags + ("Hotel.Feedback.Room203EvidenceReaction",)
     room203_art_tags = ("Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh")
     add_cube("PROP_GuestHall_RoomDoor203_OpenRefuseDecision", (3920, 302, 120), (260, 28, 240), materials["door"], ("Hotel.Interact.Room203Door",))
     if "SM_Room203_PaneledDoor_v0" in meshes:
@@ -2871,7 +2872,15 @@ def build_level(
     add_cube("PROP_GuestHall_Room203_RightDoorJamb", (4056, 272, 122), (14, 12, 244), materials["trim"])
     add_cube("PROP_GuestHall_Room203_TopDoorJamb", (3920, 272, 245), (286, 12, 14), materials["trim"])
     add_cube("PROP_GuestHall_Room203_DarkLatchGap", (4042, 266, 122), (8, 8, 188), materials["black"])
-    add_cube("PROP_GuestHall_Room203_NumberPlate", (3840, 257, 190), (76, 3, 30), materials["black"], room203_art_tags + door_decision_tags, no_collision=True)
+    add_cube(
+        "PROP_GuestHall_Room203_NumberPlate",
+        (3840, 257, 190),
+        (76, 3, 30),
+        materials["black"],
+        room203_art_tags + door_decision_tags + door_evidence_reaction_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
     if "SM_Room203_NumberDigits_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_Room203_NumberDigits_Authored",
@@ -2879,7 +2888,8 @@ def build_level(
             (3838, 252, 190),
             (0.92, 1.0, 0.92),
             materials["paper_edge"],
-            room203_art_tags + door_decision_tags,
+            room203_art_tags + door_decision_tags + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     if "SM_Room203_DoorGrimeStreaks_v0" in meshes:
@@ -2890,6 +2900,7 @@ def build_level(
             (1.0, 1.0, 1.0),
             materials["floor_scuff"],
             room203_art_tags + door_surface_refusal_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     if "SM_Room203_DoorPaintChips_v0" in meshes:
@@ -2900,9 +2911,18 @@ def build_level(
             (0.58, 1.0, 0.58),
             materials["paint_chip"],
             room203_art_tags + door_surface_refusal_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
-    add_cube("PROP_GuestHall_Room203_HandleBackplate_Readable", (4028, 257, 132), (16, 5, 58), materials["black"], door_decision_tags, no_collision=True)
+    add_cube(
+        "PROP_GuestHall_Room203_HandleBackplate_Readable",
+        (4028, 257, 132),
+        (16, 5, 58),
+        materials["black"],
+        door_decision_tags + door_evidence_reaction_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
     if "SM_Room203_LockHardwareBreakup_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_Room203_LockHardwareBreakup_Authored",
@@ -2983,7 +3003,15 @@ def build_level(
             unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
-    add_sphere("PROP_GuestHall_Room203_PeepholeBlackCue", (3920, 257, 186), (16, 4, 16), materials["black"], door_decision_tags, no_collision=True)
+    add_sphere(
+        "PROP_GuestHall_Room203_PeepholeBlackCue",
+        (3920, 257, 186),
+        (16, 4, 16),
+        materials["black"],
+        door_decision_tags + door_evidence_reaction_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
     if "SM_Room203_NoticeWriting_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_Room203_DoNotOpenNotice",
@@ -2991,11 +3019,20 @@ def build_level(
             (3880, 252, 112),
             (1.0, 1.0, 1.0),
             materials["return_faded_ink"],
-            room203_art_tags + door_decision_tags,
+            room203_art_tags + door_decision_tags + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     else:
-        add_cube("PROP_GuestHall_Room203_DoNotOpenNotice", (3880, 256, 112), (42, 4, 24), materials["paper"], door_decision_tags, no_collision=True)
+        add_cube(
+            "PROP_GuestHall_Room203_DoNotOpenNotice",
+            (3880, 256, 112),
+            (42, 4, 24),
+            materials["paper"],
+            door_decision_tags + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
     if "SM_Room203_NoticeTape_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_Room203_NoticeUnderline",
@@ -3003,12 +3040,29 @@ def build_level(
             (3880, 252, 101),
             (0.78, 1.0, 0.78),
             materials["warn"],
-            room203_art_tags + door_decision_tags,
+            room203_art_tags + door_decision_tags + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     else:
-        add_cube("PROP_GuestHall_Room203_NoticeUnderline", (3880, 256, 101), (34, 4, 3), materials["warn"], door_decision_tags, no_collision=True)
-    add_cube("PROP_GuestHall_Room203_ThresholdShadow", (3920, 257, 2), (230, 18, 6), materials["black"], door_decision_tags, no_collision=True)
+        add_cube(
+            "PROP_GuestHall_Room203_NoticeUnderline",
+            (3880, 256, 101),
+            (34, 4, 3),
+            materials["warn"],
+            door_decision_tags + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    add_cube(
+        "PROP_GuestHall_Room203_ThresholdShadow",
+        (3920, 257, 2),
+        (230, 18, 6),
+        materials["black"],
+        door_decision_tags,
+        unreal.ComponentMobility.MOVABLE,
+        no_collision=True,
+    )
     if "SM_Room203_SconceGlass_v0" in meshes:
         add_authored_mesh(
             "LIGHTMESH_GuestHall_Room203DoorPractical",
@@ -3016,11 +3070,20 @@ def build_level(
             (3778, 254, 214),
             (0.46, 0.46, 0.46),
             materials["warn_glow"],
-            room203_art_tags + ("Hotel.Capture.Readability",),
+            room203_art_tags + ("Hotel.Capture.Readability",) + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     else:
-        add_cube("LIGHTMESH_GuestHall_Room203DoorPractical", (3775, 260, 212), (32, 4, 24), materials["warn_glow"], ("Hotel.Capture.Readability",), no_collision=True)
+        add_cube(
+            "LIGHTMESH_GuestHall_Room203DoorPractical",
+            (3775, 260, 212),
+            (32, 4, 24),
+            materials["warn_glow"],
+            ("Hotel.Capture.Readability",) + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
     if "SM_Room203_SconceBracket_v0" in meshes:
         add_authored_mesh(
             "PROP_GuestHall_Room203DoorPractical_Bracket",
@@ -3028,7 +3091,8 @@ def build_level(
             (3778, 253, 214),
             (0.52, 0.52, 0.52),
             materials["dull_metal"],
-            room203_art_tags + ("Hotel.Capture.Readability",),
+            room203_art_tags + ("Hotel.Capture.Readability",) + door_evidence_reaction_tags,
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     if "SM_GuestHall_ServiceCartSilhouette_v0" in meshes:
@@ -3066,7 +3130,16 @@ def build_level(
     add_light("LIGHT_ReturnRoute_PursuitTailColdSkim", unreal.PointLight, (3020, -30, 174), (0, 0, 0), 120.0, unreal.Color(95, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteTailLight"), attenuation_radius=560.0)
     add_light("LIGHT_ReturnRoute_BackKnockWallSkim", unreal.PointLight, (3190, 220, 154), (0, 0, 0), 1650.0, unreal.Color(118, 225, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly"), attenuation_radius=520.0)
     add_light("LIGHT_GuestHall_WeakFluorescentB_TargetDoor", unreal.RectLight, (3920, 0, 262), (-90, 0, 0), 4200.0, unreal.Color(178, 206, 255, 255), ("Hotel.Feedback.Room203Light",), attenuation_radius=1160.0, source_width=380.0, source_height=55.0)
-    add_light("LIGHT_GuestHall_Room203PlatePractical", unreal.PointLight, (3785, 252, 205), (0, 0, 0), 460.0, unreal.Color(255, 178, 82, 255), ("Hotel.Capture.Readability",), attenuation_radius=320.0)
+    add_light(
+        "LIGHT_GuestHall_Room203PlatePractical",
+        unreal.PointLight,
+        (3785, 252, 205),
+        (0, 0, 0),
+        460.0,
+        unreal.Color(255, 178, 82, 255),
+        ("Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorPracticalLight"),
+        attenuation_radius=320.0,
+    )
     add_light("LIGHT_GuestHall_CaptureEvidenceDoorFill", unreal.PointLight, (3590, 105, 215), (0, 0, 0), 8800.0, unreal.Color(210, 230, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=1180.0)
     add_light("LIGHT_GuestHall_TrailerProofDoorKicker", unreal.PointLight, (3340, -170, 178), (0, 0, 0), 2200.0, unreal.Color(195, 224, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"), attenuation_radius=820.0)
     add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 4600.0, unreal.Color(255, 214, 158, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=820.0)

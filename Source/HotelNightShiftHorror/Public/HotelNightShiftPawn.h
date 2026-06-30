@@ -87,7 +87,9 @@ public:
 	FVector AutomationGetDoorRefusalLatchLocation() const;
 	FVector AutomationGetDoorRefusalChainLocation() const;
 	FVector AutomationGetDoorRefusalSurfaceLocation() const;
+	FVector AutomationGetDoorRefusalEvidenceLocation() const;
 	FVector AutomationGetDoorRefusalWallpaperFlutterLocation() const;
+	float AutomationGetRoom203PracticalLightIntensity() const;
 	void AutomationAdvanceReportLogFiledFeedback(float DeltaSeconds);
 	float AutomationGetReportLogFiledFeedbackAlpha() const;
 	FVector AutomationGetReportLogFiledFeedbackLocation() const;
@@ -196,7 +198,13 @@ private:
 	TArray<TObjectPtr<AActor>> DoorRefusalSurfaceActors;
 
 	UPROPERTY()
+	TArray<TObjectPtr<AActor>> DoorRefusalEvidenceActors;
+
+	UPROPERTY()
 	TArray<TObjectPtr<AActor>> DoorRefusalWallpaperFlutterActors;
+
+	UPROPERTY()
+	TObjectPtr<AActor> Room203PracticalLightActor;
 
 	UPROPERTY()
 	TObjectPtr<AActor> Room203AftershockSoundActor;
@@ -300,6 +308,8 @@ private:
 	TArray<FRotator> DoorRefusalChainRestRotations;
 	TArray<FVector> DoorRefusalSurfaceRestLocations;
 	TArray<FRotator> DoorRefusalSurfaceRestRotations;
+	TArray<FVector> DoorRefusalEvidenceRestLocations;
+	TArray<FRotator> DoorRefusalEvidenceRestRotations;
 	TArray<FVector> DoorRefusalWallpaperFlutterRestLocations;
 	TArray<FRotator> DoorRefusalWallpaperFlutterRestRotations;
 	TArray<FVector> ReportLogFiledFeedbackRestLocations;
@@ -341,6 +351,7 @@ private:
 	bool bPostReportLogSelfCorrectionObserved = false;
 	float DoorRefusalFeedbackSeconds = 0.0f;
 	float DoorRefusalFeedbackAlpha = 0.0f;
+	float Room203PracticalLightRestIntensity = 460.0f;
 	bool bDoorRefusalFeedbackActive = false;
 	bool bDoorRefusalAftershockSoundPlayed = false;
 	float ReportLogFiledFeedbackAlpha = 0.0f;
