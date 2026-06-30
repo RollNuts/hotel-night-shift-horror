@@ -5,8 +5,13 @@ from __future__ import annotations
 import argparse
 import glob
 import hashlib
+import json
 import os
 import re
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
 
 from check_hotel_mrq_capture_pngs import color_luma, is_too_dark, metrics_for, read_png_pixels
 
@@ -26,6 +31,9 @@ MIN_MONITOR_EDGE_SCORE = 2.0
 MIN_ROOM203_EDGE_SCORE = 1.35
 MIN_ROOM203_WARM_PIXELS = 950
 MIN_REPORT_TEXT_PIXELS = 1300
+MIN_VIDEO_DURATION_SECONDS = 23.8
+MAX_VIDEO_DURATION_SECONDS = 24.2
+MIN_VIDEO_OUTPUT_FRAMES = 500
 
 
 SHOT_RANGES = {
@@ -40,6 +48,13 @@ SHOT_RANGES = {
 
 def fail(message: str) -> None:
     raise RuntimeError(f"[FirstLoopPlaythroughProofGate] {message}")
+
+
+def require_tool(tool_name: str) -> str:
+    tool_path = shutil.which(tool_name)
+    if not tool_path:
+        fail(f"Missing required tool `{tool_name}` on PATH.")
+    return tool_path
 
 
 def frame_number_from_path(path: str) -> int | None:
@@ -103,6 +118,138 @@ def content_metrics_for(path: str) -> dict[str, float | int]:
     }
 
 
+def escaped_concat_path(path: str) -> str:
+    return str(Path(path).resolve()).replace("'", "'\\''")
+
+
+def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=True, text=True, capture_output=True)
+
+
+def write_video_concat_list(paths: list[str], source_fps: float) -> Path:
+    frame_duration = 1.0 / source_fps
+    temp_file = tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        prefix="first_loop_playthrough_",
+        suffix=".ffconcat",
+        delete=False,
+    )
+    with temp_file:
+        for path in paths:
+            temp_file.write(f"file '{escaped_concat_path(path)}'\n")
+            temp_file.write(f"duration {frame_duration:.6f}\n")
+        temp_file.write(f"file '{escaped_concat_path(paths[-1])}'\n")
+    return Path(temp_file.name)
+
+
+def video_probe(ffprobe_path: str, output_path: str) -> dict:
+    result = run_command(
+        [
+            ffprobe_path,
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height,nb_frames,avg_frame_rate:format=duration",
+            "-of",
+            "json",
+            output_path,
+        ]
+    )
+    return json.loads(result.stdout)
+
+
+def video_duration(probe: dict) -> float:
+    try:
+        return float(probe["format"]["duration"])
+    except (KeyError, TypeError, ValueError):
+        fail("ffprobe did not report a valid video duration.")
+
+
+def verify_video_probe(probe: dict) -> None:
+    streams = probe.get("streams") or []
+    if not streams:
+        fail("ffprobe found no video stream.")
+    stream = streams[0]
+    width = int(stream.get("width") or 0)
+    height = int(stream.get("height") or 0)
+    if width != 1280 or height != 720:
+        fail(f"Encoded video has wrong resolution: {width}x{height}.")
+
+    duration = video_duration(probe)
+    if not (MIN_VIDEO_DURATION_SECONDS <= duration <= MAX_VIDEO_DURATION_SECONDS):
+        fail(
+            f"Encoded video duration is outside the proof window: "
+            f"{duration:.2f}s, expected {MIN_VIDEO_DURATION_SECONDS:.1f}-{MAX_VIDEO_DURATION_SECONDS:.1f}s."
+        )
+
+    frame_count = stream.get("nb_frames")
+    if frame_count is not None and str(frame_count).isdigit() and int(frame_count) < MIN_VIDEO_OUTPUT_FRAMES:
+        fail(f"Encoded video has too few output frames: {frame_count}.")
+
+
+def encode_review_video(paths: list[str], output_path: str, source_fps: float, output_fps: float, crf: int) -> None:
+    if source_fps <= 0.0:
+        fail("--video-source-fps must be positive.")
+    if output_fps <= 0.0:
+        fail("--video-output-fps must be positive.")
+    if not (0 <= crf <= 51):
+        fail("--video-crf must be between 0 and 51.")
+
+    ffmpeg_path = require_tool("ffmpeg")
+    ffprobe_path = require_tool("ffprobe")
+    output_parent = os.path.dirname(output_path)
+    if output_parent:
+        os.makedirs(output_parent, exist_ok=True)
+
+    concat_list = write_video_concat_list(paths, source_fps)
+    duration_seconds = len(paths) / source_fps
+    try:
+        run_command(
+            [
+                ffmpeg_path,
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-t",
+                f"{duration_seconds:.6f}",
+                "-vf",
+                f"fps={output_fps:g},scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "slow",
+                "-crf",
+                str(crf),
+                "-movflags",
+                "+faststart",
+                "-an",
+                output_path,
+            ]
+        )
+    finally:
+        try:
+            concat_list.unlink()
+        except OSError:
+            pass
+
+    probe = video_probe(ffprobe_path, output_path)
+    verify_video_probe(probe)
+    print(
+        f"[FirstLoopPlaythroughProofGate] Encoded review video {output_path} "
+        f"from {len(paths)} PNGs, duration {video_duration(probe):.2f}s."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -110,6 +257,19 @@ def main() -> None:
         default=os.path.join("Saved", "MovieRenders", "FirstLoopPlaythrough"),
         help="Directory containing first-loop playthrough proof PNGs.",
     )
+    parser.add_argument(
+        "--encode-video",
+        action="store_true",
+        help="Also encode a local ignored MP4 from the validated PNGs using ffmpeg/ffprobe.",
+    )
+    parser.add_argument(
+        "--video-output",
+        default=os.path.join("Saved", "MovieRenders", "FirstLoopPlaythrough", "first_loop_playthrough_proof.mp4"),
+        help="Output MP4 path used with --encode-video.",
+    )
+    parser.add_argument("--video-source-fps", type=float, default=2.0)
+    parser.add_argument("--video-output-fps", type=float, default=24.0)
+    parser.add_argument("--video-crf", type=int, default=18)
     args = parser.parse_args()
 
     paths = sorted(glob.glob(os.path.join(args.capture_dir, "first_loop_playthrough_proof_*.png")))
@@ -217,6 +377,8 @@ def main() -> None:
         f"[FirstLoopPlaythroughProofGate] Passed {len(paths)} first-loop proof PNGs "
         f"with {unique_hash_count} unique frames."
     )
+    if args.encode_video:
+        encode_review_video(paths, args.video_output, args.video_source_fps, args.video_output_fps, args.video_crf)
 
 
 if __name__ == "__main__":
