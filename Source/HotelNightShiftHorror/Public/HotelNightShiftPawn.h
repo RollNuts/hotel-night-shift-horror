@@ -71,6 +71,8 @@ public:
 	int32 AutomationCountMovedReturnRouteBackKnockActors(float MinDistance) const;
 	bool AutomationIsPostReportMonitorMismatchActive() const;
 	void AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds);
+	FVector AutomationGetPostReportMonitorMismatchFeedbackLocation() const;
+	int32 AutomationCountMovedPostReportMonitorMismatchActors(float MinDistance) const;
 	bool AutomationIsPostReportDeskWaitActive() const;
 	bool AutomationIsPostReportDeskWaitResolved() const;
 	void AutomationAdvancePostReportDeskWait(float DeltaSeconds);
@@ -278,6 +280,12 @@ private:
 	TObjectPtr<AActor> PostReportMonitorMismatchLightActor;
 
 	UPROPERTY()
+	TObjectPtr<AActor> PostReportMonitorMismatchFeedbackActor;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PostReportMonitorMismatchFeedbackActors;
+
+	UPROPERTY()
 	TObjectPtr<AActor> PostReportDeskWaitSoundActor;
 
 	UPROPERTY()
@@ -351,6 +359,8 @@ private:
 	TArray<FRotator> ReturnRouteBackKnockRestRotations;
 	FVector ReturnRouteCameraRestRelativeLocation = FVector::ZeroVector;
 	float ReturnRouteCameraRestFieldOfView = 90.0f;
+	TArray<FVector> PostReportMonitorMismatchFeedbackRestLocations;
+	TArray<FRotator> PostReportMonitorMismatchFeedbackRestRotations;
 	TArray<FVector> PostReportDeskWaitRattleRestLocations;
 	TArray<FRotator> PostReportDeskWaitRattleRestRotations;
 	TArray<FVector> PostReportLogSelfCorrectionFeedbackRestLocations;

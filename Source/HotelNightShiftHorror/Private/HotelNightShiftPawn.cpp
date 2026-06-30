@@ -80,6 +80,7 @@ const FName ReturnRouteTailLightTag(TEXT("Hotel.Feedback.ReturnRouteTailLight"))
 const FName ReturnRouteBackKnockTag(TEXT("Hotel.Feedback.ReturnRouteBackKnock"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
 const FName PostReportMonitorMismatchLightTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchLight"));
+const FName PostReportMonitorMismatchFeedbackTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchVisual"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 const FName PostReportDeskWaitLightTag(TEXT("Hotel.Feedback.PostReportDeskWaitLight"));
 const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitRattle"));
@@ -329,6 +330,31 @@ bool AHotelNightShiftPawn::AutomationIsPostReportMonitorMismatchActive() const
 void AHotelNightShiftPawn::AutomationAdvancePostReportMonitorMismatch(float DeltaSeconds)
 {
 	UpdatePostReportMonitorMismatch(DeltaSeconds);
+}
+
+FVector AHotelNightShiftPawn::AutomationGetPostReportMonitorMismatchFeedbackLocation() const
+{
+	return PostReportMonitorMismatchFeedbackActor ? PostReportMonitorMismatchFeedbackActor->GetActorLocation() : FVector::ZeroVector;
+}
+
+int32 AHotelNightShiftPawn::AutomationCountMovedPostReportMonitorMismatchActors(float MinDistance) const
+{
+	const float MinDistanceSquared = FMath::Square(MinDistance);
+	int32 MovedCount = 0;
+	for (int32 Index = 0; Index < PostReportMonitorMismatchFeedbackActors.Num(); ++Index)
+	{
+		const AActor* FeedbackPart = PostReportMonitorMismatchFeedbackActors[Index];
+		if (!FeedbackPart || !PostReportMonitorMismatchFeedbackRestLocations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		if (FVector::DistSquared(FeedbackPart->GetActorLocation(), PostReportMonitorMismatchFeedbackRestLocations[Index]) >= MinDistanceSquared)
+		{
+			++MovedCount;
+		}
+	}
+	return MovedCount;
 }
 
 bool AHotelNightShiftPawn::AutomationIsPostReportDeskWaitActive() const
@@ -786,6 +812,12 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	ReturnRouteBackKnockActor = FindActorWithTagNear(ReturnRouteBackKnockTag, ReturnRouteAnchor, 660.0f);
 	PostReportMonitorMismatchSoundActor = FindActorWithTagNear(PostReportMonitorMismatchAudioTag, PostReportMonitorMismatchSoundAnchor, 120.0f);
 	PostReportMonitorMismatchLightActor = FindActorWithTagNear(PostReportMonitorMismatchLightTag, PostReportMonitorMismatchLightAnchor, 160.0f);
+	PostReportMonitorMismatchFeedbackActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(PostReportMonitorMismatchFeedbackTag, MonitorCheckFeedbackAnchor, 180.0f))
+	{
+		PostReportMonitorMismatchFeedbackActors.Add(FeedbackPart);
+	}
+	PostReportMonitorMismatchFeedbackActor = FindActorWithTagNear(PostReportMonitorMismatchFeedbackTag, MonitorCheckFeedbackAnchor, 180.0f);
 	PostReportDeskWaitSoundActor = FindActorWithTagNear(PostReportDeskWaitAudioTag, PostReportDeskWaitSoundAnchor, 180.0f);
 	PostReportDeskWaitLightActor = FindActorWithTagNear(PostReportDeskWaitLightTag, PostReportDeskWaitLightAnchor, 220.0f);
 	PostReportDeskWaitRattleActors.Reset();
@@ -907,6 +939,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		ReturnRouteBackKnockRestLocations.Add(FeedbackPart->GetActorLocation());
 		ReturnRouteBackKnockRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	PostReportMonitorMismatchFeedbackRestLocations.Reset();
+	PostReportMonitorMismatchFeedbackRestRotations.Reset();
+	for (AActor* FeedbackPart : PostReportMonitorMismatchFeedbackActors)
+	{
+		PostReportMonitorMismatchFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
+		PostReportMonitorMismatchFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 
 	PostReportDeskWaitRattleRestLocations.Reset();
@@ -1428,13 +1468,50 @@ void AHotelNightShiftPawn::UpdatePostReportMonitorMismatch(float DeltaSeconds)
 
 	PostReportMonitorMismatchSeconds += DeltaSeconds;
 	PostReportMonitorMismatchPulseClock += DeltaSeconds;
+	const float MismatchAlpha = FMath::Clamp(PostReportMonitorMismatchSeconds / 1.10f, 0.0f, 1.0f);
+	const float Settle = 1.0f - MismatchAlpha;
 	const float Pulse = 0.5f + 0.5f * FMath::Sin(PostReportMonitorMismatchPulseClock * 13.0f);
 	SetPostReportMonitorMismatchLightIntensity(360.0f + Pulse * 1650.0f);
+
+	for (int32 Index = 0; Index < PostReportMonitorMismatchFeedbackActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = PostReportMonitorMismatchFeedbackActors[Index];
+		if (!FeedbackPart || !PostReportMonitorMismatchFeedbackRestLocations.IsValidIndex(Index) || !PostReportMonitorMismatchFeedbackRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		const float Phase = PostReportMonitorMismatchPulseClock * (21.0f + Index * 1.35f) + Index * 0.52f;
+		const float Hit = FMath::Sin(MismatchAlpha * UE_PI * (5.5f + Index * 0.35f)) * Settle;
+		const FVector FlickerOffset(
+			FMath::Sin(Phase) * (1.2f + Index * 0.18f) * Settle,
+			-FMath::Abs(FMath::Sin(Phase * 0.71f)) * 1.4f * Settle,
+			Hit * (3.2f + Index * 0.22f));
+		const FRotator FlickerRotation(
+			0.0f,
+			FMath::Sin(Phase * 0.29f) * 0.35f * Settle,
+			FMath::Sin(Phase * 0.53f) * (0.9f + Index * 0.05f) * Settle);
+		FeedbackPart->SetActorLocationAndRotation(
+			PostReportMonitorMismatchFeedbackRestLocations[Index] + FlickerOffset,
+			PostReportMonitorMismatchFeedbackRestRotations[Index] + FlickerRotation);
+	}
 
 	if (PostReportMonitorMismatchSeconds >= 1.10f)
 	{
 		bPostReportMonitorMismatchActive = false;
 		PostReportMonitorMismatchSeconds = 0.0f;
+		for (int32 Index = 0; Index < PostReportMonitorMismatchFeedbackActors.Num(); ++Index)
+		{
+			AActor* FeedbackPart = PostReportMonitorMismatchFeedbackActors[Index];
+			if (!FeedbackPart || !PostReportMonitorMismatchFeedbackRestLocations.IsValidIndex(Index) || !PostReportMonitorMismatchFeedbackRestRotations.IsValidIndex(Index))
+			{
+				continue;
+			}
+
+			FeedbackPart->SetActorLocationAndRotation(
+				PostReportMonitorMismatchFeedbackRestLocations[Index],
+				PostReportMonitorMismatchFeedbackRestRotations[Index]);
+		}
 		SetPostReportMonitorMismatchLightIntensity(780.0f);
 	}
 }

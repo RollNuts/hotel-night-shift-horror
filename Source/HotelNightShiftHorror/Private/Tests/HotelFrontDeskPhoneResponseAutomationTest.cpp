@@ -32,6 +32,7 @@ const FName ReturnRouteLightTag(TEXT("Hotel.Feedback.ReturnRouteLight"));
 const FName ReturnRouteTailLightTag(TEXT("Hotel.Feedback.ReturnRouteTailLight"));
 const FName ReturnRouteBackKnockTag(TEXT("Hotel.Feedback.ReturnRouteBackKnock"));
 const FName PostReportMonitorMismatchAudioTag(TEXT("Hotel.Audio.PostReportMonitorMismatch"));
+const FName PostReportMonitorMismatchFeedbackTag(TEXT("Hotel.Feedback.PostReportMonitorMismatchVisual"));
 const FName PostReportDeskWaitAudioTag(TEXT("Hotel.Audio.PostReportDeskWait"));
 const FName PostReportDeskWaitRattleTag(TEXT("Hotel.Feedback.PostReportDeskWaitRattle"));
 const FName PostReportLogSelfCorrectionAudioTag(TEXT("Hotel.Audio.PostReportLogSelfCorrection"));
@@ -184,6 +185,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		AActor* ReturnRouteTailLight = FindActorByTag(World, ReturnRouteTailLightTag);
 		AActor* ReturnRouteBackKnock = FindActorByTag(World, ReturnRouteBackKnockTag);
 		AActor* PostReportMonitorMismatchSound = FindActorByTag(World, PostReportMonitorMismatchAudioTag);
+		AActor* PostReportMonitorMismatchFeedback = FindActorByTag(World, PostReportMonitorMismatchFeedbackTag);
 		AActor* PostReportDeskWaitSound = FindActorByTag(World, PostReportDeskWaitAudioTag);
 		AActor* PostReportDeskWaitRattle = FindActorByTag(World, PostReportDeskWaitRattleTag);
 		AActor* PostReportLogSelfCorrectionSound = FindActorByTag(World, PostReportLogSelfCorrectionAudioTag);
@@ -226,6 +228,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Return route pursuit-tail light exists"), ReturnRouteTailLight);
 		TestNotNull(TEXT("Return route back-knock visible feedback actor exists"), ReturnRouteBackKnock);
 		TestNotNull(TEXT("Post-report monitor mismatch sound actor exists"), PostReportMonitorMismatchSound);
+		TestNotNull(TEXT("Post-report monitor mismatch visual feedback actor exists"), PostReportMonitorMismatchFeedback);
 		TestNotNull(TEXT("Post-report desk wait sound actor exists"), PostReportDeskWaitSound);
 		TestNotNull(TEXT("Post-report desk wait rattle actor exists"), PostReportDeskWaitRattle);
 		TestNotNull(TEXT("Post-report log self-correction sound actor exists"), PostReportLogSelfCorrectionSound);
@@ -248,7 +251,7 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Authored lobby door tape cross exists in production map"), AuthoredLobbyDoorTapeCross);
 		TestNotNull(TEXT("Authored lobby door latch plate exists in production map"), AuthoredLobbyDoorLatchPlate);
 		TestNotNull(TEXT("Legacy lobby door no-guest reflection blockout actor remains ledger-visible"), LegacyLobbyDoorNoGuestReflection);
-		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !ReportLogFiledReaction || !ReportLogFiledLight || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !AuthoredReportPenBody || !AuthoredReportFiledInk || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl || !AuthoredLobbyDoorCrackWeb || !AuthoredLobbyDoorTapeCross || !AuthoredLobbyDoorLatchPlate || !LegacyLobbyDoorNoGuestReflection)
+		if (!Phone || !Monitor || !MonitorCheckSound || !MonitorCheckFeedback || !MonitorCheckLight || !Room203Door || !Room203DoorFeedback || !Room203WallpaperFlutter || !ReportLog || !ReportLogFiledFeedback || !ReportLogFiledReaction || !ReportLogFiledLight || !PatrolListenSound || !ReturnRouteSound || !ReturnRouteTailSound || !ReturnRouteLight || !ReturnRouteTailLight || !ReturnRouteBackKnock || !PostReportMonitorMismatchSound || !PostReportMonitorMismatchFeedback || !PostReportDeskWaitSound || !PostReportDeskWaitRattle || !PostReportLogSelfCorrectionSound || !PostReportLogSelfCorrectionFeedback || !AuthoredPhoneBody || !AuthoredPhoneReceiver || !AuthoredPhoneCord || !AuthoredLedgerPages || !AuthoredReportPenBody || !AuthoredReportFiledInk || !Room203DoorEdgeSlamShadow || !Room203NoticeCornerJolt || !Room203NumberDigits || !Room203DoNotOpenNotice || !Room203SconceLightMesh || !Room203AftershockLoosePaper || !Room203AftershockHighCurl || !AuthoredLobbyDoorCrackWeb || !AuthoredLobbyDoorTapeCross || !AuthoredLobbyDoorLatchPlate || !LegacyLobbyDoorNoGuestReflection)
 		{
 			return true;
 		}
@@ -417,11 +420,18 @@ bool FHotelFrontDeskPhoneResponseLiveMapTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Report filed feedback reaches completion"), Pawn->AutomationGetReportLogFiledFeedbackAlpha() >= 1.0f);
 		TestTrue(TEXT("Report filing desk lamp returns after the stamp"), FMath::Abs(Pawn->AutomationGetReportLogFiledLightIntensity() - ReportFiledLightRestIntensity) < 0.5f);
 
+		const FVector PostReportMonitorMismatchRestLocation = Pawn->AutomationGetPostReportMonitorMismatchFeedbackLocation();
+		TestTrue(TEXT("Post-report monitor mismatch visual feedback is cached"), PostReportMonitorMismatchRestLocation.SizeSquared() > 0.0f);
 		TestTrue(TEXT("Monitor recheck after report succeeds"), Pawn->AutomationInteractWithActor(Monitor));
 		TestEqual(TEXT("Monitor recheck keeps ReportFiled as the terminal loop stage"), Pawn->AutomationGetLoopStage(), EHotelLoopStage::ReportFiled);
 		TestTrue(TEXT("Post-report monitor mismatch feedback starts"), Pawn->AutomationIsPostReportMonitorMismatchActive());
-		Pawn->AutomationAdvancePostReportMonitorMismatch(1.20f);
+		Pawn->AutomationAdvancePostReportMonitorMismatch(0.16f);
+		TestTrue(TEXT("Post-report monitor contradiction moves multiple screen cues"), Pawn->AutomationCountMovedPostReportMonitorMismatchActors(1.0f) >= 3);
+		TestTrue(TEXT("Post-report monitor contradiction primary cue moves visibly"), FVector::DistSquared(PostReportMonitorMismatchRestLocation, Pawn->AutomationGetPostReportMonitorMismatchFeedbackLocation()) > FMath::Square(1.0f));
+		Pawn->AutomationAdvancePostReportMonitorMismatch(1.05f);
 		TestFalse(TEXT("Post-report monitor mismatch feedback settles"), Pawn->AutomationIsPostReportMonitorMismatchActive());
+		TestEqual(TEXT("Post-report monitor contradiction screen cues return to rest"), Pawn->AutomationCountMovedPostReportMonitorMismatchActors(1.0f), 0);
+		TestTrue(TEXT("Post-report monitor contradiction primary cue returns to rest"), FVector::DistSquared(PostReportMonitorMismatchRestLocation, Pawn->AutomationGetPostReportMonitorMismatchFeedbackLocation()) < FMath::Square(1.0f));
 		TestFalse(TEXT("Post-report log self-correction is blocked before desk wait resolves"), Pawn->AutomationInteractWithActor(ReportLog));
 		TestFalse(TEXT("Post-report log has not self-corrected before desk wait"), Pawn->AutomationHasPostReportLogSelfCorrection());
 		TestFalse(TEXT("Post-report desk wait has not fired before waiting"), Pawn->AutomationIsPostReportDeskWaitResolved());

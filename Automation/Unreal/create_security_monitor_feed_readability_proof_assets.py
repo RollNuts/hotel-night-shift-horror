@@ -25,20 +25,26 @@ SECONDS = 5
 END_FRAME = FPS * SECONDS
 
 CAMERA_KEYS = [
-    (0, (-455, -720, 178), (0.7, 126.0, 0.0), 68.0),
-    (14, (-448, -715, 178), (0.5, 126.2, -0.1), 65.0),
-    (28, (-441, -712, 179), (0.2, 126.5, 0.1), 61.0),
-    (52, (-437, -709, 179), (0.3, 126.7, -0.1), 59.0),
-    (84, (-429, -703, 179), (0.1, 127.0, 0.0), 57.0),
-    (END_FRAME, (-424, -699, 179), (0.1, 127.1, 0.0), 55.0),
+    (0, (-505, -704, 178), (0.5, 128.0, 0.0), 58.0),
+    (14, (-505, -700, 178), (0.4, 128.1, -0.1), 55.0),
+    (28, (-503, -696, 179), (0.2, 128.3, 0.1), 52.0),
+    (52, (-500, -692, 179), (0.2, 128.5, -0.1), 49.0),
+    (84, (-497, -688, 179), (0.1, 128.7, 0.0), 47.0),
+    (END_FRAME, (-494, -684, 179), (0.1, 128.9, 0.0), 45.0),
 ]
 
 MONITOR_FEEDBACK_JOLTS = {
-    "PROP_Surveillance_Monitor_CheckScanlineSweepA": (12, (-7.0, -1.2, 2.0), (0.0, 0.0, -1.8), 1.05),
-    "PROP_Surveillance_Monitor_CheckScanlineSweepB": (18, (8.5, -1.0, -2.2), (0.0, 0.0, 1.6), 1.04),
-    "PROP_Surveillance_Monitor_CheckRoom203TargetBox": (22, (2.8, -1.6, 4.4), (0.0, 0.0, 2.4), 1.10),
-    "PROP_Surveillance_Monitor_CheckNoGuestUnderline": (30, (-5.5, -1.0, -1.8), (0.0, 0.0, -1.2), 1.08),
-    "PROP_Surveillance_Monitor_CheckTimestampBlock": (38, (4.5, -1.0, 1.6), (0.0, 0.0, 1.1), 1.06),
+    "PROP_Surveillance_Monitor_CheckScanlineSweepA": (12, (-5.0, -0.8, 1.2), (0.0, 0.0, -1.0), 1.02),
+    "PROP_Surveillance_Monitor_CheckScanlineSweepB": (18, (5.8, -0.8, -1.4), (0.0, 0.0, 0.9), 1.02),
+    "PROP_Surveillance_Monitor_CheckRoom203TargetBox": (22, (1.8, -1.0, 2.6), (0.0, 0.0, 1.4), 1.03),
+    "PROP_Surveillance_Monitor_CheckNoGuestUnderline": (30, (-3.8, -0.8, -1.0), (0.0, 0.0, -0.8), 1.02),
+    "PROP_Surveillance_Monitor_CheckTimestampBlock": (38, (2.8, -0.8, 1.0), (0.0, 0.0, 0.7), 1.02),
+    "PROP_Surveillance_Monitor_PostReportFeedFrame": (56, (-2.2, -0.9, 1.0), (0.0, 0.0, -0.6), 1.01),
+    "PROP_Surveillance_Monitor_PostReportStaticBarA": (60, (4.5, -0.9, 1.2), (0.0, 0.0, 0.9), 1.02),
+    "PROP_Surveillance_Monitor_PostReportStaticBarB": (64, (-5.0, -1.0, -1.3), (0.0, 0.0, -0.9), 1.02),
+    "PROP_Surveillance_Monitor_PostReportOpenDoorGlyph": (70, (1.5, -1.4, 3.0), (0.0, 0.0, 1.2), 1.03),
+    "PROP_Surveillance_Monitor_PostReportRoom203Dot": (76, (-1.8, -1.2, 1.9), (0.0, 0.0, -1.0), 1.03),
+    "PROP_Surveillance_Monitor_PostReportTimestampSmear": (82, (3.0, -0.9, -1.1), (0.0, 0.0, 0.7), 1.02),
 }
 
 CONTEXT_SCALE_ACTORS = {
