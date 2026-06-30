@@ -90,6 +90,8 @@ REQUIRED_ASSETS = [
     "/Game/Hotel/Cinematics/MRQ_HotelEvidencePng",
     "/Game/Hotel/Cinematics/LS_ReturnRoute_TrailerBeat_15s",
     "/Game/Hotel/Cinematics/MRQ_ReturnRouteTrailerProofPng",
+    "/Game/Hotel/Cinematics/LS_Room203_EvidenceReactionProof_5s",
+    "/Game/Hotel/Cinematics/MRQ_Room203EvidenceReactionProofPng",
 ]
 
 REQUIRED_ACTOR_LABELS = [
@@ -335,6 +337,20 @@ ROOM203_WALLPAPER_FLUTTER_TAGS = ROOM203_SURFACE_PASS_AUTHORED_MESH_TAGS + [
     "Hotel.Capture.Room203Aftershock",
 ]
 
+ROOM203_EVIDENCE_REACTION_TAGS = [
+    "Hotel.Capture.Readability",
+    "Hotel.Feedback.Room203Refusal",
+    "Hotel.Feedback.Room203EvidenceReaction",
+]
+
+RUNTIME_MOVABLE_STATIC_MESH_TAGS = [
+    "Hotel.Feedback.Room203LatchJolt",
+    "Hotel.Feedback.Room203ChainJolt",
+    "Hotel.Feedback.Room203DoorSurfaceJolt",
+    "Hotel.Feedback.Room203EvidenceReaction",
+    "Hotel.Feedback.Room203WallpaperFlutter",
+]
+
 
 REQUIRED_ACTOR_TAGS = {
     "PROP_FrontDesk_Phone_AnswerLoopPlaceholder": ["Hotel.Interact.Phone"],
@@ -411,11 +427,11 @@ REQUIRED_ACTOR_TAGS = {
     "PROP_GuestHall_Floor_AuthoredScuffPath_ToRoom203": ROOM203_SURFACE_PASS_AUTHORED_MESH_TAGS,
     "PROP_GuestHall_Ceiling_AuthoredWaterStain_FluorescentB": ROOM203_SURFACE_PASS_AUTHORED_MESH_TAGS,
     "PROP_GuestHall_Room203_AuthoredPaneledDoor": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203DoorSurfaceJolt"],
-    "PROP_GuestHall_Room203_NumberPlate": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203DoorDecisionVisual"],
-    "PROP_GuestHall_Room203_NumberDigits_Authored": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_NumberPlate": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203DoorDecisionVisual", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
+    "PROP_GuestHall_Room203_NumberDigits_Authored": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203DoorDecisionVisual", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
     "PROP_GuestHall_Room203_DoorGrimeStreaks_Authored": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203DoorSurfaceJolt"],
     "PROP_GuestHall_Room203_DoorPaintChips_Authored": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203DoorSurfaceJolt"],
-    "PROP_GuestHall_Room203_HandleBackplate_Readable": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_HandleBackplate_Readable": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
     "PROP_GuestHall_Room203_LockHardwareBreakup_Authored": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203LatchJolt"],
     "PROP_GuestHall_Room203_AuthoredHandleLever": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203LatchJolt"],
     "PROP_GuestHall_Room203_LatchJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203LatchJolt"],
@@ -424,12 +440,12 @@ REQUIRED_ACTOR_TAGS = {
     "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorSurfaceJolt"],
     "PROP_GuestHall_Room203_NoticeCornerJoltCue": ["Hotel.Feedback.Room203Refusal", "Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorSurfaceJolt"],
     "PROP_GuestHall_Room203_AuthoredTornNotice": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203DoorSurfaceJolt"],
-    "PROP_GuestHall_Room203_PeepholeBlackCue": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
-    "PROP_GuestHall_Room203_DoNotOpenNotice": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
-    "PROP_GuestHall_Room203_NoticeUnderline": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
+    "PROP_GuestHall_Room203_PeepholeBlackCue": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
+    "PROP_GuestHall_Room203_DoNotOpenNotice": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
+    "PROP_GuestHall_Room203_NoticeUnderline": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
     "PROP_GuestHall_Room203_ThresholdShadow": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorDecisionVisual"],
-    "LIGHTMESH_GuestHall_Room203DoorPractical": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh"],
-    "PROP_GuestHall_Room203DoorPractical_Bracket": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh"],
+    "LIGHTMESH_GuestHall_Room203DoorPractical": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
+    "PROP_GuestHall_Room203DoorPractical_Bracket": ["Hotel.Capture.Readability", "Hotel.ArtDensity.Room203", "Hotel.ArtSource.AuthoredMesh", "Hotel.Feedback.Room203Refusal", "Hotel.Feedback.Room203EvidenceReaction"],
     "PROP_GuestHall_ServiceCart_BlockingSightline": ROOM203_SURFACE_PASS_AUTHORED_MESH_TAGS,
     "PROP_ReportLog_ReturnAndRecordPoint": ["Hotel.Interact.ReportLog"],
     "PROP_FrontDesk_ReportLog_AuthoredCurledPages": ["Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk", "Hotel.ArtSource.AuthoredMesh"],
@@ -507,6 +523,7 @@ REQUIRED_ACTOR_TAGS = {
     "LIGHT_ReturnRoute_ColdPulseAfterRefusal": ["Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteLight"],
     "LIGHT_ReturnRoute_PursuitTailColdSkim": ["Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly", "Hotel.Feedback.ReturnRouteTailLight"],
     "LIGHT_ReturnRoute_BackKnockWallSkim": ["Hotel.Capture.Readability", "Hotel.Capture.ReturnRouteAnomaly"],
+    "LIGHT_GuestHall_Room203PlatePractical": ["Hotel.Capture.Readability", "Hotel.Feedback.Room203DoorPracticalLight"],
     "LIGHT_GuestHall_CaptureEvidenceDoorFill": ["Hotel.Capture.Readability", "Hotel.Capture.Room203Surface"],
     "LIGHT_GuestHall_Room203AftershockPaperSkimFill": ["Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"],
     "LIGHT_GuestHall_Room203TornPaperEdgeRim": ["Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"],
@@ -582,6 +599,14 @@ MOVABLE_STATIC_MESH_LABELS = [
     "RETURN_Route_FootprintBacktrackB",
     "RETURN_Route_FootprintBacktrackC",
     "PROP_GuestHall_Room203_AuthoredPaneledDoor",
+    "PROP_GuestHall_Room203_DoorGrimeStreaks_Authored",
+    "PROP_GuestHall_Room203_DoorPaintChips_Authored",
+    "PROP_GuestHall_Room203_NumberPlate",
+    "PROP_GuestHall_Room203_NumberDigits_Authored",
+    "PROP_GuestHall_Room203_HandleBackplate_Readable",
+    "PROP_GuestHall_Room203_PeepholeBlackCue",
+    "PROP_GuestHall_Room203_DoNotOpenNotice",
+    "PROP_GuestHall_Room203_NoticeUnderline",
     "PROP_GuestHall_Room203_AuthoredHandleLever",
     "PROP_GuestHall_Room203_LatchJoltCue",
     "PROP_GuestHall_Room203_ChainJoltCue",
@@ -589,6 +614,9 @@ MOVABLE_STATIC_MESH_LABELS = [
     "PROP_GuestHall_Room203_DoorEdgeSlamShadowCue",
     "PROP_GuestHall_Room203_NoticeCornerJoltCue",
     "PROP_GuestHall_Room203_AuthoredTornNotice",
+    "LIGHTMESH_GuestHall_Room203DoorPractical",
+    "PROP_GuestHall_Room203DoorPractical_Bracket",
+    "PROP_GuestHall_Room203_ThresholdShadow",
     "PROP_FrontDesk_ReportLog_FiledStampCue",
     "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine",
     "PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine",
@@ -707,6 +735,10 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "RETURN_Route_CeilingLightmesh_ColdPulseCue",
     "RETURN_Route_CeilingLightmesh_PursuitTailCue",
     "PROP_GuestHall_Room203_AuthoredPaneledDoor",
+    "PROP_GuestHall_Room203_DoorGrimeStreaks_Authored",
+    "PROP_GuestHall_Room203_DoorPaintChips_Authored",
+    "PROP_GuestHall_Room203_NumberPlate",
+    "PROP_GuestHall_Room203_NumberDigits_Authored",
     "PROP_GuestHall_Room203_HandleBackplate_Readable",
     "PROP_GuestHall_Room203_AuthoredHandleLever",
     "PROP_GuestHall_Room203_LatchJoltCue",
@@ -718,6 +750,8 @@ NON_INTERACTIVE_POLISH_LABELS = [
     "PROP_GuestHall_Room203_PeepholeBlackCue",
     "PROP_GuestHall_Room203_DoNotOpenNotice",
     "PROP_GuestHall_Room203_NoticeUnderline",
+    "LIGHTMESH_GuestHall_Room203DoorPractical",
+    "PROP_GuestHall_Room203DoorPractical_Bracket",
     "PROP_GuestHall_Room203_ThresholdShadow",
     "TRANSITION_Elevator_CallPanel_SoundCueAnchor",
     "TRANSITION_Elevator_FloorIndicator_WrongFloorCue",
@@ -862,6 +896,19 @@ for label in MOVABLE_STATIC_MESH_LABELS:
         fail(f"Actor {label} must have a static mesh component")
     if component.get_editor_property("mobility") != unreal.ComponentMobility.MOVABLE:
         fail(f"Actor {label} must be movable for live interaction feedback")
+
+for actor in actors_by_label.values():
+    actual_tags = {str(tag) for tag in actor.tags}
+    if not any(tag in actual_tags for tag in RUNTIME_MOVABLE_STATIC_MESH_TAGS):
+        continue
+    component = actor.static_mesh_component if hasattr(actor, "static_mesh_component") else None
+    if component is None:
+        continue
+    if component.get_editor_property("mobility") != unreal.ComponentMobility.MOVABLE:
+        fail(
+            f"Actor {actor.get_actor_label()} carries runtime motion tags "
+            "but its static mesh component is not movable"
+        )
 
 for label in NON_INTERACTIVE_POLISH_LABELS:
     actor = actors_by_label.get(label)
