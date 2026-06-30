@@ -30,6 +30,7 @@ const FVector Room203WallpaperFlutterAnchor(3635.0f, 276.0f, 166.0f);
 const FVector Room203AftershockSoundAnchor(3725.0f, 276.0f, 168.0f);
 const FVector ReportFiledSoundAnchor(-242.0f, -500.0f, 152.0f);
 const FVector ReportLogFiledFeedbackAnchor(-232.0f, -503.0f, 145.0f);
+const FVector ReportLogFiledLightAnchor(-318.0f, -548.0f, 176.0f);
 const FVector PatrolListenAnchor(930.0f, 0.0f, 92.0f);
 const FVector PatrolListenSoundAnchor(930.0f, 0.0f, 72.0f);
 const FVector PatrolListenLightAnchor(955.0f, 0.0f, 115.0f);
@@ -67,6 +68,8 @@ const FName Room203PracticalLightTag(TEXT("Hotel.Feedback.Room203DoorPracticalLi
 const FName Room203AftershockAudioTag(TEXT("Hotel.Audio.Room203Aftershock"));
 const FName ReportLogInteractTag(TEXT("Hotel.Interact.ReportLog"));
 const FName ReportLogFiledFeedbackTag(TEXT("Hotel.Feedback.ReportLogFiled"));
+const FName ReportLogFiledReactionTag(TEXT("Hotel.Feedback.ReportLogFiledReaction"));
+const FName ReportLogFiledLightTag(TEXT("Hotel.Feedback.ReportLogFiledLight"));
 const FName ReportLogFiledAudioTag(TEXT("Hotel.Audio.ReportLogFiled"));
 const FName PatrolListenAudioTag(TEXT("Hotel.Audio.PatrolListen"));
 const FName PatrolListenLightTag(TEXT("Hotel.Feedback.PatrolListenLight"));
@@ -476,6 +479,18 @@ FVector AHotelNightShiftPawn::AutomationGetReportLogFiledFeedbackLocation() cons
 {
 	return ReportLogFiledFeedbackActor ? ReportLogFiledFeedbackActor->GetActorLocation() : FVector::ZeroVector;
 }
+
+FVector AHotelNightShiftPawn::AutomationGetReportLogFiledReactionLocation() const
+{
+	return ReportLogFiledReactionActors.IsValidIndex(0) && ReportLogFiledReactionActors[0]
+		? ReportLogFiledReactionActors[0]->GetActorLocation()
+		: FVector::ZeroVector;
+}
+
+float AHotelNightShiftPawn::AutomationGetReportLogFiledLightIntensity() const
+{
+	return GetLightIntensity(ReportLogFiledLightActor);
+}
 #endif
 
 void AHotelNightShiftPawn::MoveForward(float Value)
@@ -747,6 +762,13 @@ void AHotelNightShiftPawn::CacheHotelActors()
 		ReportLogFiledFeedbackActors.Add(FeedbackPart);
 	}
 	ReportLogFiledFeedbackActor = FindActorWithTagNear(ReportLogFiledFeedbackTag, ReportLogFiledFeedbackAnchor, 150.0f);
+	ReportLogFiledReactionActors.Reset();
+	for (AActor* FeedbackPart : FindActorsWithTagNear(ReportLogFiledReactionTag, ReportLogFiledFeedbackAnchor, 180.0f))
+	{
+		ReportLogFiledReactionActors.Add(FeedbackPart);
+	}
+	ReportLogFiledLightActor = FindLightActorWithTagNear(ReportLogFiledLightTag, ReportLogFiledLightAnchor, 180.0f);
+	ReportLogFiledLightRestIntensity = ReportLogFiledLightActor ? GetLightIntensity(ReportLogFiledLightActor) : 620.0f;
 	PatrolListenSoundActor = FindActorWithTagNear(PatrolListenAudioTag, PatrolListenSoundAnchor, 120.0f);
 	PatrolListenLightActor = FindActorWithTagNear(PatrolListenLightTag, PatrolListenLightAnchor, 120.0f);
 	ReturnRouteSoundActor = FindActorWithTagNear(ReturnRouteAudioTag, ReturnRouteSoundAnchor, 220.0f);
@@ -866,6 +888,14 @@ void AHotelNightShiftPawn::CacheHotelActors()
 	{
 		ReportLogFiledFeedbackRestLocations.Add(FeedbackPart->GetActorLocation());
 		ReportLogFiledFeedbackRestRotations.Add(FeedbackPart->GetActorRotation());
+	}
+
+	ReportLogFiledReactionRestLocations.Reset();
+	ReportLogFiledReactionRestRotations.Reset();
+	for (AActor* FeedbackPart : ReportLogFiledReactionActors)
+	{
+		ReportLogFiledReactionRestLocations.Add(FeedbackPart->GetActorLocation());
+		ReportLogFiledReactionRestRotations.Add(FeedbackPart->GetActorRotation());
 	}
 
 	ReturnRouteBackKnockRestLocations.Reset();
@@ -1809,18 +1839,22 @@ void AHotelNightShiftPawn::UpdateDoorRefusalFeedback(float DeltaSeconds)
 
 void AHotelNightShiftPawn::TriggerReportLogFiledFeedback()
 {
-	if (!ReportLogFiledFeedbackActor || ReportLogFiledFeedbackActors.IsEmpty())
+	if (!ReportLogFiledFeedbackActor && ReportLogFiledFeedbackActors.IsEmpty() && ReportLogFiledReactionActors.IsEmpty() && !ReportLogFiledLightActor)
 	{
 		return;
 	}
 
 	bReportLogFiledFeedbackActive = true;
 	ReportLogFiledFeedbackAlpha = 0.0f;
+	if (ULightComponent* LightComponent = ReportLogFiledLightActor ? ReportLogFiledLightActor->FindComponentByClass<ULightComponent>() : nullptr)
+	{
+		LightComponent->SetIntensity(ReportLogFiledLightRestIntensity + 980.0f);
+	}
 }
 
 void AHotelNightShiftPawn::UpdateReportLogFiledFeedback(float DeltaSeconds)
 {
-	if (!bReportLogFiledFeedbackActive || !ReportLogFiledFeedbackActor)
+	if (!bReportLogFiledFeedbackActive)
 	{
 		return;
 	}
@@ -1828,6 +1862,7 @@ void AHotelNightShiftPawn::UpdateReportLogFiledFeedback(float DeltaSeconds)
 	ReportLogFiledFeedbackAlpha = FMath::Clamp(ReportLogFiledFeedbackAlpha + DeltaSeconds / 0.30f, 0.0f, 1.0f);
 	const float Ease = FMath::InterpEaseOut(0.0f, 1.0f, ReportLogFiledFeedbackAlpha, 3.0f);
 	const float Impact = FMath::Sin(ReportLogFiledFeedbackAlpha * UE_PI) * (1.0f - ReportLogFiledFeedbackAlpha);
+	const float LightPulse = FMath::Sin(ReportLogFiledFeedbackAlpha * UE_PI);
 	const FVector StampOffset(0.0f, 6.0f * Ease, 8.0f * Impact);
 	const FRotator StampRotation(-4.0f * Impact, 0.0f, -9.0f * Impact);
 
@@ -1844,9 +1879,41 @@ void AHotelNightShiftPawn::UpdateReportLogFiledFeedback(float DeltaSeconds)
 			ReportLogFiledFeedbackRestRotations[Index] + StampRotation);
 	}
 
+	for (int32 Index = 0; Index < ReportLogFiledReactionActors.Num(); ++Index)
+	{
+		AActor* FeedbackPart = ReportLogFiledReactionActors[Index];
+		if (!FeedbackPart || !ReportLogFiledReactionRestLocations.IsValidIndex(Index) || !ReportLogFiledReactionRestRotations.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		const float Direction = (Index % 2 == 0) ? 1.0f : -1.0f;
+		const float DelayBias = FMath::Clamp(static_cast<float>(Index) * 0.09f, 0.0f, 0.28f);
+		const float LocalAlpha = FMath::Clamp((ReportLogFiledFeedbackAlpha - DelayBias) / FMath::Max(0.1f, 1.0f - DelayBias), 0.0f, 1.0f);
+		const float LocalEase = FMath::InterpEaseOut(0.0f, 1.0f, LocalAlpha, 2.2f);
+		const float LocalImpact = FMath::Sin(LocalAlpha * UE_PI) * FMath::Pow(1.0f - LocalAlpha, 0.72f);
+		const FVector ReactionOffset(
+			Direction * 2.8f * LocalImpact,
+			-5.0f * LocalEase - 2.5f * LocalImpact,
+			3.8f * FMath::Abs(LocalImpact));
+		const FRotator ReactionRotation(-3.8f * LocalImpact, Direction * 1.2f * LocalEase, Direction * 6.2f * LocalImpact);
+		FeedbackPart->SetActorLocationAndRotation(
+			ReportLogFiledReactionRestLocations[Index] + ReactionOffset,
+			ReportLogFiledReactionRestRotations[Index] + ReactionRotation);
+	}
+
+	if (ULightComponent* LightComponent = ReportLogFiledLightActor ? ReportLogFiledLightActor->FindComponentByClass<ULightComponent>() : nullptr)
+	{
+		LightComponent->SetIntensity(ReportLogFiledLightRestIntensity + LightPulse * 1320.0f);
+	}
+
 	if (ReportLogFiledFeedbackAlpha >= 1.0f)
 	{
 		bReportLogFiledFeedbackActive = false;
+		if (ULightComponent* LightComponent = ReportLogFiledLightActor ? ReportLogFiledLightActor->FindComponentByClass<ULightComponent>() : nullptr)
+		{
+			LightComponent->SetIntensity(ReportLogFiledLightRestIntensity);
+		}
 	}
 }
 

@@ -24,6 +24,7 @@ MAP_PATH = "/Game/Hotel/Maps/L_HotelNightShift_Slice"
 UPDATED_SOURCE_MESHES: set[str] = set()
 UPDATED_SOURCE_TEXTURES: set[str] = set()
 ALWAYS_REIMPORT_TEXTURES = {
+    "TX_Hotel_ReportLogFiledPaper_v0",
     "TX_Hotel_ReturnRouteSlipPaper_v0",
     "TX_Hotel_RoomDoorPaint_v0",
     "TX_Hotel_SecurityMonitorFeed_v0",
@@ -146,6 +147,91 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             max(0, min(255, int(red + warm - darken))),
             max(0, min(255, int(green + warm * 0.55 - darken * 0.82))),
             max(0, min(255, int(blue + warm * 0.25 - darken * 0.64))),
+        )
+
+    def report_log_filed_paper_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        fiber = (
+            math.sin(x * 0.157 + y * 0.049)
+            + math.sin(x * 0.043 - y * 0.193 + 2.1)
+            + math.sin(x * 0.331 + y * 0.067 + 0.8)
+        ) / 3.0
+        edge_shadow = max(0.0, 1.0 - min(u, 1.0 - u, v, 1.0 - v) / 0.052)
+        thumb_oil = max(0.0, 1.0 - (((u - 0.72) / 0.20) ** 2 + ((v - 0.84) / 0.12) ** 2))
+        coffee_bleed = max(0.0, 1.0 - (((u - 0.18) / 0.16) ** 2 + ((v - 0.16) / 0.10) ** 2))
+        fold = max(0.0, 1.0 - abs(u - 0.54) / 0.012) * (0.35 + 0.65 * v)
+
+        r = 193 + 8 * fiber
+        g = 173 + 6 * fiber
+        b = 130 + 5 * fiber
+        darken = 12 * edge_shadow + 7 * thumb_oil + 6 * coffee_bleed + 4 * fold
+        r -= darken
+        g -= darken * 0.83
+        b -= darken * 0.63
+
+        def mix(red: float, green: float, blue: float, amount: float) -> None:
+            nonlocal r, g, b
+            a = max(0.0, min(1.0, amount))
+            r = r * (1.0 - a) + red * a
+            g = g * (1.0 - a) + green * a
+            b = b * (1.0 - a) + blue * a
+
+        def rect(x0: float, x1: float, y0: float, y1: float, feather: float = 0.002) -> float:
+            if u < x0 - feather or u > x1 + feather or v < y0 - feather or v > y1 + feather:
+                return 0.0
+            inside = min(u - x0, x1 - u, v - y0, y1 - v)
+            return max(0.0, min(1.0, (inside + feather) / max(feather, 0.0001)))
+
+        def line_x(x0: float, x1: float, y0: float, thickness: float) -> float:
+            return rect(x0, x1, y0 - thickness * 0.5, y0 + thickness * 0.5, thickness * 0.28)
+
+        def line_y(x0: float, y0: float, y1: float, thickness: float) -> float:
+            return rect(x0 - thickness * 0.5, x0 + thickness * 0.5, y0, y1, thickness * 0.28)
+
+        def outline(x0: float, x1: float, y0: float, y1: float, thickness: float) -> float:
+            return max(
+                line_x(x0, x1, y0, thickness),
+                line_x(x0, x1, y1, thickness),
+                line_y(x0, y0, y1, thickness),
+                line_y(x1, y0, y1, thickness),
+            )
+
+        ink = (31, 25, 21)
+        faded = (64, 46, 33)
+        red = (142, 30, 24)
+        mix(*faded, outline(0.055, 0.945, 0.055, 0.945, 0.007) * 0.78)
+        mix(*ink, line_x(0.105, 0.62, 0.122, 0.012) * 0.65)
+        mix(*faded, line_x(0.105, 0.90, 0.205, 0.006) * 0.65)
+        mix(*faded, line_x(0.105, 0.90, 0.305, 0.005) * 0.55)
+        mix(*faded, line_x(0.105, 0.90, 0.405, 0.005) * 0.55)
+        mix(*faded, line_x(0.105, 0.54, 0.505, 0.005) * 0.55)
+        mix(*faded, outline(0.095, 0.165, 0.585, 0.655, 0.007) * 0.85)
+        mix(*red, line_x(0.104, 0.137, 0.636, 0.010) * 0.92)
+        mix(*red, line_x(0.129, 0.178, 0.606, 0.010) * 0.92)
+        mix(*red, outline(0.602, 0.900, 0.610, 0.760, 0.010) * 0.72)
+        mix(*red, line_x(0.630, 0.872, 0.690, 0.010) * 0.46)
+        mix(*red, line_x(0.632, 0.795, 0.728, 0.008) * 0.44)
+        mix(*red, line_y(0.670, 0.632, 0.742, 0.007) * 0.50)
+        mix(*red, line_y(0.742, 0.632, 0.742, 0.007) * 0.50)
+        mix(*red, line_y(0.820, 0.632, 0.742, 0.007) * 0.50)
+        mix(*red, max(
+            line_x(0.235, 0.345, 0.248, 0.012),
+            line_x(0.235, 0.345, 0.288, 0.012),
+            line_x(0.235, 0.345, 0.328, 0.012),
+            line_y(0.345, 0.248, 0.328, 0.012),
+            line_y(0.235, 0.288, 0.328, 0.012),
+        ) * 0.70)
+
+        for offset, strength in ((0.00, 0.60), (0.028, 0.42), (0.058, 0.30)):
+            wave = max(0.0, 1.0 - abs(v - (0.805 + offset + 0.012 * math.sin(u * 31.0))) / 0.006)
+            span = rect(0.20, 0.76, 0.785 + offset, 0.825 + offset, 0.004)
+            mix(*ink, wave * span * strength)
+
+        return (
+            max(0, min(255, int(r))),
+            max(0, min(255, int(g))),
+            max(0, min(255, int(b))),
         )
 
     def room_door_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
@@ -367,6 +453,7 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
         "TX_Hotel_RoomDoorPaint_v0": (512, 512, room_door_pixel),
         "TX_Hotel_ReturnRouteSlipPaper_v0": (512, 512, return_slip_pixel),
         "TX_Hotel_SecurityMonitorFeed_v0": (512, 512, security_monitor_feed_pixel),
+        "TX_Hotel_ReportLogFiledPaper_v0": (512, 512, report_log_filed_paper_pixel),
     }
     output: dict[str, pathlib.Path] = {}
     for name, (width, height, pixel_func) in textures.items():
@@ -869,6 +956,116 @@ def create_curled_pages_mesh() -> tuple[list[tuple[float, float, float]], list[t
     return vertices, faces
 
 
+def create_frontdesk_log_pen_body_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    length_segments = 20
+    radial_segments = 10
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    for length_index in range(length_segments + 1):
+        u = length_index / length_segments
+        x = -42.0 + 84.0 * u
+        center_y = math.sin(u * math.pi) * -1.6
+        center_z = math.sin(u * math.pi) * 1.4
+        radius_y = 3.8 + 0.9 * math.sin(u * math.pi)
+        radius_z = 3.2 + 0.6 * math.sin(u * math.pi)
+        for radial_index in range(radial_segments):
+            theta = 2.0 * math.pi * radial_index / radial_segments
+            vertices.append((
+                x,
+                center_y + math.cos(theta) * radius_y,
+                center_z + math.sin(theta) * radius_z,
+            ))
+
+    for length_index in range(length_segments):
+        base = length_index * radial_segments
+        next_base = (length_index + 1) * radial_segments
+        for radial_index in range(radial_segments):
+            faces.append((
+                base + radial_index,
+                base + ((radial_index + 1) % radial_segments),
+                next_base + ((radial_index + 1) % radial_segments),
+                next_base + radial_index,
+            ))
+    faces.append(tuple(reversed(range(radial_segments))))
+    end_base = length_segments * radial_segments
+    faces.append(tuple(end_base + index for index in range(radial_segments)))
+
+    append_box(vertices, faces, (-8.0, -5.2, 5.1), (36.0, 1.4, 1.2))
+    append_box(vertices, faces, (22.0, 3.4, 0.0), (8.0, 1.2, 7.0))
+    return vertices, faces
+
+
+def create_frontdesk_log_pen_nib_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_flat_polygon(
+        vertices,
+        faces,
+        [
+            (-12.0, -0.7, -4.0),
+            (8.0, -0.8, -3.0),
+            (18.0, -0.9, 0.0),
+            (8.0, -0.8, 3.0),
+            (-12.0, -0.7, 4.0),
+        ],
+        double_sided=True,
+    )
+    append_planar_stroke(vertices, faces, [(-6.0, 0.0), (10.0, 0.0)], 0.7, 0.4, y=-1.1)
+    return vertices, faces
+
+
+def create_frontdesk_report_log_filed_paper_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    columns = 5
+    rows = 7
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    for row in range(rows + 1):
+        v = row / rows
+        for column in range(columns + 1):
+            u = column / columns
+            edge = 1.0 if row in (0, rows) or column in (0, columns) else 0.0
+            x = -55.0 + 110.0 * u + math.sin(row * 1.7 + column * 0.9) * edge * 1.3
+            y = -38.0 + 76.0 * v + math.sin(row * 0.8 + column * 1.3) * edge * 0.9
+            z = 0.5 + 1.8 * edge * max(0.0, v - 0.78) + 0.35 * math.sin(u * math.pi) * math.sin(v * math.pi)
+            vertices.append((x, y, z))
+
+    stride = columns + 1
+    for row in range(rows):
+        for column in range(columns):
+            a = row * stride + column
+            b = a + 1
+            c = a + stride + 1
+            d = a + stride
+            faces.append((a, b, c, d))
+    return vertices, faces
+
+
+def create_frontdesk_filed_stamp_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_box(vertices, faces, (0.0, 0.0, -2.0), (44.0, 20.0, 5.0))
+    append_box(vertices, faces, (0.0, -1.0, 6.0), (35.0, 15.0, 8.0))
+    append_box(vertices, faces, (0.0, -2.0, 18.0), (24.0, 10.0, 18.0))
+    append_box(vertices, faces, (0.0, -2.8, 31.0), (34.0, 8.0, 7.0))
+    append_planar_stroke(vertices, faces, [(-16.0, -6.0), (14.0, -6.0)], 1.4, 0.5, y=-11.0)
+    append_planar_stroke(vertices, faces, [(-15.0, 0.0), (12.0, 0.0)], 1.1, 1.5, y=-11.1)
+    append_planar_stroke(vertices, faces, [(-13.0, 6.0), (16.0, 6.0)], 1.2, 2.5, y=-11.2)
+    return vertices, faces
+
+
+def create_frontdesk_report_filed_ink_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_planar_stroke_xy(vertices, faces, [(-28.0, 8.0), (-12.0, 10.0), (8.0, 7.0), (30.0, 10.0)], 1.4, 0.3, z=0.32)
+    append_planar_stroke_xy(vertices, faces, [(-28.0, 0.0), (-8.0, -2.0), (14.0, 1.0), (28.0, -2.0)], 1.1, 1.4, z=0.34)
+    append_planar_stroke_xy(vertices, faces, [(-24.0, -9.0), (-4.0, -7.0), (18.0, -10.0)], 1.0, 2.3, z=0.36)
+    append_planar_stroke_xy(vertices, faces, [(-32.0, 16.0), (-18.0, -16.0)], 1.7, 3.1, z=0.38)
+    append_planar_blob_xy(vertices, faces, 21.0, -13.0, 8.0, 3.0, 9, 1.9, z=0.40)
+    return vertices, faces
+
+
 def create_room203_paneled_door_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, ...]] = []
@@ -1021,6 +1218,38 @@ def append_planar_stroke(
         faces.append((d, c, b, a))
 
 
+def append_planar_stroke_xy(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    points: list[tuple[float, float]],
+    thickness: float,
+    phase: float,
+    z: float = 0.3,
+) -> None:
+    base = len(vertices)
+    for index, (x, y) in enumerate(points):
+        if index == 0:
+            dx, dy = points[1][0] - x, points[1][1] - y
+        elif index == len(points) - 1:
+            dx, dy = x - points[index - 1][0], y - points[index - 1][1]
+        else:
+            dx, dy = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+        length = math.sqrt(dx * dx + dy * dy) or 1.0
+        px, py = -dy / length, dx / length
+        wobble = math.sin(index * 1.37 + phase) * thickness * 0.10
+        half = thickness * (0.54 + 0.10 * math.cos(index * 1.11 + phase))
+        vertices.append((x + px * (half + wobble), y + py * (half + wobble), z))
+        vertices.append((x - px * (half - wobble * 0.35), y - py * (half - wobble * 0.35), z + 0.02))
+
+    for index in range(len(points) - 1):
+        a = base + index * 2
+        b = a + 1
+        c = a + 3
+        d = a + 2
+        faces.append((a, b, c, d))
+        faces.append((d, c, b, a))
+
+
 def append_planar_blob(
     vertices: list[tuple[float, float, float]],
     faces: list[tuple[int, ...]],
@@ -1037,6 +1266,25 @@ def append_planar_blob(
         theta = 2.0 * math.pi * index / count
         wobble = 1.0 + 0.10 * math.sin(index * 1.71 + phase) + 0.07 * math.cos(index * 2.43 + phase)
         points.append((center_x + math.cos(theta) * radius_x * wobble, y, center_z + math.sin(theta) * radius_z * wobble))
+    append_flat_polygon(vertices, faces, points, double_sided=True)
+
+
+def append_planar_blob_xy(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    center_x: float,
+    center_y: float,
+    radius_x: float,
+    radius_y: float,
+    count: int,
+    phase: float,
+    z: float = 0.3,
+) -> None:
+    points: list[tuple[float, float, float]] = []
+    for index in range(count):
+        theta = 2.0 * math.pi * index / count
+        wobble = 1.0 + 0.10 * math.sin(index * 1.71 + phase) + 0.07 * math.cos(index * 2.43 + phase)
+        points.append((center_x + math.cos(theta) * radius_x * wobble, center_y + math.sin(theta) * radius_y * wobble, z))
     append_flat_polygon(vertices, faces, points, double_sided=True)
 
 
@@ -1764,6 +2012,11 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_FrontDesk_CurvedReceiver_v0": create_receiver_mesh,
         "SM_FrontDesk_CoiledPhoneCord_v0": create_coiled_cord_mesh,
         "SM_FrontDesk_CurledLedgerPages_v0": create_curled_pages_mesh,
+        "SM_FrontDesk_LogPenBody_v0": create_frontdesk_log_pen_body_mesh,
+        "SM_FrontDesk_LogPenNib_v0": create_frontdesk_log_pen_nib_mesh,
+        "SM_FrontDesk_ReportLogFiledPaper_v0": create_frontdesk_report_log_filed_paper_mesh,
+        "SM_FrontDesk_FiledStamp_v0": create_frontdesk_filed_stamp_mesh,
+        "SM_FrontDesk_ReportFiledInk_v0": create_frontdesk_report_filed_ink_mesh,
         "SM_Room203_PaneledDoor_v0": create_room203_paneled_door_mesh,
         "SM_Room203_ChainLinks_v0": create_room203_chain_links_mesh,
         "SM_Room203_TornNotice_v0": create_room203_torn_notice_mesh,
@@ -1795,15 +2048,16 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
     }
 
     output: dict[str, pathlib.Path] = {}
-    wall_texture_uv_meshes = {
-        "SM_Room203_PaneledDoor_v0",
-        "SM_GuestHall_ReturnRouteTornSlip_v0",
+    texture_uv_meshes = {
+        "SM_Room203_PaneledDoor_v0": ("x", "z"),
+        "SM_GuestHall_ReturnRouteTornSlip_v0": ("x", "z"),
+        "SM_FrontDesk_ReportLogFiledPaper_v0": ("x", "y"),
     }
     for name, builder in mesh_builders.items():
         path = SOURCE_MESH_DIR / f"{name}.obj"
         vertices, faces = builder()
-        if name in wall_texture_uv_meshes:
-            changed = write_obj(path, vertices, faces, ("x", "z"), True)
+        if name in texture_uv_meshes:
+            changed = write_obj(path, vertices, faces, texture_uv_meshes[name], True)
         else:
             changed = write_obj(path, vertices, faces)
         if changed:
@@ -2346,6 +2600,7 @@ def build_level(
     room_door_texture = textures.get("TX_Hotel_RoomDoorPaint_v0")
     return_slip_texture = textures.get("TX_Hotel_ReturnRouteSlipPaper_v0")
     security_monitor_texture = textures.get("TX_Hotel_SecurityMonitorFeed_v0")
+    report_log_paper_texture = textures.get("TX_Hotel_ReportLogFiledPaper_v0")
     materials = {
         "floor": ensure_material("M_Hotel_WornFloor_v0", unreal.LinearColor(0.15, 0.13, 0.11, 1.0), 0.92),
         "wall": ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
@@ -2420,6 +2675,11 @@ def build_level(
             unreal.LinearColor(1.9, 1.18, 0.48, 1.0),
         ),
     }
+    materials["report_log_paper"] = (
+        ensure_textured_material("M_Hotel_ReportLogFiledPaper_v0", report_log_paper_texture, 0.89, two_sided=True)
+        if report_log_paper_texture
+        else materials["paper"]
+    )
 
     # Front desk / lobby work hub.
     add_cube("AREA_FrontDesk_WorkHub_Floor", (0, 0, -10), (2500, 1600, 20), materials["floor"])
@@ -2431,7 +2691,7 @@ def build_level(
     add_cube("PROP_FrontDesk_BackShelf_KeyAndLogSilhouette", (-880, -400, 145), (30, 520, 170), materials["trim"])
     phone_visual_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.PhoneResponseVisual")
 
-    add_cube("PROP_FrontDesk_DeskMat_UnderPhoneAndLog", (-352, -529, 118), (310, 130, 8), materials["trim"], phone_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_DeskMat_UnderPhoneOnly", (-430, -529, 118), (170, 112, 6), materials["trim"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_Phone_BaseHeavyOldDeskSet", (-430, -525, 126), (108, 68, 18), materials["black"], ("Hotel.Capture.Readability",))
     add_cube("PROP_FrontDesk_Phone_AnswerLoopPlaceholder", (-430, -525, 140), (82, 48, 22), materials["black"], ("Hotel.Interact.Phone", "Hotel.Capture.Readability"))
     add_cube("PROP_FrontDesk_Phone_Keypad_ReadableCue", (-430, -523, 154), (56, 32, 5), materials["button"], phone_visual_tags, no_collision=True)
@@ -2522,9 +2782,9 @@ def build_level(
     add_sphere("PROP_FrontDesk_Phone_CordRoundLoopC", (-318, -553, 140), (15, 9, 7), materials["black"], front_desk_art_tags, no_collision=True)
     add_cylinder("PROP_FrontDesk_ServiceBell_Dome", (-525, -505, 133), 40, 18, materials["dull_metal"], front_desk_art_tags, no_collision=True)
     add_sphere("PROP_FrontDesk_ServiceBell_Button", (-525, -505, 149), (14, 14, 10), materials["brass"], front_desk_art_tags, no_collision=True)
-    add_cylinder("PROP_FrontDesk_DeskLamp_RoundFoot", (-332, -552, 132), 44, 8, materials["brass"], front_desk_art_tags, no_collision=True)
-    add_cylinder("PROP_FrontDesk_DeskLamp_ThinStem", (-332, -552, 158), 8, 48, materials["brass"], front_desk_art_tags, no_collision=True)
-    add_sphere("PROP_FrontDesk_DeskLamp_ShadeCurvedSilhouette", (-320, -548, 176), (74, 34, 22), materials["desk_lamp"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_DeskLamp_RoundFoot", (-350, -568, 132), 38, 8, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_DeskLamp_ThinStem", (-350, -568, 158), 7, 48, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_DeskLamp_ShadeCurvedSilhouette", (-342, -564, 176), (56, 26, 18), materials["desk_lamp"], front_desk_art_tags, no_collision=True)
     add_cube("LIGHTMESH_FrontDesk_PhoneCallLamp", (-395, -555, 158), (18, 8, 10), materials["warn_glow"], ("Hotel.Feedback.PhoneRingLamp", "Hotel.Capture.Readability"))
     monitor_feed_tags = (
         "Hotel.Interact.Monitor",
@@ -2552,33 +2812,94 @@ def build_level(
     add_cube("PROP_Surveillance_Monitor_PostReportOpenDoorGlyph", (-585, -542, 159), (13, 5, 34), materials["warn_glow"], monitor_mismatch_tags, no_collision=True)
     add_cube("PROP_Surveillance_Monitor_PostReportRoom203Dot", (-608, -543, 174), (12, 5, 12), materials["warn"], monitor_mismatch_tags, no_collision=True)
     add_cube("PROP_Surveillance_Monitor_PostReportTimestampSmear", (-656, -542, 132), (40, 5, 4), materials["paper"], monitor_mismatch_tags, no_collision=True)
-    add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-255, -522, 128), (96, 62, 10), materials["warn_glow"], ("Hotel.Interact.ReportLog",))
-    add_cube("PROP_FrontDesk_NightLog_OpenPage_Readable", (-255, -522, 137), (88, 54, 4), materials["paper"], ("Hotel.Capture.Readability",), no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_PullOutWritingShelf", (-185, -590, 130), (150, 112, 14), materials["desk"], ("Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk"), no_collision=True)
+    add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-185, -590, 139), (118, 72, 2), materials["paper"], ("Hotel.Interact.ReportLog",))
+    if "SM_FrontDesk_ReportLogFiledPaper_v0" in meshes:
+        add_authored_mesh(
+            "PROP_FrontDesk_NightLog_OpenPage_Readable",
+            meshes["SM_FrontDesk_ReportLogFiledPaper_v0"],
+            (-185, -590, 146),
+            (1.22, 1.02, 1.0),
+            materials["report_log_paper"],
+            authored_mesh_tags + ("Hotel.Feedback.ReportLogVisual",),
+            no_collision=True,
+        )
+    else:
+        add_cube("PROP_FrontDesk_NightLog_OpenPage_Readable", (-220, -592, 141), (84, 50, 2), materials["paper"], ("Hotel.Capture.Readability",), no_collision=True)
     if "SM_FrontDesk_CurledLedgerPages_v0" in meshes:
         add_authored_mesh(
             "PROP_FrontDesk_ReportLog_AuthoredCurledPages",
             meshes["SM_FrontDesk_CurledLedgerPages_v0"],
-            (-255, -522, 141),
-            (0.88, 0.78, 0.7),
+            (-232, -617, 147),
+            (0.24, 0.16, 0.18),
             materials["paper"],
-            authored_mesh_tags,
+            authored_mesh_tags + ("Hotel.Feedback.ReportLogFiledReaction",),
+            unreal.ComponentMobility.MOVABLE,
             no_collision=True,
         )
     report_log_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual")
     report_log_filed_tags = ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogVisual", "Hotel.Feedback.ReportLogFiled")
-    add_cube("PROP_FrontDesk_ReportLog_ClipboardClip_Readable", (-255, -550, 144), (44, 8, 5), materials["trim"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_IncidentHeaderCue", (-255, -540, 142), (58, 3, 3), materials["black"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_Room203EntryLine", (-262, -528, 142), (64, 3, 2), materials["black"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_TimeBoxCue", (-221, -516, 142), (30, 10, 2), materials["trim"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_RefusedCheckbox", (-292, -513, 142), (8, 8, 2), materials["black"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_RefusedCheckmarkShort", (-295, -511, 144), (3, 9, 2), materials["warn"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_RefusedCheckmarkLong", (-288, -509, 144), (16, 3, 2), materials["warn"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_FiledStampCue", (-236, -504, 143), (38, 16, 3), materials["warn"], report_log_filed_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_PenRest", (-207, -536, 144), (42, 5, 6), materials["black"], report_log_tags, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_PenTip", (-184, -536, 144), (8, 5, 5), materials["warn"], report_log_tags, no_collision=True)
-    add_cylinder("PROP_FrontDesk_ReportLog_BinderRingTop", (-296, -548, 146), 9, 12, materials["brass"], front_desk_art_tags, no_collision=True)
-    add_cylinder("PROP_FrontDesk_ReportLog_BinderRingBottom", (-296, -509, 146), 9, 12, materials["brass"], front_desk_art_tags, no_collision=True)
-    add_sphere("PROP_FrontDesk_ReportLog_RedInkSmear", (-238, -517, 145), (30, 8, 3), materials["deep_red"], front_desk_art_tags, no_collision=True)
+    report_log_filing_reaction_tags = report_log_filed_tags + ("Hotel.Feedback.ReportLogFiledReaction",)
+    add_cube("PROP_FrontDesk_ReportLog_ClipboardClip_Readable", (-185, -626, 149), (26, 4, 0.45), materials["trim"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_IncidentHeaderCue", (-185, -612, 148), (40, 1.3, 0.28), materials["return_faded_ink"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_Room203EntryLine", (-191, -597, 148), (44, 1.3, 0.28), materials["return_faded_ink"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_TimeBoxCue", (-146, -583, 148), (20, 5, 0.28), materials["return_faded_ink"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_RefusedCheckbox", (-227, -582, 148), (5, 5, 0.28), materials["return_faded_ink"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_RefusedCheckmarkShort", (-229, -580, 148.4), (2, 6, 0.35), materials["warn"], report_log_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_RefusedCheckmarkLong", (-223, -578, 148.4), (11, 2, 0.35), materials["warn"], report_log_tags, no_collision=True)
+    if "SM_FrontDesk_FiledStamp_v0" in meshes:
+        add_authored_mesh(
+            "PROP_FrontDesk_ReportLog_FiledStampCue",
+            meshes["SM_FrontDesk_FiledStamp_v0"],
+            (-211, -609, 149.7),
+            (0.16, 0.16, 0.16),
+            materials["warn"],
+            report_log_filing_reaction_tags + ("Hotel.ArtSource.AuthoredMesh",),
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, 0.0, -8.0),
+        )
+    else:
+        add_cube("PROP_FrontDesk_ReportLog_FiledStampCue", (-236, -586, 145), (38, 16, 3), materials["warn"], report_log_filing_reaction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    if "SM_FrontDesk_LogPenBody_v0" in meshes:
+        add_authored_mesh(
+            "PROP_FrontDesk_ReportLog_AuthoredPenBody",
+            meshes["SM_FrontDesk_LogPenBody_v0"],
+            (-118, -601, 150.8),
+            (0.30, 0.30, 0.30),
+            materials["black"],
+            report_log_tags + ("Hotel.Feedback.ReportLogFiledReaction", "Hotel.ArtSource.AuthoredMesh"),
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, 0.0, -8.0),
+        )
+    if "SM_FrontDesk_LogPenNib_v0" in meshes:
+        add_authored_mesh(
+            "PROP_FrontDesk_ReportLog_AuthoredPenNib",
+            meshes["SM_FrontDesk_LogPenNib_v0"],
+            (-104, -604, 150.8),
+            (0.30, 0.30, 0.30),
+            materials["warn"],
+            report_log_tags + ("Hotel.Feedback.ReportLogFiledReaction", "Hotel.ArtSource.AuthoredMesh"),
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, 0.0, -8.0),
+        )
+    if "SM_FrontDesk_ReportFiledInk_v0" in meshes:
+        add_authored_mesh(
+            "PROP_FrontDesk_ReportLog_FiledInkStrokes",
+            meshes["SM_FrontDesk_ReportFiledInk_v0"],
+            (-183, -583, 148.9),
+            (0.34, 0.34, 0.34),
+            materials["deep_red"],
+            report_log_filing_reaction_tags + ("Hotel.ArtSource.AuthoredMesh",),
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+            rotation=(0.0, 0.0, -4.0),
+        )
+    add_cylinder("PROP_FrontDesk_ReportLog_BinderRingTop", (-240, -616, 150), 5, 5, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_cylinder("PROP_FrontDesk_ReportLog_BinderRingBottom", (-240, -579, 150), 5, 5, materials["brass"], front_desk_art_tags, no_collision=True)
+    add_sphere("PROP_FrontDesk_ReportLog_RedInkSmear", (-173, -587, 149), (10, 3, 1), materials["deep_red"], front_desk_art_tags, no_collision=True)
     log_self_correction_tags = (
         "Hotel.Capture.Readability",
         "Hotel.Capture.PostReportLogSelfCorrection",
@@ -2589,13 +2910,13 @@ def build_level(
         "Hotel.Capture.PostReportLogSelfCorrection",
         "Hotel.Feedback.PostReportLogSelfCorrectionVisual",
     )
-    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine", (-205, -510, 146), (66, 4, 3), materials["warn_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine", (-202, -500, 146), (58, 4, 3), materials["screen_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash", (-226, -490, 146), (34, 4, 3), materials["warn"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue", (-190, -520, 166), (42, 8, 10), materials["warn_glow"], log_self_correction_visual_tags, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine", (-170, -591, 148), (62, 4, 3), materials["warn_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedNoGuestLine", (-167, -581, 148), (54, 4, 3), materials["screen_glow"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_FrontDesk_ReportLog_SelfCorrectedTimestampSlash", (-191, -571, 148), (30, 4, 3), materials["warn"], log_self_correction_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("LIGHTMESH_FrontDesk_ReportLog_SelfCorrectionCue", (-155, -601, 168), (38, 8, 10), materials["warn_glow"], log_self_correction_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Room203_CameraMismatchCue", (-315, -565, 131), (76, 38, 4), materials["paper"], phone_visual_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CallSlip_Underline203", (-315, -565, 135), (42, 4, 3), materials["warn"], phone_visual_tags, no_collision=True)
-    add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-320, -548, 176), (72, 18, 18), materials["desk_lamp"], ("Hotel.Capture.Readability",))
+    add_cube("LIGHTMESH_FrontDesk_DeskLampPractical", (-342, -564, 176), (54, 14, 14), materials["desk_lamp"], ("Hotel.Capture.Readability", "Hotel.Feedback.ReportLogFiledReaction"), unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookA", (-858, -560, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookB", (-858, -495, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookC", (-858, -430, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
@@ -3269,6 +3590,7 @@ def build_level(
     add_light("LIGHT_GuestHall_Room203AftershockPaperSkimFill", unreal.PointLight, (3705, 118, 178), (0, 0, 0), 4600.0, unreal.Color(255, 214, 158, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=820.0)
     add_light("LIGHT_GuestHall_Room203TornPaperEdgeRim", unreal.PointLight, (3435, 72, 138), (0, 0, 0), 2100.0, unreal.Color(255, 225, 176, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=560.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
+    add_light("LIGHT_FrontDesk_ReportLogFiledDeskLampPulse", unreal.PointLight, (-342, -564, 176), (0, 0, 0), 620.0, unreal.Color(255, 198, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReportLogFiledPressure", "Hotel.Feedback.ReportLogFiledLight"), attenuation_radius=520.0)
     add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 1350.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=920.0)
     add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
     add_light("LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse", unreal.PointLight, (-190, -520, 166), (0, 0, 0), 520.0, unreal.Color(255, 190, 120, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionLight"), attenuation_radius=420.0)
@@ -3335,7 +3657,7 @@ def build_level(
     if "SFX_Room203AftershockRustle_v0" in sounds:
         add_audio("SFX_Room203AftershockRustle_ManualTrigger_v0", sounds["SFX_Room203AftershockRustle_v0"], (3725, 276, 168), False, ("Hotel.Audio.Room203Aftershock",))
     if "SFX_ReportLogFiled_v0" in sounds:
-        add_audio("SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0", sounds["SFX_ReportLogFiled_v0"], (-242, -500, 152), False, ("Hotel.Audio.ReportLogFiled",))
+        add_audio("SFX_ReportLogFiled_FrontDesk_ManualTrigger_v0", sounds["SFX_ReportLogFiled_v0"], (-185, -583, 154), False, ("Hotel.Audio.ReportLogFiled",))
 
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
 
