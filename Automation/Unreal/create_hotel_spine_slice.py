@@ -28,6 +28,7 @@ ALWAYS_REIMPORT_TEXTURES = {
     "TX_Hotel_ReturnRouteSlipPaper_v0",
     "TX_Hotel_RoomDoorPaint_v0",
     "TX_Hotel_SecurityMonitorFeed_v0",
+    "TX_Hotel_LobbyDoorSmudgedGlass_v0",
 }
 
 
@@ -448,12 +449,51 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             max(0, min(255, int(blue * vignette))),
         )
 
+    def lobby_door_smudged_glass_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
+        u = x / max(1, width - 1)
+        v = y / max(1, height - 1)
+        noise = (
+            math.sin(x * 0.111 + y * 0.047)
+            + math.sin(x * 0.027 - y * 0.183 + 1.9)
+            + math.sin(x * 0.431 + y * 0.071 + 4.3)
+        ) / 3.0
+        vertical_grime = 0.0
+        for stain_u in (0.18, 0.31, 0.48, 0.64, 0.82):
+            vertical_grime += max(0.0, 1.0 - abs(u - stain_u) / 0.018) * (0.22 + 0.78 * v)
+        palm_oil = max(0.0, 1.0 - (((u - 0.29) / 0.18) ** 2 + ((v - 0.62) / 0.20) ** 2))
+        sleeve_smear = max(0.0, 1.0 - (((u - 0.72) / 0.22) ** 2 + ((v - 0.38) / 0.15) ** 2))
+        tape_residue = max(0.0, 1.0 - abs(v - 0.23) / 0.020) * max(0.0, 1.0 - abs(u - 0.50) / 0.38)
+        tape_residue = max(tape_residue, max(0.0, 1.0 - abs(u - 0.52) / 0.018) * max(0.0, 1.0 - abs(v - 0.23) / 0.34))
+        crack = 0.0
+        for slope, intercept, span_min, span_max in (
+            (0.62, 0.11, 0.35, 0.83),
+            (-0.45, 0.78, 0.18, 0.64),
+            (0.18, 0.49, 0.20, 0.88),
+        ):
+            center = slope * u + intercept
+            if span_min <= u <= span_max:
+                crack = max(crack, max(0.0, 1.0 - abs(v - center) / 0.004))
+        edge_dirt = max(0.0, 1.0 - min(u, 1.0 - u, v, 1.0 - v) / 0.045)
+        reflection = max(0.0, 1.0 - abs((u + v * 0.18) - 0.76) / 0.018) * 0.55
+
+        red = 25 + 12 * noise + 28 * reflection + 34 * tape_residue + 42 * crack
+        green = 43 + 16 * noise + 44 * reflection + 42 * tape_residue + 58 * crack
+        blue = 54 + 18 * noise + 58 * reflection + 50 * tape_residue + 72 * crack
+        darken = 17 * edge_dirt + 18 * vertical_grime + 16 * sleeve_smear
+        lighten = 32 * palm_oil
+        return (
+            max(0, min(255, int(red - darken + lighten))),
+            max(0, min(255, int(green - darken * 0.88 + lighten * 0.96))),
+            max(0, min(255, int(blue - darken * 0.75 + lighten * 1.05))),
+        )
+
     textures = {
         "TX_Hotel_Room203WallpaperPanel_v0": (512, 512, wallpaper_pixel),
         "TX_Hotel_RoomDoorPaint_v0": (512, 512, room_door_pixel),
         "TX_Hotel_ReturnRouteSlipPaper_v0": (512, 512, return_slip_pixel),
         "TX_Hotel_SecurityMonitorFeed_v0": (512, 512, security_monitor_feed_pixel),
         "TX_Hotel_ReportLogFiledPaper_v0": (512, 512, report_log_filed_paper_pixel),
+        "TX_Hotel_LobbyDoorSmudgedGlass_v0": (512, 512, lobby_door_smudged_glass_pixel),
     }
     output: dict[str, pathlib.Path] = {}
     for name, (width, height, pixel_func) in textures.items():
@@ -1288,6 +1328,57 @@ def append_planar_blob_xy(
     append_flat_polygon(vertices, faces, points, double_sided=True)
 
 
+def append_planar_stroke_yz(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    points: list[tuple[float, float]],
+    thickness: float,
+    phase: float,
+    plane_x: float = 0.0,
+) -> None:
+    base = len(vertices)
+    for index, (y, z) in enumerate(points):
+        if index == 0:
+            dy, dz = points[1][0] - y, points[1][1] - z
+        elif index == len(points) - 1:
+            dy, dz = y - points[index - 1][0], z - points[index - 1][1]
+        else:
+            dy, dz = points[index + 1][0] - points[index - 1][0], points[index + 1][1] - points[index - 1][1]
+        length = math.sqrt(dy * dy + dz * dz) or 1.0
+        py, pz = -dz / length, dy / length
+        wobble = math.sin(index * 1.47 + phase) * thickness * 0.14
+        half = thickness * (0.54 + 0.13 * math.cos(index * 1.23 + phase))
+        vertices.append((plane_x, y + py * (half + wobble), z + pz * (half + wobble)))
+        vertices.append((plane_x - 0.08, y - py * (half - wobble * 0.40), z - pz * (half - wobble * 0.40)))
+
+    for index in range(len(points) - 1):
+        a = base + index * 2
+        b = a + 1
+        c = a + 3
+        d = a + 2
+        faces.append((a, b, c, d))
+        faces.append((d, c, b, a))
+
+
+def append_planar_blob_yz(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    center_y: float,
+    center_z: float,
+    radius_y: float,
+    radius_z: float,
+    count: int,
+    phase: float,
+    plane_x: float = 0.0,
+) -> None:
+    points: list[tuple[float, float, float]] = []
+    for index in range(count):
+        theta = 2.0 * math.pi * index / count
+        wobble = 1.0 + 0.12 * math.sin(index * 1.71 + phase) + 0.08 * math.cos(index * 2.31 + phase)
+        points.append((plane_x, center_y + math.cos(theta) * radius_y * wobble, center_z + math.sin(theta) * radius_z * wobble))
+    append_flat_polygon(vertices, faces, points, double_sided=True)
+
+
 def create_room203_number_digits_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
     vertices: list[tuple[float, float, float]] = []
     faces: list[tuple[int, ...]] = []
@@ -2005,6 +2096,98 @@ def create_guesthall_ceiling_water_stain_mesh() -> tuple[list[tuple[float, float
     return vertices, faces
 
 
+def create_lobbydoor_smudged_glass_pane_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices = [
+        (0.06, -132.0, -104.0),
+        (0.06, 132.0, -104.0),
+        (0.06, 132.0, 104.0),
+        (0.06, -132.0, 104.0),
+    ]
+    return vertices, [(0, 1, 2, 3), (3, 2, 1, 0)]
+
+
+def create_lobbydoor_palm_smear_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_planar_blob_yz(vertices, faces, -74.0, 8.0, 19.0, 25.0, 22, 0.4)
+    for index, finger_y in enumerate((-101.0, -89.0, -77.0, -65.0)):
+        append_planar_stroke_yz(
+            vertices,
+            faces,
+            [(finger_y, 20.0), (finger_y + 4.0, 50.0), (finger_y + math.sin(index) * 3.0, 82.0)],
+            4.8 - index * 0.35,
+            index * 0.8,
+        )
+    append_planar_stroke_yz(vertices, faces, [(-55.0, 6.0), (-36.0, 25.0), (-28.0, 51.0)], 5.2, 4.0)
+    append_planar_stroke_yz(vertices, faces, [(-108.0, -21.0), (-82.0, -31.0), (-48.0, -24.0)], 4.2, 4.9)
+    return vertices, faces
+
+
+def create_lobbydoor_crack_web_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_planar_stroke_yz(vertices, faces, [(-78.0, 72.0), (-42.0, 48.0), (-8.0, 30.0), (26.0, 10.0), (70.0, -12.0)], 0.58, 0.2)
+    append_planar_stroke_yz(vertices, faces, [(-6.0, 30.0), (-19.0, 55.0), (-34.0, 79.0)], 0.42, 1.0)
+    append_planar_stroke_yz(vertices, faces, [(4.0, 27.0), (27.0, 53.0), (51.0, 73.0)], 0.36, 1.8)
+    append_planar_stroke_yz(vertices, faces, [(22.0, 12.0), (43.0, 11.0), (66.0, 20.0)], 0.34, 2.4)
+    append_planar_stroke_yz(vertices, faces, [(-42.0, 47.0), (-55.0, 22.0), (-82.0, 6.0)], 0.38, 3.0)
+    append_planar_blob_yz(vertices, faces, -8.0, 30.0, 1.2, 1.2, 10, 3.6)
+    return vertices, faces
+
+
+def create_lobbydoor_torn_tape_cross_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+
+    horizontal = [
+        (-18.0, 20.0, 0.0),
+        (-9.0, 22.0, 0.0),
+        (3.0, 20.5, 0.0),
+        (15.0, 23.0, 0.0),
+        (22.0, 20.0, 0.0),
+        (23.5, 15.0, 0.0),
+        (11.0, 13.0, 0.0),
+        (-2.0, 15.5, 0.0),
+        (-12.0, 14.0, 0.0),
+        (-21.0, 15.5, 0.0),
+    ]
+    vertical = [
+        (-5.0, 34.0, 0.0),
+        (3.0, 32.5, 0.0),
+        (4.0, 20.0, 0.0),
+        (0.5, 5.0, 0.0),
+        (3.0, -12.0, 0.0),
+        (-3.0, -27.0, 0.0),
+        (-10.0, -25.0, 0.0),
+        (-8.0, -9.0, 0.0),
+        (-9.5, 6.0, 0.0),
+        (-7.0, 21.0, 0.0),
+    ]
+    loose = [
+        (21.0, 19.0, 0.0),
+        (30.0, 16.0, 0.0),
+        (31.5, 10.0, 0.0),
+        (23.0, 13.0, 0.0),
+    ]
+    append_flat_polygon(vertices, faces, [(0.0, y, z) for y, z, _ in horizontal], double_sided=True)
+    append_flat_polygon(vertices, faces, [(0.0, y, z) for y, z, _ in vertical], double_sided=True)
+    append_flat_polygon(vertices, faces, [(0.0, y, z) for y, z, _ in loose], double_sided=True)
+    return vertices, faces
+
+
+def create_lobbydoor_latch_plate_mesh() -> tuple[list[tuple[float, float, float]], list[tuple[int, ...]]]:
+    vertices: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, ...]] = []
+    append_box(vertices, faces, (0.0, 0.0, 0.0), (3.2, 9.0, 24.0))
+    append_box(vertices, faces, (-2.8, 0.0, -1.4), (2.0, 20.0, 3.0))
+    append_box(vertices, faces, (-3.2, -10.5, -1.4), (1.8, 4.0, 5.4))
+    append_box(vertices, faces, (-3.2, 10.5, -1.4), (1.8, 4.0, 5.4))
+    append_planar_blob_yz(vertices, faces, 0.0, 7.5, 1.9, 1.9, 12, 0.5, plane_x=-2.1)
+    append_planar_blob_yz(vertices, faces, 0.0, -8.0, 1.9, 1.9, 12, 1.3, plane_x=-2.1)
+    append_planar_stroke_yz(vertices, faces, [(-7.0, 0.0), (-1.0, 1.5), (7.5, -0.5)], 0.7, 2.4, plane_x=-2.2)
+    return vertices, faces
+
+
 def generate_source_meshes() -> dict[str, pathlib.Path]:
     UPDATED_SOURCE_MESHES.clear()
     mesh_builders = {
@@ -2045,6 +2228,11 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_GuestHall_ReturnRouteColdVein_v0": create_guesthall_return_route_cold_vein_mesh,
         "SM_GuestHall_ReturnRouteDirectionScratch_v0": create_guesthall_return_route_direction_scratch_mesh,
         "SM_GuestHall_CeilingWaterStain_v0": create_guesthall_ceiling_water_stain_mesh,
+        "SM_LobbyDoor_SmudgedGlassPane_v0": create_lobbydoor_smudged_glass_pane_mesh,
+        "SM_LobbyDoor_PalmSmear_v0": create_lobbydoor_palm_smear_mesh,
+        "SM_LobbyDoor_CrackWeb_v0": create_lobbydoor_crack_web_mesh,
+        "SM_LobbyDoor_TornTapeCross_v0": create_lobbydoor_torn_tape_cross_mesh,
+        "SM_LobbyDoor_LatchPlate_v0": create_lobbydoor_latch_plate_mesh,
     }
 
     output: dict[str, pathlib.Path] = {}
@@ -2052,6 +2240,7 @@ def generate_source_meshes() -> dict[str, pathlib.Path]:
         "SM_Room203_PaneledDoor_v0": ("x", "z"),
         "SM_GuestHall_ReturnRouteTornSlip_v0": ("x", "z"),
         "SM_FrontDesk_ReportLogFiledPaper_v0": ("x", "y"),
+        "SM_LobbyDoor_SmudgedGlassPane_v0": ("y", "z"),
     }
     for name, builder in mesh_builders.items():
         path = SOURCE_MESH_DIR / f"{name}.obj"
@@ -2159,6 +2348,7 @@ def ensure_material(
     roughness: float,
     emissive: unreal.LinearColor | None = None,
     two_sided: bool = False,
+    force_recreate: bool = False,
 ) -> unreal.MaterialInterface:
     def enable_runtime_usage(material: unreal.MaterialInterface) -> None:
         usage_names = (
@@ -2180,6 +2370,8 @@ def ensure_material(
                     pass
 
     path = f"/Game/Hotel/Materials/{name}"
+    if force_recreate and unreal.EditorAssetLibrary.does_asset_exist(path):
+        unreal.EditorAssetLibrary.delete_asset(path)
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         material = unreal.EditorAssetLibrary.load_asset(path)
         if two_sided:
@@ -2601,6 +2793,7 @@ def build_level(
     return_slip_texture = textures.get("TX_Hotel_ReturnRouteSlipPaper_v0")
     security_monitor_texture = textures.get("TX_Hotel_SecurityMonitorFeed_v0")
     report_log_paper_texture = textures.get("TX_Hotel_ReportLogFiledPaper_v0")
+    lobby_glass_texture = textures.get("TX_Hotel_LobbyDoorSmudgedGlass_v0")
     materials = {
         "floor": ensure_material("M_Hotel_WornFloor_v0", unreal.LinearColor(0.15, 0.13, 0.11, 1.0), 0.92),
         "wall": ensure_material("M_Hotel_AgedWall_v0", unreal.LinearColor(0.42, 0.38, 0.31, 1.0), 0.86),
@@ -2617,6 +2810,13 @@ def build_level(
         "paper": ensure_material("M_Hotel_AgedCallSlipPaper_v0", unreal.LinearColor(0.72, 0.64, 0.48, 1.0), 0.81),
         "button": ensure_material("M_Hotel_PhoneBoneButton_v0", unreal.LinearColor(0.58, 0.54, 0.46, 1.0), 0.62),
         "route_mark": ensure_material("M_Hotel_WornRouteTape_v0", unreal.LinearColor(0.46, 0.42, 0.32, 1.0), 0.88),
+        "lobby_tape_cloth": ensure_material(
+            "M_Hotel_LobbyDoorAgedTape_v0",
+            unreal.LinearColor(0.055, 0.046, 0.036, 1.0),
+            0.98,
+            two_sided=True,
+            force_recreate=True,
+        ),
         "wall_peel": ensure_material("M_Hotel_PeeledWallpaperPaper_v0", unreal.LinearColor(0.72, 0.63, 0.46, 1.0), 0.93, two_sided=True),
         "wall_damp": ensure_material("M_Hotel_WallDampStain_v0", unreal.LinearColor(0.052, 0.050, 0.044, 1.0), 0.97, two_sided=True),
         "paper_tear_shadow": ensure_material("M_Hotel_PaperTearShadowBack_v0", unreal.LinearColor(0.13, 0.105, 0.078, 1.0), 0.96, two_sided=True),
@@ -2656,6 +2856,30 @@ def build_level(
         "security_monitor_feed": ensure_textured_material("M_Hotel_SecurityMonitorFeed_v0", security_monitor_texture, 0.42)
         if security_monitor_texture
         else ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
+        "lobby_glass_smudge": ensure_textured_material("M_Hotel_LobbyDoorSmudgedGlass_v0", lobby_glass_texture, 0.63, two_sided=True)
+        if lobby_glass_texture
+        else ensure_material(
+            "M_Hotel_LobbyDoorSmudgedGlass_v0",
+            unreal.LinearColor(0.11, 0.18, 0.21, 1.0),
+            0.66,
+            unreal.LinearColor(0.02, 0.09, 0.12, 1.0),
+            two_sided=True,
+        ),
+        "lobby_hand_oil": ensure_material(
+            "M_Hotel_LobbyDoorHandOil_v0",
+            unreal.LinearColor(0.09, 0.12, 0.12, 1.0),
+            0.98,
+            two_sided=True,
+            force_recreate=True,
+        ),
+        "lobby_crack_light": ensure_material(
+            "M_Hotel_LobbyDoorCrackLight_v0",
+            unreal.LinearColor(0.12, 0.18, 0.19, 1.0),
+            0.92,
+            unreal.LinearColor(0.004, 0.018, 0.022, 1.0),
+            two_sided=True,
+            force_recreate=True,
+        ),
         "warn_glow": ensure_material(
             "M_Hotel_ServiceAmberGlow_v0",
             unreal.LinearColor(0.85, 0.48, 0.14, 1.0),
@@ -2922,24 +3146,85 @@ def build_level(
     add_cylinder("PROP_FrontDesk_BackShelf_KeyHookC", (-858, -430, 176), 6, 28, materials["brass"], front_desk_art_tags, no_collision=True)
     add_sphere("PROP_FrontDesk_BackShelf_KeyTag203", (-858, -495, 148), (22, 10, 26), materials["paper"], front_desk_art_tags, no_collision=True)
     add_cube("AREA_Lobby_GuestAdmissionThreshold", (780, 0, -8), (620, 1280, 16), materials["floor"])
-    add_cube("PROP_Lobby_MainGlassDoor_Silhouette", (1080, -250, 110), (28, 270, 220), materials["screen_glow"])
-    add_cube("PROP_Lobby_MainGlassDoor_RefuseLine", (1080, 250, 110), (28, 270, 220), materials["screen_glow"])
+    add_cube("PROP_Lobby_MainGlassDoor_Silhouette", (1080, -250, 110), (28, 270, 220), materials["lobby_glass_smudge"])
+    add_cube("PROP_Lobby_MainGlassDoor_RefuseLine", (1080, 250, 110), (28, 270, 220), materials["lobby_glass_smudge"])
     post_report_desk_wait_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitVisual")
     add_cube("PROP_FrontDesk_FloorWaitMarker_PostReport", (-260, -620, 4), (220, 80, 4), materials["route_mark"], post_report_desk_wait_tags, no_collision=True)
     add_cube("PROP_FrontDesk_CounterHoldLine_PostReport", (-210, -475, 122), (180, 6, 5), materials["warn"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportHoldClosedTape", (1062, -250, 172), (8, 210, 12), materials["warn"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportOutsidePalmSmear", (1060, -312, 132), (7, 46, 54), materials["paper"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportNoGuestReflection", (1058, -188, 112), (7, 54, 82), materials["black"], post_report_desk_wait_tags, no_collision=True)
-    add_cube("LIGHTMESH_LobbyDoor_PostReportRattleCue", (1035, -250, 170), (10, 170, 18), materials["screen_glow"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportHoldClosedTape", (1062, -250, 172), (3, 42, 3), materials["lobby_tape_cloth"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportOutsidePalmSmear", (1060, -312, 132), (2, 18, 26), materials["lobby_hand_oil"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportNoGuestReflection", (1058, -188, 112), (2, 20, 28), materials["black"], post_report_desk_wait_tags, no_collision=True)
+    add_cube("LIGHTMESH_LobbyDoor_PostReportRattleCue", (1035, -308, 181), (2, 18, 2), materials["lobby_crack_light"], post_report_desk_wait_tags, no_collision=True)
+    post_report_lobby_art_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.PostReportDeskWait",
+        "Hotel.Feedback.PostReportDeskWaitVisual",
+        "Hotel.ArtDensity.FrontDesk",
+        "Hotel.ArtSource.AuthoredMesh",
+    )
     desk_wait_rattle_tags = (
         "Hotel.Capture.Readability",
         "Hotel.Capture.PostReportDeskWait",
         "Hotel.Feedback.PostReportDeskWaitRattle",
         "Hotel.ArtDensity.FrontDesk",
     )
-    add_cylinder("PROP_Lobby_GlassDoor_PostReportHandleRattleBar", (1055, -250, 134), 12, 132, materials["dull_metal"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cylinder("PROP_Lobby_GlassDoor_PostReportLatchRattlePin", (1048, -250, 158), 10, 28, materials["brass"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_Lobby_GlassDoor_PostReportTapeLooseEnd", (1053, -355, 178), (7, 36, 12), materials["warn"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    desk_wait_authored_rattle_tags = desk_wait_rattle_tags + ("Hotel.ArtSource.AuthoredMesh",)
+    if "SM_LobbyDoor_SmudgedGlassPane_v0" in meshes:
+        add_authored_mesh(
+            "PROP_Lobby_GlassDoor_PostReportSmudgedPane_Authored",
+            meshes["SM_LobbyDoor_SmudgedGlassPane_v0"],
+            (1054, -250, 114),
+            (1.0, 1.0, 1.0),
+            materials["lobby_glass_smudge"],
+            post_report_lobby_art_tags,
+            no_collision=True,
+        )
+    if "SM_LobbyDoor_PalmSmear_v0" in meshes:
+        add_authored_mesh(
+            "PROP_Lobby_GlassDoor_PostReportPalmSmear_Authored",
+            meshes["SM_LobbyDoor_PalmSmear_v0"],
+            (1051, -250, 126),
+            (1.0, 1.0, 1.0),
+            materials["lobby_hand_oil"],
+            post_report_lobby_art_tags,
+            no_collision=True,
+        )
+    if "SM_LobbyDoor_CrackWeb_v0" in meshes:
+        add_authored_mesh(
+            "PROP_Lobby_GlassDoor_PostReportCrackWeb_Authored",
+            meshes["SM_LobbyDoor_CrackWeb_v0"],
+            (1049, -250, 126),
+            (1.0, 1.0, 1.0),
+            materials["lobby_crack_light"],
+            post_report_lobby_art_tags + ("Hotel.Feedback.PostReportDeskWaitRattle",),
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_LobbyDoor_TornTapeCross_v0" in meshes:
+        add_authored_mesh(
+            "PROP_Lobby_GlassDoor_PostReportTapeCross_Authored",
+            meshes["SM_LobbyDoor_TornTapeCross_v0"],
+            (1047, -266, 111),
+            (0.46, 0.46, 0.46),
+            materials["lobby_tape_cloth"],
+            desk_wait_authored_rattle_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    if "SM_LobbyDoor_LatchPlate_v0" in meshes:
+        add_authored_mesh(
+            "PROP_Lobby_GlassDoor_PostReportLatchPlate_Authored",
+            meshes["SM_LobbyDoor_LatchPlate_v0"],
+            (1048, -250, 142),
+            (0.72, 0.72, 0.72),
+            materials["dull_metal"],
+            desk_wait_authored_rattle_tags,
+            unreal.ComponentMobility.MOVABLE,
+            no_collision=True,
+        )
+    add_cylinder("PROP_Lobby_GlassDoor_PostReportHandleRattleBar", (1055, -250, 134), 6, 94, materials["dull_metal"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cylinder("PROP_Lobby_GlassDoor_PostReportLatchRattlePin", (1048, -250, 158), 5, 18, materials["brass"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Lobby_GlassDoor_PostReportTapeLooseEnd", (1053, -355, 178), (3, 18, 4), materials["lobby_tape_cloth"], desk_wait_rattle_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
 
     # Controlled transition from work hub to guest-floor response.
     add_cube("AREA_Transition_CarpetRun_ToGuestHall_NoVoid", (1625, 0, -9), (750, 560, 18), materials["floor"])
@@ -3591,7 +3876,8 @@ def build_level(
     add_light("LIGHT_GuestHall_Room203TornPaperEdgeRim", unreal.PointLight, (3435, 72, 138), (0, 0, 0), 2100.0, unreal.Color(255, 225, 176, 255), ("Hotel.Capture.Readability", "Hotel.Capture.Room203Aftershock"), attenuation_radius=560.0)
     add_light("LIGHT_MonitorToHall_CaptureEvidenceGreenFill", unreal.PointLight, (-575, -555, 188), (0, 0, 0), 1250.0, unreal.Color(120, 255, 190, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchLight"), attenuation_radius=560.0)
     add_light("LIGHT_FrontDesk_ReportLogFiledDeskLampPulse", unreal.PointLight, (-342, -564, 176), (0, 0, 0), 620.0, unreal.Color(255, 198, 132, 255), ("Hotel.Capture.Readability", "Hotel.Capture.ReportLogFiledPressure", "Hotel.Feedback.ReportLogFiledLight"), attenuation_radius=520.0)
-    add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 1350.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=920.0)
+    add_light("LIGHT_LobbyDoor_PostReportRattleColdPulse", unreal.PointLight, (1035, -250, 170), (0, 0, 0), 920.0, unreal.Color(120, 190, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=620.0)
+    add_light("LIGHT_LobbyDoor_PostReportSurfaceSkim", unreal.PointLight, (845, -460, 188), (0, 0, 0), 2500.0, unreal.Color(150, 205, 245, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait", "Hotel.Feedback.PostReportDeskWaitLight"), attenuation_radius=680.0)
     add_light("LIGHT_PostReportDeskWait_EvidenceFill", unreal.PointLight, (-290, -650, 190), (0, 0, 0), 13000.0, unreal.Color(185, 220, 255, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportDeskWait"), attenuation_radius=1250.0)
     add_light("LIGHT_FrontDesk_ReportLog_SelfCorrectionAmberPulse", unreal.PointLight, (-190, -520, 166), (0, 0, 0), 520.0, unreal.Color(255, 190, 120, 255), ("Hotel.Capture.Readability", "Hotel.Capture.PostReportLogSelfCorrection", "Hotel.Feedback.PostReportLogSelfCorrectionLight"), attenuation_radius=420.0)
 
