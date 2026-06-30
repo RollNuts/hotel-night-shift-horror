@@ -7,6 +7,7 @@ These scripts must not contain personal local paths, credentials, paid-service h
 ## Scripts
 
 - `check_public_repo_safety.sh`: scans the repository for common personal-path and secret-token patterns before pushing.
+- `Automation/Tools/check_first_loop_playthrough_proof_pngs.py --encode-video`: validates ignored first-loop MRQ PNGs, then converts them into a local ignored MP4 and verifies it with `ffprobe`.
 - `open_unreal_editor.sh`: opens the `.uproject` with an Unreal Editor executable supplied through `UE_EDITOR`.
 - `smoke_project_files.sh`: validates the public-safe project baseline without launching the editor.
 
