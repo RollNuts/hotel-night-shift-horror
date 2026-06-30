@@ -366,6 +366,61 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             max(0, min(255, int(b))),
         )
 
+    monitor_glyphs = {
+        "0": ("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
+        "1": ("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
+        "2": ("01110", "10001", "00001", "00010", "00100", "01000", "11111"),
+        "3": ("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
+        "4": ("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
+        "5": ("11111", "10000", "11110", "00001", "00001", "10001", "01110"),
+        "6": ("00110", "01000", "10000", "11110", "10001", "10001", "01110"),
+        "7": ("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
+        "8": ("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
+        "9": ("01110", "10001", "10001", "01111", "00001", "00010", "11100"),
+        "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+        "B": ("11110", "10001", "10001", "11110", "10001", "10001", "11110"),
+        "C": ("01111", "10000", "10000", "10000", "10000", "10000", "01111"),
+        "D": ("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
+        "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+        "G": ("01111", "10000", "10000", "10111", "10001", "10001", "01111"),
+        "H": ("10001", "10001", "10001", "11111", "10001", "10001", "10001"),
+        "I": ("11111", "00100", "00100", "00100", "00100", "00100", "11111"),
+        "K": ("10001", "10010", "10100", "11000", "10100", "10010", "10001"),
+        "L": ("10000", "10000", "10000", "10000", "10000", "10000", "11111"),
+        "M": ("10001", "11011", "10101", "10101", "10001", "10001", "10001"),
+        "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+        "O": ("01110", "10001", "10001", "10001", "10001", "10001", "01110"),
+        "P": ("11110", "10001", "10001", "11110", "10000", "10000", "10000"),
+        "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
+        "S": ("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
+        "T": ("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
+        "U": ("10001", "10001", "10001", "10001", "10001", "10001", "01110"),
+        "Y": ("10001", "10001", "01010", "00100", "00100", "00100", "00100"),
+        ":": ("0", "1", "1", "0", "1", "1", "0"),
+        "-": ("0", "0", "0", "111", "0", "0", "0"),
+    }
+
+    def monitor_text_mask(local_u: float, local_v: float, text: str, origin_u: float, origin_v: float, cell: float) -> float:
+        cursor_u = origin_u
+        for char in text.upper():
+            if char == " ":
+                cursor_u += cell * 3.0
+                continue
+            glyph = monitor_glyphs.get(char)
+            if glyph is None:
+                cursor_u += cell * 6.0
+                continue
+            glyph_width = max(len(row) for row in glyph)
+            glyph_height = len(glyph)
+            if cursor_u <= local_u < cursor_u + glyph_width * cell and origin_v <= local_v < origin_v + glyph_height * cell:
+                col = int((local_u - cursor_u) / cell)
+                row = int((local_v - origin_v) / cell)
+                glyph_row = glyph[row]
+                if col < len(glyph_row) and glyph_row[col] == "1":
+                    return 1.0
+            cursor_u += (glyph_width + 1) * cell
+        return 0.0
+
     def security_monitor_feed_pixel(x: int, y: int, width: int, height: int) -> tuple[int, int, int]:
         u = x / max(1, width - 1)
         v = y / max(1, height - 1)
@@ -401,40 +456,62 @@ def generate_source_textures() -> dict[str, pathlib.Path]:
             floor_hit = max(0.0, 1.0 - abs(local_v - floor_line) / 0.012)
             ceiling_hit = max(0.0, 1.0 - abs(local_v - ceiling_line) / 0.010)
             door = 1.0 if 0.61 <= local_u <= 0.78 and 0.30 <= local_v <= 0.79 else 0.0
+            door_frame = max(0.0, 1.0 - abs(local_u - 0.61) / 0.010) if 0.28 <= local_v <= 0.82 else 0.0
+            door_frame = max(door_frame, max(0.0, 1.0 - abs(local_u - 0.78) / 0.010) if 0.28 <= local_v <= 0.82 else 0.0)
+            door_frame = max(door_frame, max(0.0, 1.0 - abs(local_v - 0.30) / 0.010) if 0.58 <= local_u <= 0.81 else 0.0)
+            ajar_gap = max(0.0, 1.0 - abs(local_u - (0.755 + (local_v - 0.30) * 0.035)) / 0.008) if 0.34 <= local_v <= 0.78 else 0.0
             plate = 1.0 if 0.66 <= local_u <= 0.73 and 0.34 <= local_v <= 0.40 else 0.0
-            red += 3 * (wall_hit + floor_hit + ceiling_hit) + 10 * door + 18 * plate
-            green += 50 * (wall_hit + floor_hit + ceiling_hit) + 36 * door + 70 * plate
-            blue += 20 * (wall_hit + floor_hit + ceiling_hit) + 14 * door + 28 * plate
+            label_203 = monitor_text_mask(local_u, local_v, "CAM 203 HALL", 0.055, 0.070, 0.010)
+            no_guest = monitor_text_mask(local_u, local_v, "NO GUEST", 0.055, 0.820, 0.012)
+            timestamp_203 = monitor_text_mask(local_u, local_v, "02:13:47", 0.600, 0.860, 0.010)
+            red += 3 * (wall_hit + floor_hit + ceiling_hit) + 8 * door + 20 * plate + 8 * door_frame + 18 * ajar_gap
+            green += 46 * (wall_hit + floor_hit + ceiling_hit) + 26 * door + 76 * plate + 78 * door_frame + 118 * ajar_gap
+            blue += 18 * (wall_hit + floor_hit + ceiling_hit) + 10 * door + 32 * plate + 30 * door_frame + 50 * ajar_gap
+            red += 10 * (label_203 + timestamp_203) + 44 * no_guest
+            green += 94 * (label_203 + timestamp_203) + 48 * no_guest
+            blue += 38 * (label_203 + timestamp_203) + 14 * no_guest
 
         # Empty lobby feed: visible counter edge, no figure.
         if qx == 1 and qy == 0:
             counter = 1.0 if 0.18 <= local_v <= 0.28 and 0.10 <= local_u <= 0.92 else 0.0
             glass_line = max(0.0, 1.0 - abs(local_u - 0.74) / 0.012) if 0.28 < local_v < 0.86 else 0.0
+            lobby_label = monitor_text_mask(local_u, local_v, "LOBBY EMPTY", 0.055, 0.070, 0.010)
             red += 4 * counter + 5 * glass_line
             green += 42 * counter + 48 * glass_line
             blue += 16 * counter + 30 * glass_line
+            red += 10 * lobby_label
+            green += 86 * lobby_label
+            blue += 36 * lobby_label
 
         # Stair/elevator feed: the split route is represented without adding another mechanic.
         if qx == 0 and qy == 1:
             elevator_seam = max(0.0, 1.0 - abs(local_u - 0.36) / 0.010) if 0.18 < local_v < 0.84 else 0.0
             stair_sign = 1.0 if 0.58 <= local_u <= 0.86 and 0.20 <= local_v <= 0.31 else 0.0
+            stair_label = monitor_text_mask(local_u, local_v, "STAIR LOCK", 0.055, 0.070, 0.010)
             red += 15 * stair_sign + 4 * elevator_seam
             green += 50 * stair_sign + 42 * elevator_seam
             blue += 30 * stair_sign + 18 * elevator_seam
+            red += 9 * stair_label
+            green += 84 * stair_label
+            blue += 35 * stair_label
 
-        # Alert/status feed: no-guest and mismatch marks are drawn as geometry-like bars.
+        # Alert/status feed: warm pixels must remain readable after filmic tonemapping.
         if qx == 1 and qy == 1:
-            red_bar = 1.0 if 0.18 <= local_u <= 0.84 and 0.28 <= local_v <= 0.35 else 0.0
-            red_bar = max(red_bar, 1.0 if 0.24 <= local_u <= 0.76 and 0.46 <= local_v <= 0.51 else 0.0)
-            slash = max(0.0, 1.0 - abs((local_u - 0.28) - (local_v - 0.62) * 0.55) / 0.016) if 0.18 < local_u < 0.78 and 0.56 < local_v < 0.80 else 0.0
-            red += 64 * max(red_bar, slash)
-            green += 18 * max(red_bar, slash)
-            blue += 10 * max(red_bar, slash)
+            red_bar = 1.0 if 0.18 <= local_u <= 0.84 and 0.305 <= local_v <= 0.322 else 0.0
+            red_bar = max(red_bar, 1.0 if 0.24 <= local_u <= 0.76 and 0.487 <= local_v <= 0.502 else 0.0)
+            slash = max(0.0, 1.0 - abs((local_u - 0.28) - (local_v - 0.62) * 0.55) / 0.010) if 0.18 < local_u < 0.78 and 0.56 < local_v < 0.80 else 0.0
+            alert_label = monitor_text_mask(local_u, local_v, "ROOM203 OPEN", 0.055, 0.070, 0.010)
+            no_guest_alert = monitor_text_mask(local_u, local_v, "NO GUEST", 0.245, 0.600, 0.014)
+            warm_line = max(red_bar, slash)
+            warm_text = max(alert_label, no_guest_alert)
+            red += 138 * warm_line + 228 * warm_text
+            green += 44 * warm_line + 56 * warm_text
+            blue += 18 * warm_line + 20 * warm_text
 
-        # CCTV labels/timestamp are simple block strokes, not font assets.
-        label = 1.0 if 0.055 <= local_u <= 0.38 and 0.070 <= local_v <= 0.092 else 0.0
-        label = max(label, 1.0 if 0.055 <= local_u <= 0.23 and 0.118 <= local_v <= 0.136 else 0.0)
-        timestamp = 1.0 if 0.61 <= local_u <= 0.92 and 0.875 <= local_v <= 0.895 else 0.0
+        # CCTV text is a tiny project-authored bitmap font, not an external font asset.
+        rec = monitor_text_mask(local_u, local_v, "REC", 0.835, 0.070, 0.010)
+        timestamp = monitor_text_mask(local_u, local_v, "02:13", 0.695, 0.875, 0.010)
+        label = rec
         red += 7 * (label + timestamp) + 18 * border
         green += 70 * (label + timestamp) + 80 * border
         blue += 30 * (label + timestamp) + 36 * border
@@ -2430,6 +2507,9 @@ def ensure_textured_material(
     texture: unreal.Texture2D,
     roughness: float,
     two_sided: bool = False,
+    emissive: bool = False,
+    emissive_strength: float = 1.0,
+    force_recreate: bool = False,
 ) -> unreal.MaterialInterface:
     def enable_runtime_usage(material: unreal.MaterialInterface) -> None:
         usage_names = (
@@ -2451,6 +2531,8 @@ def ensure_textured_material(
                     pass
 
     path = f"/Game/Hotel/Materials/{name}"
+    if force_recreate and unreal.EditorAssetLibrary.does_asset_exist(path):
+        unreal.EditorAssetLibrary.delete_asset(path)
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         material = unreal.EditorAssetLibrary.load_asset(path)
         if two_sided:
@@ -2484,6 +2566,24 @@ def ensure_textured_material(
     )
     sample.set_editor_property("texture", texture)
     unreal.MaterialEditingLibrary.connect_material_property(sample, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    if emissive:
+        if emissive_strength == 1.0:
+            unreal.MaterialEditingLibrary.connect_material_property(sample, "RGB", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+        else:
+            emissive_multiply = unreal.MaterialEditingLibrary.create_material_expression(
+                material, unreal.MaterialExpressionMultiply, -160, -120
+            )
+            emissive_value = unreal.MaterialEditingLibrary.create_material_expression(
+                material, unreal.MaterialExpressionConstant, -360, 90
+            )
+            emissive_value.set_editor_property("r", emissive_strength)
+            unreal.MaterialEditingLibrary.connect_material_expressions(sample, "RGB", emissive_multiply, "A")
+            unreal.MaterialEditingLibrary.connect_material_expressions(emissive_value, "", emissive_multiply, "B")
+            unreal.MaterialEditingLibrary.connect_material_property(
+                emissive_multiply,
+                "",
+                unreal.MaterialProperty.MP_EMISSIVE_COLOR,
+            )
 
     rough = unreal.MaterialEditingLibrary.create_material_expression(
         material, unreal.MaterialExpressionConstant, -420, 90
@@ -2853,7 +2953,14 @@ def build_level(
             0.28,
             unreal.LinearColor(0.0, 0.55, 0.28, 1.0),
         ),
-        "security_monitor_feed": ensure_textured_material("M_Hotel_SecurityMonitorFeed_v0", security_monitor_texture, 0.42)
+        "security_monitor_feed": ensure_textured_material(
+            "M_Hotel_SecurityMonitorFeed_v0",
+            security_monitor_texture,
+            0.42,
+            emissive=True,
+            emissive_strength=1.45,
+            force_recreate=True,
+        )
         if security_monitor_texture
         else ensure_material("M_Hotel_MonitorGreen_v0", unreal.LinearColor(0.02, 0.18, 0.11, 1.0), 0.35),
         "lobby_glass_smudge": ensure_textured_material("M_Hotel_LobbyDoorSmudgedGlass_v0", lobby_glass_texture, 0.63, two_sided=True)
@@ -3020,22 +3127,36 @@ def build_level(
         "Hotel.Capture.SecurityMonitorFeed",
         "Hotel.Feedback.MonitorCheckVisual",
     )
+    monitor_art_tags = (
+        "Hotel.Capture.Readability",
+        "Hotel.Capture.SecurityMonitorFeed",
+        "Hotel.ArtDensity.FrontDesk",
+    )
     add_cube("PROP_Surveillance_Monitor_CRT_Housing", (-620, -520, 160), (168, 34, 106), materials["black"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
     add_cube("PROP_Surveillance_Monitor_PlayerChecksHall", (-620, -541, 160), (132, 6, 74), materials["security_monitor_feed"], monitor_feed_tags)
-    add_cube("PROP_Surveillance_Monitor_CheckFeedGlassReflection", (-674, -545, 160), (7, 3, 64), materials["screen_glow"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_CheckScanlineSweepA", (-642, -548, 176), (48, 3, 3), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_CheckScanlineSweepB", (-600, -548, 144), (62, 3, 3), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_CheckRoom203TargetBox", (-585, -549, 159), (10, 3, 30), materials["warn_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_CheckNoGuestUnderline", (-646, -549, 134), (34, 3, 3), materials["warn"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_CheckTimestampBlock", (-574, -549, 186), (24, 3, 3), materials["paper"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CRT_BezelTop", (-620, -548, 202), (148, 7, 8), materials["black"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CRT_BezelBottom", (-620, -548, 118), (148, 7, 10), materials["black"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CRT_BezelLeft", (-692, -548, 160), (8, 7, 82), materials["black"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CRT_BezelRight", (-548, -548, 160), (8, 7, 82), materials["black"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_ChannelLabelTape203", (-642, -553, 209), (30, 1, 2), materials["report_log_paper"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_RecordRedLED", (-552, -554, 128), (7, 3, 7), materials["deep_red"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_ControlButtonRow", (-607, -554, 127), (34, 3, 5), materials["dull_metal"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_ControlKnobA", (-578, -554, 128), (8, 3, 8), materials["brass"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_ControlKnobB", (-565, -554, 128), (7, 3, 7), materials["brass"], monitor_art_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckFeedGlassReflection", (-676, -545, 160), (3, 2, 38), materials["screen_glow"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckScanlineSweepA", (-642, -548, 176), (20, 1, 1), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckScanlineSweepB", (-600, -548, 144), (22, 1, 1), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckRoom203TargetBox", (-585, -549, 159), (1, 1, 8), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckNoGuestUnderline", (-646, -549, 134), (12, 1, 1), materials["warn"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_CheckTimestampBlock", (-574, -549, 186), (8, 1, 1), materials["screen_glow"], monitor_feedback_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("LIGHTMESH_Surveillance_Monitor_CheckGlow", (-620, -550, 122), (118, 3, 4), materials["screen_glow"], ("Hotel.Capture.Readability", "Hotel.Capture.SecurityMonitorFeed"), no_collision=True)
     monitor_mismatch_tags = ("Hotel.Capture.Readability", "Hotel.Capture.PostReportMonitorMismatch", "Hotel.Feedback.PostReportMonitorMismatchVisual")
-    add_cube("PROP_Surveillance_Monitor_PostReportFeedFrame", (-620, -536, 160), (112, 5, 58), materials["screen"], monitor_mismatch_tags, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_PostReportStaticBarA", (-646, -540, 178), (58, 4, 4), materials["screen_glow"], monitor_mismatch_tags, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_PostReportStaticBarB", (-602, -540, 143), (76, 4, 4), materials["screen_glow"], monitor_mismatch_tags, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_PostReportOpenDoorGlyph", (-585, -542, 159), (13, 5, 34), materials["warn_glow"], monitor_mismatch_tags, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_PostReportRoom203Dot", (-608, -543, 174), (12, 5, 12), materials["warn"], monitor_mismatch_tags, no_collision=True)
-    add_cube("PROP_Surveillance_Monitor_PostReportTimestampSmear", (-656, -542, 132), (40, 5, 4), materials["paper"], monitor_mismatch_tags, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportFeedFrame", (-620, -536, 160), (112, 5, 58), materials["screen"], monitor_mismatch_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportStaticBarA", (-646, -540, 178), (16, 1, 1), materials["screen_glow"], monitor_mismatch_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportStaticBarB", (-602, -540, 143), (18, 1, 1), materials["screen_glow"], monitor_mismatch_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportOpenDoorGlyph", (-585, -542, 159), (1, 1, 9), materials["warn_glow"], monitor_mismatch_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportRoom203Dot", (-608, -543, 174), (2, 1, 2), materials["warn"], monitor_mismatch_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
+    add_cube("PROP_Surveillance_Monitor_PostReportTimestampSmear", (-656, -542, 132), (12, 1, 1), materials["screen_glow"], monitor_mismatch_tags, unreal.ComponentMobility.MOVABLE, no_collision=True)
     add_cube("PROP_FrontDesk_ReportLog_PullOutWritingShelf", (-185, -590, 130), (150, 112, 14), materials["desk"], ("Hotel.Capture.Readability", "Hotel.ArtDensity.FrontDesk"), no_collision=True)
     add_cube("PROP_ReportLog_ReturnAndRecordPoint", (-185, -590, 139), (118, 72, 2), materials["paper"], ("Hotel.Interact.ReportLog",))
     if "SM_FrontDesk_ReportLogFiledPaper_v0" in meshes:
