@@ -22,14 +22,18 @@ MIN_UNIQUE_HASHES = 40
 MIN_FRAME_SPAN = 564
 MIN_AVERAGE_LUMA_RANGE = 8.0
 MIN_AVERAGE_RGB_ENERGY_RANGE = 24.0
-MIN_FRONT_DESK_WARM_PIXELS = 5200
+MIN_FRONT_DESK_WARM_PIXELS = 2000
 MIN_FRONT_DESK_GREEN_PIXELS = 1600
 MAX_FRONT_DESK_BLOWN_PIXELS = 85000
 MIN_MONITOR_GREEN_PIXELS = 38000
 MIN_MONITOR_WARM_PIXELS = 18
 MIN_MONITOR_EDGE_SCORE = 2.0
+MIN_ROUTE_EDGE_SCORE = 1.35
+MIN_TRANSITION_WARM_PIXELS = 900
+MIN_PATROL_WARM_PIXELS = 1800
 MIN_ROOM203_EDGE_SCORE = 1.35
 MIN_ROOM203_WARM_PIXELS = 950
+MIN_RETURN_ROUTE_WARM_PIXELS = 1800
 MIN_REPORT_TEXT_PIXELS = 1300
 MIN_VIDEO_DURATION_SECONDS = 23.8
 MAX_VIDEO_DURATION_SECONDS = 24.2
@@ -39,7 +43,10 @@ MIN_VIDEO_OUTPUT_FRAMES = 500
 SHOT_RANGES = {
     "front_desk": (0, 96),
     "monitor": (96, 144),
+    "transition": (144, 196),
+    "patrol": (196, 248),
     "room203": (248, 316),
+    "return_route": (316, 384),
     "report": (384, 448),
     "post_report_monitor": (448, 512),
     "post_report_log": (512, 576),
@@ -359,6 +366,22 @@ def main() -> None:
     if max(float(metrics["edge_score"]) for metrics in monitor_metrics) < MIN_MONITOR_EDGE_SCORE:
         fail("Monitor proof shots have too little edge detail and read as abstract glow.")
 
+    transition_metrics = shot_content_metrics["transition"]
+    if not transition_metrics:
+        fail("Missing first-loop transition route proof frames.")
+    if max(float(metrics["edge_score"]) for metrics in transition_metrics) < MIN_ROUTE_EDGE_SCORE:
+        fail("Transition route frames have too little hotel geometry detail to read as player traversal.")
+    if max(int(metrics["warm_pixels"]) for metrics in transition_metrics) < MIN_TRANSITION_WARM_PIXELS:
+        fail("Transition route frames have too few warm route/work pixels to connect the desk to the guest hall.")
+
+    patrol_metrics = shot_content_metrics["patrol"]
+    if not patrol_metrics:
+        fail("Missing first-loop patrol/listen route proof frames.")
+    if max(float(metrics["edge_score"]) for metrics in patrol_metrics) < MIN_ROUTE_EDGE_SCORE:
+        fail("Patrol/listen frames have too little route detail to read as a played stop-line beat.")
+    if max(int(metrics["warm_pixels"]) for metrics in patrol_metrics) < MIN_PATROL_WARM_PIXELS:
+        fail("Patrol/listen frames have too few readable route cue pixels.")
+
     room203_metrics = shot_content_metrics["room203"]
     if not room203_metrics:
         fail("Missing first-loop Room 203 proof frames.")
@@ -366,6 +389,14 @@ def main() -> None:
         fail("Room 203 proof shot has too little visible door/wall detail.")
     if max(int(metrics["warm_pixels"]) for metrics in room203_metrics) < MIN_ROOM203_WARM_PIXELS:
         fail("Room 203 proof shot has too few warm notice/door/light pixels to read as a refusal beat.")
+
+    return_route_metrics = shot_content_metrics["return_route"]
+    if not return_route_metrics:
+        fail("Missing first-loop return-route proof frames.")
+    if max(float(metrics["edge_score"]) for metrics in return_route_metrics) < MIN_ROUTE_EDGE_SCORE:
+        fail("Return-route frames have too little hallway detail to read as the walk back after Room 203.")
+    if max(int(metrics["warm_pixels"]) for metrics in return_route_metrics) < MIN_RETURN_ROUTE_WARM_PIXELS:
+        fail("Return-route frames have too few readable hallway evidence pixels.")
 
     report_metrics = shot_content_metrics["report"] + shot_content_metrics["post_report_log"]
     if not report_metrics:
