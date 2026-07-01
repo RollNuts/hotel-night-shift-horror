@@ -67,6 +67,25 @@ Not safe for a public repo:
 - AI assets with unclear terms.
 - Third-party reference boards containing copyrighted source images.
 
+## Reference Media Rule
+
+Commercial horror references may be inspected for market and quality analysis, but they are not project assets.
+
+Allowed:
+
+- Viewing official store pages, official trailers, official screenshots, and official developer/publisher materials.
+- Temporarily downloading public reference screenshots or trailers to ignored/local temporary folders for measurement with tools such as `ffmpeg`, `ffprobe`, or image analysis scripts.
+- Recording source links, app IDs, dates reviewed, and derived observations in repo documents.
+
+Not allowed:
+
+- Committing third-party screenshots, trailer frames, videos, thumbnails, art books, reference boards, or scraped media.
+- Tracing, copying, recreating, or kitbashing another game's distinctive visual content.
+- Treating "free to view" reference media as free game assets.
+- Using reference analysis as a substitute for license review on any imported asset.
+
+Reference findings may change art direction and acceptance criteria. They do not grant asset rights.
+
 ## Asset Ledger
 
 Create an asset ledger before importing production assets. Each entry must include:

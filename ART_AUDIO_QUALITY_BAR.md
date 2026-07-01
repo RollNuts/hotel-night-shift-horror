@@ -35,6 +35,26 @@ Every public-facing scene must satisfy:
 
 If the scene cannot produce at least one store-page candidate screenshot, it is not product progress.
 
+## Horror Reference Bar
+
+Before Codex marks a core horror beat as visually acceptable for PR, store proof, trailer proof, or demo proof, it must compare the shot against current public horror references on Steam or official developer channels.
+
+Reference review is required when the work touches first-person camera proof, store screenshots, trailer clips, Room 203, the front desk, monitor feedback, return-route anomaly, or any visible monster/guest/body cue.
+
+The review must judge:
+
+- Does the frame have one clear subject at thumbnail size?
+- Does the subject carry readable detail through text, face, silhouette, material wear, reflection, wetness, damage, light, or deliberate graphic style?
+- Is darkness used to frame the subject instead of hiding unfinished art?
+- Is the foreground free of raw blockout shapes, smooth boxes, unprocessed cylinders, or anonymous low-poly props?
+- Does every close shot justify itself with readable information, not only camera proximity?
+- Does the shot have foreground, subject plane, and background depth?
+- Would a player understand the action/result without reading a PR explanation?
+
+Low-poly and stylized horror are allowed. Raw low-poly is not. If a low-poly object is closer than mid-distance, it needs a strong silhouette, texture, decal pass, shadow breakup, screen-space distortion, grain/noise, or readable diegetic text. A smooth rectangular prop in close-up fails the product image bar even when the mechanic works.
+
+Official reference media may be downloaded only to ignored or temporary folders for analysis. Do not commit third-party screenshots, trailer frames, videos, or reference boards to the public repo.
+
 ## Motion Bar
 
 Every player-facing action must define:

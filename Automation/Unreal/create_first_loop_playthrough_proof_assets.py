@@ -1,9 +1,9 @@
-"""Create a 24-second first-loop playthrough proof sequence.
+"""Create a 24-second first-loop first-person-height proof sequence.
 
 This is an internal capture/proof lane for the production hotel map. It does
 not add a gameplay feature, new room, test map, or public trailer approval; it
 lets PRs prove that the existing first work loop can be judged as a connected
-player-facing sequence instead of isolated unit checks.
+cinematic route instead of isolated unit checks or disconnected stills.
 """
 
 from __future__ import annotations
@@ -24,28 +24,45 @@ FPS = 24
 SECONDS = 24
 END_FRAME = FPS * SECONDS
 
-SHOT_CAMERAS = [
-    (0, 48, "CAPTURE_FrontDesk_FirstSteamShotCandidate", "Night reception work desk", (-10.0, -2.0, 0.0), -1.0),
-    (48, 96, "CAPTURE_PhoneResponse_LiftReceiverCandidate", "Answer phone", (-4.0, -4.0, 1.0), -1.0),
-    (96, 144, "CAPTURE_SecurityMonitorFeed_ReadabilityCandidate", "Check monitor", (-6.0, -2.0, 0.0), -1.0),
-    (144, 196, "CAPTURE_Transition_ElevatorStair_AudioFearCandidate", "Leave desk", (16.0, 0.0, 0.0), 0.0),
-    (196, 248, "CAPTURE_PatrolRoute_DecisionCueCandidate", "Hold and listen", (18.0, 0.0, 0.0), 1.0),
-    (248, 316, "CAPTURE_GuestDoor_15SecondBeatCandidate", "Refuse Room 203", (12.0, -8.0, 1.0), -1.5),
-    (316, 384, "CAPTURE_ReturnRoute_BackKnockCandidate", "Return route answers", (18.0, -4.0, 0.0), 1.0),
-    (384, 448, "CAPTURE_ReportLog_ReadabilityCandidate", "File report", (6.0, 5.0, 1.0), -1.0),
-    (448, 512, "CAPTURE_PostReportMonitorMismatchCandidate", "Recheck camera", (8.0, -6.0, 1.0), -1.5),
-    (512, END_FRAME, "CAPTURE_PostReportLogSelfCorrectionCandidate", "Wait for next call", (6.0, 5.0, 1.0), -1.0),
+POV_CAMERA_KEYS = [
+    (0, (-505.0, -704.0, 178.0), (0.5, 128.0, 0.0), 58.0),
+    (24, (-505.0, -700.0, 178.0), (0.4, 128.1, -0.1), 55.0),
+    (48, (-503.0, -696.0, 179.0), (0.2, 128.3, 0.1), 52.0),
+    (72, (-500.0, -692.0, 179.0), (0.2, 128.5, -0.1), 49.0),
+    (96, (-497.0, -688.0, 179.0), (0.1, 128.7, 0.0), 47.0),
+    (120, (-494.0, -684.0, 179.0), (0.1, 128.9, 0.0), 45.0),
+    (144, (-210.0, -620.0, 165.5), (-2.0, 24.0, 0.4), 70.0),
+    (168, (430.0, -320.0, 164.5), (-1.0, 38.0, -0.8), 74.0),
+    (196, (780.0, -430.0, 165.2), (-8.0, 58.0, 0.7), 70.0),
+    (216, (790.0, -410.0, 166.0), (-12.0, 58.0, -0.2), 66.0),
+    (228, (820.0, -360.0, 166.0), (-12.0, 55.0, 0.2), 66.0),
+    (240, (2668.0, -248.0, 158.0), (0.5, 43.0, 0.0), 54.0),
+    (252, (3185.0, -205.0, 164.0), (1.5, 30.0, 0.0), 52.0),
+    (264, (3222.0, -214.0, 165.0), (1.3, 29.2, 0.0), 47.0),
+    (276, (3227.0, -219.0, 166.0), (0.9, 28.8, 0.2), 44.0),
+    (288, (3223.0, -216.0, 165.0), (1.2, 29.4, -0.1), 46.0),
+    (304, (3234.0, -225.0, 166.0), (0.9, 28.6, 0.0), 44.0),
+    (316, (3242.0, -230.0, 167.0), (0.7, 28.4, 0.0), 44.0),
+    (324, (2668.0, -248.0, 158.0), (0.5, 43.0, 0.0), 52.0),
+    (336, (2788.0, -238.0, 158.0), (0.3, 43.0, -0.2), 52.0),
+    (348, (2920.0, -228.0, 158.0), (0.2, 43.5, 0.2), 52.0),
+    (360, (3060.0, -218.0, 158.0), (0.2, 43.8, -0.1), 52.0),
+    (372, (3180.0, -210.0, 158.0), (0.2, 44.0, 0.0), 52.0),
+    (384, (-62.0, -728.0, 184.0), (-11.0, 132.0, 0.0), 48.0),
+    (396, (-61.0, -728.0, 184.0), (-11.2, 132.1, 0.0), 47.5),
+    (408, (-59.0, -727.0, 183.0), (-11.4, 132.3, 0.0), 47.0),
+    (420, (-62.0, -728.0, 184.0), (-11.0, 132.0, 0.0), 48.0),
+    (432, (-61.0, -728.0, 184.0), (-11.2, 132.1, 0.0), 47.5),
+    (444, (-61.0, -728.0, 184.0), (-11.2, 132.1, 0.0), 47.5),
+    (456, (-497.0, -688.0, 179.0), (0.1, 128.7, 0.0), 47.0),
+    (480, (-674.0, -650.0, 166.2), (1.0, 31.0, 0.6), 69.0),
+    (512, (-58.0, -726.0, 183.0), (-11.5, 132.5, 0.0), 46.8),
+    (528, (-58.0, -726.0, 183.0), (-11.5, 132.5, 0.0), 46.8),
+    (548, (-57.0, -726.0, 183.0), (-11.4, 132.5, 0.0), 46.8),
+    (END_FRAME, (-57.0, -726.0, 183.0), (-11.4, 132.5, 0.0), 46.8),
 ]
 
-SHOT_EXPOSURE_BIAS = {
-    0: 1.8,
-    1: 2.3,
-    # The transition shot is intentionally darker in-game, but the internal
-    # proof must still let reviewers read the corridor and route geometry.
-    3: 3.15,
-    7: 1.55,
-    9: 1.25,
-}
+POV_EXPOSURE_BIAS = 3.2
 
 ACTOR_JOLTS = {
     "PROP_FrontDesk_Phone_ReceiverAuthoredSilhouette": (52, (26.0, -10.0, 18.0), (-8.0, 3.0, -12.0), 1.0),
@@ -61,7 +78,7 @@ ACTOR_JOLTS = {
     "RETURN_Route_RightWall_BackKnockShadow_Echo": (338, (-40.0, 0.0, 8.0), (0.0, -2.0, 0.0), 1.15),
     "RETURN_Route_RightWall_PalmDragShadow_BackKnock": (356, (-32.0, 0.0, -30.0), (0.0, -5.0, 0.0), 1.20),
     "RETURN_Route_WallStatusSlip_ReportAfterHall": (376, (-6.0, -4.0, 3.0), (0.0, -2.0, 0.0), 1.16),
-    "PROP_FrontDesk_ReportLog_FiledStampCue": (410, (0.0, -10.0, 4.0), (0.0, 0.0, -8.0), 1.05),
+    "PROP_FrontDesk_ReportLog_FiledStampCue": (410, (0.0, -8.0, 10.0), (0.0, 0.0, -8.0), 1.05),
     "PROP_Surveillance_Monitor_PostReportStaticBarA": (468, (0.0, 0.0, 18.0), (0.0, 0.0, 0.0), 1.12),
     "PROP_Surveillance_Monitor_PostReportOpenDoorGlyph": (474, (-8.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.14),
     "PROP_FrontDesk_ReportLog_SelfCorrectedRoom203OpenLine": (532, (0.0, -6.0, 4.0), (0.0, 0.0, 0.0), 1.10),
@@ -75,20 +92,20 @@ REPORT_TEXT_CUES = [
         448,
         "TXT_FirstLoop_ReportFiled_ReadableCue",
         "NIGHT LOG\nROOM 203 REFUSED\nSTAMP: FILED",
-        (-246.0, -520.0, 160.0),
+        (-150.0, -548.0, 182.0),
         (0.0, -90.0, 0.0),
-        4.2,
-        (255, 218, 112, 255),
+        3.4,
+        (180, 140, 70, 255),
     ),
     (
         512,
         END_FRAME,
         "TXT_FirstLoop_PostReportSelfCorrection_ReadableCue",
         "LOG CHANGED\n203 OPEN\nNO GUEST FOUND",
-        (-238.0, -650.0, 172.0),
+        (-150.0, -548.0, 184.0),
         (0.0, -90.0, 0.0),
-        4.0,
-        (96, 255, 182, 255),
+        3.3,
+        (160, 210, 120, 255),
     ),
 ]
 
@@ -136,19 +153,6 @@ def focal_length_from_fov_degrees(fov_degrees: float, sensor_width_mm: float = 3
     return (sensor_width_mm * 0.5) / math.tan(half_angle)
 
 
-def get_actor_camera_fov(actor) -> float:
-    for component_getter in ("get_cine_camera_component", "get_camera_component"):
-        getter = getattr(actor, component_getter, None)
-        if not getter:
-            continue
-        try:
-            component = getter()
-            return float(component.get_editor_property("field_of_view"))
-        except Exception:
-            pass
-    return 58.0
-
-
 def channel_name(channel) -> str:
     return str(getattr(channel, "channel_name", ""))
 
@@ -181,14 +185,6 @@ def add_transform_key(section, frame: int, location, rotation, scale) -> None:
 def add_camera_focal_key(section, frame: int, fov: float) -> None:
     for channel in section.find_channels_by_type(unreal.MovieSceneScriptingFloatChannel):
         add_float_key(channel, frame, focal_length_from_fov_degrees(fov))
-
-
-def vector_tuple(vector) -> tuple[float, float, float]:
-    return (float(vector.x), float(vector.y), float(vector.z))
-
-
-def rotator_tuple(rotator) -> tuple[float, float, float]:
-    return (float(rotator.pitch), float(rotator.yaw), float(rotator.roll))
 
 
 def add_tuple(a, b) -> tuple[float, float, float]:
@@ -289,30 +285,17 @@ def sanitize_sequence_metadata(sequence: unreal.LevelSequence) -> None:
     )
 
 
-def camera_source_transform(camera_label: str):
-    source_camera = find_actor_by_label(camera_label)
-    if source_camera is None:
-        fail(f"Missing playthrough proof camera actor: {camera_label}")
-    return (
-        vector_tuple(source_camera.get_actor_location()),
-        rotator_tuple(source_camera.get_actor_rotation()),
-        get_actor_camera_fov(source_camera),
-    )
-
-
-def add_spawnable_shot_camera(sequence: unreal.LevelSequence, shot_index: int, shot) -> object:
-    start_frame, end_frame, camera_label, display_note, drift, fov_kick = shot
-    location, rotation, fov = camera_source_transform(camera_label)
-    end_location = add_tuple(location, drift)
-    end_fov = max(35.0, min(70.0, fov + fov_kick))
-    exposure_bias = SHOT_EXPOSURE_BIAS.get(shot_index, 2.15)
+def add_first_person_height_route_camera(sequence: unreal.LevelSequence) -> object:
+    start_frame, location, rotation, fov = POV_CAMERA_KEYS[0]
+    if start_frame != 0:
+        fail("First-person-height route camera must start at frame 0.")
 
     temp_camera = unreal.EditorLevelLibrary.spawn_actor_from_class(
         unreal.CineCameraActor,
         unreal.Vector(*location),
         make_rotator(*rotation),
     )
-    temp_camera.set_actor_label(f"TMP_FirstLoopPlaythrough_{shot_index:02d}")
+    temp_camera.set_actor_label("TMP_FirstLoopFirstPersonHeight_ContinuousRoute")
     try:
         cine_component = temp_camera.get_cine_camera_component()
         try_set_property(cine_component, "current_focal_length", focal_length_from_fov_degrees(fov))
@@ -328,7 +311,7 @@ def add_spawnable_shot_camera(sequence: unreal.LevelSequence, shot_index: int, s
                 "override_motion_blur_amount": True,
                 "auto_exposure_min_brightness": 1.0,
                 "auto_exposure_max_brightness": 1.0,
-                "auto_exposure_bias": exposure_bias,
+                "auto_exposure_bias": POV_EXPOSURE_BIAS,
                 "motion_blur_amount": 0.0,
             }
             for name, value in exposure_overrides.items():
@@ -344,14 +327,14 @@ def add_spawnable_shot_camera(sequence: unreal.LevelSequence, shot_index: int, s
         pass
 
     binding = sequence.add_spawnable_from_instance(temp_camera)
-    binding.set_display_name(f"CAM_FirstLoop_{shot_index:02d}_{display_note}")
+    binding.set_display_name("CAM_FirstLoop_FirstPersonHeight_ContinuousRoute")
 
     transform_track = binding.add_track(unreal.MovieScene3DTransformTrack)
     transform_section = transform_track.add_section()
-    transform_section.set_end_frame(end_frame)
-    transform_section.set_start_frame(start_frame)
-    add_transform_key(transform_section, start_frame, location, rotation, (1.0, 1.0, 1.0))
-    add_transform_key(transform_section, end_frame, end_location, rotation, (1.0, 1.0, 1.0))
+    transform_section.set_start_frame(0)
+    transform_section.set_end_frame(END_FRAME)
+    for frame, key_location, key_rotation, key_fov in POV_CAMERA_KEYS:
+        add_transform_key(transform_section, frame, key_location, key_rotation, (1.0, 1.0, 1.0))
 
     try:
         cine_component = temp_camera.get_cine_camera_component()
@@ -360,10 +343,10 @@ def add_spawnable_shot_camera(sequence: unreal.LevelSequence, shot_index: int, s
         focal_length_track = component_binding.add_track(unreal.MovieSceneFloatTrack)
         focal_length_track.set_property_name_and_path("CurrentFocalLength", "CurrentFocalLength")
         focal_length_section = focal_length_track.add_section()
-        focal_length_section.set_end_frame(end_frame)
-        focal_length_section.set_start_frame(start_frame)
-        add_camera_focal_key(focal_length_section, start_frame, fov)
-        add_camera_focal_key(focal_length_section, end_frame, end_fov)
+        focal_length_section.set_start_frame(0)
+        focal_length_section.set_end_frame(END_FRAME)
+        for frame, key_location, key_rotation, key_fov in POV_CAMERA_KEYS:
+            add_camera_focal_key(focal_length_section, frame, key_fov)
     except Exception:
         pass
 
@@ -420,7 +403,7 @@ def add_actor_jolt_track(sequence: unreal.LevelSequence, label: str, jolt) -> No
 def add_text_cue_track(sequence: unreal.LevelSequence, cue) -> None:
     start_frame, end_frame, label, text, location, rotation, world_size, color = cue
     hidden_location = (location[0], location[1], -1200.0)
-    peak_location = (location[0], location[1] - 4.0, location[2] + 8.0)
+    peak_location = (location[0], location[1] - 2.0, location[2] + 2.0)
     settle_location = (location[0], location[1], location[2])
 
     temp_text = unreal.EditorLevelLibrary.spawn_actor_from_class(
@@ -444,7 +427,7 @@ def add_text_cue_track(sequence: unreal.LevelSequence, cue) -> None:
     for frame, key_location, key_scale in (
         (0, hidden_location, (0.01, 0.01, 0.01)),
         (max(0, start_frame - 5), hidden_location, (0.01, 0.01, 0.01)),
-        (start_frame + 4, peak_location, (1.12, 1.12, 1.12)),
+        (start_frame + 4, peak_location, (1.04, 1.04, 1.04)),
         (start_frame + 16, settle_location, (1.0, 1.0, 1.0)),
         (max(start_frame + 16, end_frame - 2), settle_location, (1.0, 1.0, 1.0)),
         (min(END_FRAME, end_frame + 1), hidden_location, (0.01, 0.01, 0.01)),
@@ -478,16 +461,14 @@ def create_sequence() -> unreal.LevelSequence:
     if not camera_cut_track:
         fail("Unable to create camera cut track.")
 
-    for index, shot in enumerate(SHOT_CAMERAS):
-        binding = add_spawnable_shot_camera(sequence, index, shot)
-        start_frame, end_frame = shot[0], shot[1]
-        cut = camera_cut_track.add_section()
-        cut.set_end_frame(end_frame)
-        cut.set_start_frame(start_frame)
-        try:
-            cut.set_camera_binding_id(sequence.get_binding_id(binding))
-        except Exception:
-            cut.set_editor_property("CameraBindingID", camera_binding_id(binding))
+    binding = add_first_person_height_route_camera(sequence)
+    cut = camera_cut_track.add_section()
+    cut.set_start_frame(0)
+    cut.set_end_frame(END_FRAME)
+    try:
+        cut.set_camera_binding_id(sequence.get_binding_id(binding))
+    except Exception:
+        cut.set_editor_property("CameraBindingID", camera_binding_id(binding))
 
     for label, jolt in ACTOR_JOLTS.items():
         add_actor_jolt_track(sequence, label, jolt)
